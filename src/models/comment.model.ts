@@ -12,7 +12,8 @@ export interface IComment extends Document {
   _id: Types.ObjectId;
   postId: Types.ObjectId;
   userId: Types.ObjectId;
-  parentCommentId?: Types.ObjectId;
+  parentCommentId?: Types.ObjectId; // comment cha trực tiếp (reply của reply)
+  originalCommentId?: Types.ObjectId; // comment gốc cấp 1 trong thread
   contentText: string;
 
   // Moderation
@@ -43,6 +44,19 @@ const CommentSchema = new Schema<IComment>(
       index: true,
     },
     parentCommentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
+      index: true,
+    },
+    /**
+     * originalCommentId: luôn trỏ về comment cấp 1 trong thread.
+     * - Comment cấp 1 (top-level): null
+     * - Reply trực tiếp vào comment cấp 1: = parentCommentId
+     * - Reply của reply (cấp 3+): = comment cấp 1 (không thay đổi)
+     * Dùng để group toàn bộ thread replies về cùng một comment gốc.
+     */
+    originalCommentId: {
       type: Schema.Types.ObjectId,
       ref: "Comment",
       default: null,
@@ -87,10 +101,10 @@ const CommentSchema = new Schema<IComment>(
   }
 );
 
-// Indexes
 CommentSchema.index({ postId: 1, createdAt: -1 });
 CommentSchema.index({ userId: 1, createdAt: -1 });
 CommentSchema.index({ parentCommentId: 1, createdAt: -1 });
+CommentSchema.index({ originalCommentId: 1, createdAt: -1 });
 CommentSchema.index({ postId: 1, parentCommentId: 1 });
 
 export const CommentModel = model<IComment>("Comment", CommentSchema);

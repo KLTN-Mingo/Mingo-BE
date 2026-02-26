@@ -46,6 +46,10 @@ export interface IPost extends Document {
 
   createdAt: Date;
   updatedAt: Date;
+
+  locationName?: string;
+  locationLatitude?: number;
+  locationLongitude?: number;
 }
 
 const PostSchema = new Schema<IPost>(
@@ -131,6 +135,10 @@ const PostSchema = new Schema<IPost>(
       type: Boolean,
       default: false,
     },
+
+    locationName: { type: String, maxlength: 255 },
+    locationLatitude: { type: Number, min: -90, max: 90 },
+    locationLongitude: { type: Number, min: -180, max: 180 },
   },
   {
     timestamps: true,
