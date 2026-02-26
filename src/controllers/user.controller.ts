@@ -1,17 +1,16 @@
 // src/controllers/user.controller.ts
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
+import { NotFoundError, ValidationError, ForbiddenError } from "../errors";
+import { validateObjectId, validateLength } from "../utils/validators";
+import { UserModel, Gender, UserRole } from "../models/user.model";
+import { sendSuccess, sendPaginated } from "../utils/response";
 import {
-  NotFoundError,
-  ValidationError,
-  ForbiddenError,
-} from "../errors/app-error";
-import {
-  validateObjectId,
-  validateRequired,
-  validateLength,
-} from "../utils/validators";
-import { UserModel } from "../models/user.model";
+  toUserProfile,
+  toPublicUser,
+  toUserSummary,
+  type UpdateProfileDto,
+} from "../dtos/user.dto";
 
 /**
  * @route   GET /api/users/me
@@ -22,40 +21,34 @@ export const getCurrentUser = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
 
-    const user = await UserModel.findById(userId).select("-passwordHash");
+    const user = await UserModel.findById(userId);
 
     if (!user) {
       throw new NotFoundError("Không tìm thấy thông tin người dùng");
     }
 
-    res.json({
-      success: true,
-      data: { user },
-    });
+    sendSuccess(res, toUserProfile(user));
   }
 );
 
 /**
  * @route   GET /api/users/:id
- * @desc    Lấy thông tin user theo ID
+ * @desc    Lấy public profile của user theo ID
  * @access  Private
  */
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
-  // Validate ObjectId
-  validateObjectId(id as string, "User ID");
+  validateObjectId(id, "User ID");
 
-  const user = await UserModel.findById(id).select("-passwordHash");
+  const user = await UserModel.findById(id);
 
   if (!user) {
     throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
   }
 
-  res.json({
-    success: true,
-    data: { user },
-  });
+  // Trả public profile - ẩn thông tin nhạy cảm
+  sendSuccess(res, toPublicUser(user));
 });
 
 /**
@@ -66,15 +59,37 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
 export const updateProfile = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
-    const { name, bio, avatar } = req.body;
+    const { name, bio, avatar, backgroundUrl, dateOfBirth, gender } =
+      req.body as UpdateProfileDto;
 
-    // Validate input
-    if (name) {
-      validateLength(name, 2, 50, "Tên");
+    // Validate
+    if (name !== undefined) {
+      validateLength(name, 2, 100, "Tên");
     }
 
-    if (bio && bio.length > 500) {
+    if (bio !== undefined && bio.length > 500) {
       throw new ValidationError("Bio không được vượt quá 500 ký tự");
+    }
+
+    if (gender !== undefined && !Object.values(Gender).includes(gender)) {
+      throw new ValidationError(
+        `Giới tính không hợp lệ. Các giá trị hợp lệ: ${Object.values(Gender).join(", ")}`,
+        "INVALID_GENDER"
+      );
+    }
+
+    let parsedDob: Date | undefined;
+    if (dateOfBirth !== undefined) {
+      parsedDob = new Date(dateOfBirth);
+      if (isNaN(parsedDob.getTime())) {
+        throw new ValidationError("Ngày sinh không hợp lệ", "INVALID_DATE");
+      }
+      if (parsedDob > new Date()) {
+        throw new ValidationError(
+          "Ngày sinh không được ở tương lai",
+          "INVALID_DATE"
+        );
+      }
     }
 
     const user = await UserModel.findById(userId);
@@ -83,18 +98,17 @@ export const updateProfile = asyncHandler(
       throw new NotFoundError("Không tìm thấy người dùng");
     }
 
-    // Update fields
-    if (name) user.name = name;
+    // Chỉ update các field được gửi lên (undefined = không thay đổi)
+    if (name !== undefined) user.name = name;
     if (bio !== undefined) user.bio = bio;
-    if (avatar) user.avatar = avatar;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (backgroundUrl !== undefined) user.backgroundUrl = backgroundUrl;
+    if (parsedDob !== undefined) user.dateOfBirth = parsedDob;
+    if (gender !== undefined) user.gender = gender;
 
     await user.save();
 
-    res.json({
-      success: true,
-      data: { user },
-      message: "Cập nhật thông tin thành công",
-    });
+    sendSuccess(res, toUserProfile(user), "Cập nhật thông tin thành công");
   }
 );
 
@@ -104,13 +118,11 @@ export const updateProfile = asyncHandler(
  * @access  Private + Admin
  */
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const currentUser = (req as any).user;
 
-  // Validate ObjectId
-  validateObjectId(id as string, "User ID");
+  validateObjectId(id, "User ID");
 
-  // Không cho phép tự xóa chính mình
   if (currentUser.userId === id) {
     throw new ForbiddenError("Bạn không thể xóa chính mình");
   }
@@ -123,23 +135,27 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 
   await user.deleteOne();
 
-  res.json({
-    success: true,
-    message: "Xóa user thành công",
-  });
+  sendSuccess(res, null, "Xóa user thành công");
 });
 
 /**
  * @route   GET /api/users
- * @desc    Lấy danh sách users (có phân trang)
- * @access  Private
+ * @desc    Lấy danh sách users (có phân trang + filter)
+ * @access  Private + Admin
  */
 export const getUsers = asyncHandler(async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
-  const search = req.query.search as string;
+  const {
+    page: pageStr,
+    limit: limitStr,
+    search,
+    role,
+    isActive,
+    isBlocked,
+  } = req.query as Record<string, string>;
 
-  // Validate pagination
+  const page = parseInt(pageStr) || 1;
+  const limit = parseInt(limitStr) || 10;
+
   if (page < 1) {
     throw new ValidationError("Số trang phải lớn hơn 0");
   }
@@ -148,38 +164,36 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError("Limit phải từ 1 đến 100");
   }
 
+  if (role && !Object.values(UserRole).includes(role as UserRole)) {
+    throw new ValidationError(
+      `Role không hợp lệ. Các giá trị hợp lệ: ${Object.values(UserRole).join(", ")}`,
+      "INVALID_ROLE"
+    );
+  }
+
   const skip = (page - 1) * limit;
 
   // Build query
-  const query: any = {};
+  const query: Record<string, any> = {};
+
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: "i" } },
       { phoneNumber: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
     ];
   }
 
-  // Execute query
+  if (role) query.role = role;
+
+  // isActive / isBlocked từ query string là string "true"/"false"
+  if (isActive !== undefined) query.isActive = isActive === "true";
+  if (isBlocked !== undefined) query.isBlocked = isBlocked === "true";
+
   const [users, total] = await Promise.all([
-    UserModel.find(query)
-      .select("-passwordHash")
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 }),
+    UserModel.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
     UserModel.countDocuments(query),
   ]);
 
-  res.json({
-    success: true,
-    data: {
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total,
-      },
-    },
-  });
+  sendPaginated(res, users.map(toUserSummary), { page, limit, total });
 });

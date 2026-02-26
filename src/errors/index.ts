@@ -3,11 +3,11 @@ export {
   AppError,
   ValidationError,
   UnauthorizedError,
+  TokenError,
+  TokenReuseError,
   ForbiddenError,
   NotFoundError,
   ConflictError,
   InternalServerError,
   DatabaseError,
-  TokenError,
-  TokenReuseError,
 } from "./app-error";

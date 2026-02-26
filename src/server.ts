@@ -1,6 +1,6 @@
 // src/server.ts
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: ".env.local" });
 import mongoose from "mongoose";
 import { app } from "./app";
 
