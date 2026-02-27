@@ -5,6 +5,8 @@ import authRoutes from "./routes/auth.routes";
 import postRoutes from "./routes/post.routes";
 import commentRoutes from "./routes/comment.routes";
 import followRoutes from "./routes/follow.routes";
+import mediaRoutes from "./routes/media.routes";
+import notificationRoutes from "./routes/notification.routes";
 import {
   errorHandler,
   notFoundHandler,
@@ -19,6 +21,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/follow", followRoutes);
+app.use("/api/media", mediaRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

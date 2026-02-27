@@ -1,4 +1,4 @@
-// src/routes/post.routes.ts  (thêm comment routes vào)
+// src/routes/post.routes.ts
 
 import { Router } from "express";
 import {
@@ -18,6 +18,10 @@ import {
   createComment,
   createReply,
 } from "../controllers/comment.controller";
+import {
+  createMedia,
+  getPostMedia,
+} from "../controllers/media.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -42,5 +46,9 @@ router.delete("/:id/like", authMiddleware, unlikePost);
 router.get("/:postId/comments", authMiddleware, getPostComments);
 router.post("/:postId/comments", authMiddleware, createComment);
 router.post("/:postId/comments/:commentId/replies", authMiddleware, createReply);
+
+// ── Media của post ────────────────────────────────────────────────────────────
+router.get("/:postId/media", authMiddleware, getPostMedia);
+router.post("/:postId/media", authMiddleware, createMedia);
 
 export default router;
