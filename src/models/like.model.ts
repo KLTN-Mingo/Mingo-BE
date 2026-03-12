@@ -6,7 +6,7 @@ export interface ILike extends Document {
   userId: Types.ObjectId;
   postId?: Types.ObjectId;
   commentId?: Types.ObjectId;
-  mediaId?: Types.ObjectId; // Like cho media
+  mediaId?: Types.ObjectId;
   createdAt: Date;
 }
 
@@ -21,17 +21,14 @@ const LikeSchema = new Schema<ILike>(
     postId: {
       type: Schema.Types.ObjectId,
       ref: "Post",
-      index: true,
     },
     commentId: {
       type: Schema.Types.ObjectId,
       ref: "Comment",
-      index: true,
     },
     mediaId: {
       type: Schema.Types.ObjectId,
       ref: "PostMedia",
-      index: true,
     },
   },
   {
@@ -39,10 +36,19 @@ const LikeSchema = new Schema<ILike>(
   }
 );
 
-// Compound unique indexes to prevent duplicate likes
-LikeSchema.index({ userId: 1, postId: 1 }, { unique: true, sparse: true });
-LikeSchema.index({ userId: 1, commentId: 1 }, { unique: true, sparse: true });
-LikeSchema.index({ userId: 1, mediaId: 1 }, { unique: true, sparse: true });
+// Partial unique indexes - chỉ áp dụng khi field tồn tại
+LikeSchema.index(
+  { userId: 1, postId: 1 },
+  { unique: true, partialFilterExpression: { postId: { $exists: true, $ne: null } } }
+);
+LikeSchema.index(
+  { userId: 1, commentId: 1 },
+  { unique: true, partialFilterExpression: { commentId: { $exists: true, $ne: null } } }
+);
+LikeSchema.index(
+  { userId: 1, mediaId: 1 },
+  { unique: true, partialFilterExpression: { mediaId: { $exists: true, $ne: null } } }
+);
 
 // Additional indexes for queries
 LikeSchema.index({ postId: 1, createdAt: -1 });
