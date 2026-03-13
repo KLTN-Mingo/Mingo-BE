@@ -54,7 +54,6 @@ const UserSchema = new Schema<IUser>(
       required: true,
       unique: true,
       trim: true,
-      index: true,
     },
     email: {
       type: String,
@@ -161,10 +160,6 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-UserSchema.index({ phoneNumber: 1 });
-UserSchema.index({ email: 1 });
-UserSchema.index({ googleId: 1 });
-UserSchema.index({ isActive: 1 });
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ name: "text" });
 

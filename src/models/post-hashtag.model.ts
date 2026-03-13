@@ -30,7 +30,6 @@ const PostHashtagSchema = new Schema<IPostHashtag>(
 );
 
 // Indexes
-PostHashtagSchema.index({ postId: 1 });
 PostHashtagSchema.index({ hashtag: 1 });
 PostHashtagSchema.index({ hashtag: 1, createdAt: -1 });
 
