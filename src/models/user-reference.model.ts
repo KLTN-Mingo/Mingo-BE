@@ -85,7 +85,6 @@ const UserInteractionSchema = new Schema<IUserInteraction>(
 
 // Indexes
 UserInteractionSchema.index({ userId: 1, createdAt: -1 });
-UserInteractionSchema.index({ postId: 1 });
 UserInteractionSchema.index({ userId: 1, liked: 1 });
 UserInteractionSchema.index({ userId: 1, source: 1, createdAt: -1 });
 

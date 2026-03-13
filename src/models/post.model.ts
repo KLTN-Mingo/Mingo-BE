@@ -100,7 +100,6 @@ const PostSchema = new Schema<IPost>(
       type: String,
       enum: Object.values(ModerationStatus),
       default: ModerationStatus.PENDING,
-      index: true,
     },
     aiToxicScore: {
       type: Number,
