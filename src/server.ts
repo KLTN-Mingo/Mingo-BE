@@ -1,22 +1,36 @@
 // src/server.ts
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
+
 import http from "http";
 import mongoose from "mongoose";
 import { app } from "./app";
 import { initSocketIO } from "./socket/socket";
 
-mongoose.connect(process.env.MONGO_URI!, {
-  tls: true,
-});
-
 const PORT = Number(process.env.PORT) || 3000;
 
-// Create a plain HTTP server so Socket.IO can share the same port as Express
-const httpServer = http.createServer(app);
+async function startServer() {
+  try {
+    // Connect MongoDB
+    await mongoose.connect(process.env.MONGO_URI!, {
+      tls: true,
+    });
 
-initSocketIO(httpServer);
+    console.log("MongoDB connected");
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    // Create HTTP server
+    const httpServer = http.createServer(app);
+
+    // Init socket
+    initSocketIO(httpServer);
+
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
