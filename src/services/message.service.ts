@@ -10,6 +10,7 @@ import { CallModel } from "../models/call.model";
 import { UserModel } from "../models/user.model";
 import { BlockModel } from "../models/block.model";
 import { pusherServer } from "../lib/pusher";
+
 import {
   NotFoundError,
   ValidationError,
@@ -33,6 +34,12 @@ import {
   toMessageResponse,
 } from "../dtos/message.dto";
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 const generateRandomString = (length = 20): string => {
@@ -47,7 +54,8 @@ const generateRandomString = (length = 20): string => {
 
 async function uploadFileToCloudinary(
   file: Express.Multer.File,
-  userId: string
+  userId: string,
+  duration?: number
 ) {
   const { mimetype, buffer, originalname, size } = file;
 
@@ -105,7 +113,10 @@ async function uploadFileToCloudinary(
   });
 
   const savedFile = await MessageFileModel.create({
-    fileName: type === "Other" ? (originalname ?? generateRandomString()) : generateRandomString(),
+    fileName:
+      type === "Other"
+        ? (originalname ?? generateRandomString())
+        : generateRandomString(),
     url: uploadResult.secure_url ?? uploadResult.url,
     publicId: uploadResult.public_id,
     bytes: String(size),
@@ -113,6 +124,7 @@ async function uploadFileToCloudinary(
     height: String(uploadResult.height ?? 0),
     format: uploadResult.format ?? mimetype.split("/")[1] ?? "unknown",
     type,
+    duration: type === "Audio" ? (duration ?? uploadResult.duration ?? 0) : undefined,
     createBy: new Types.ObjectId(userId),
     createAt: new Date(),
   });
@@ -141,7 +153,12 @@ async function buildMessageContent(
         "No file provided for file message",
         "FILE_REQUIRED"
       );
-    const savedFile = await uploadFileToCloudinary(file, userId);
+    const contentMeta = data.content as FileContentMetaDto;
+    const duration =
+      typeof (contentMeta as any).duration === "number"
+        ? (contentMeta as any).duration
+        : undefined;
+    const savedFile = await uploadFileToCloudinary(file, userId, duration);
     contentIds = [savedFile._id as Types.ObjectId];
     text = [];
   } else {
@@ -171,7 +188,11 @@ async function buildMessageContent(
 
 async function populateMessageForPusher(messageId: Types.ObjectId) {
   return MessageModel.findById(messageId)
-    .populate({ path: "contentId", model: "File", options: { strictPopulate: false } })
+    .populate({
+      path: "contentId",
+      model: "File",
+      options: { strictPopulate: false },
+    })
     .populate({ path: "createBy", model: "User", select: "name avatar" });
 }
 
@@ -184,11 +205,13 @@ function buildPusherNewMessage(
     flag: true,
     isReact: false,
     readedId: populated.readedId.map((id: any) => id.toString()),
-    contentId: populated.contentId?.[populated.contentId.length - 1] ?? undefined,
+    contentId:
+      populated.contentId?.[populated.contentId.length - 1] ?? undefined,
     text: populated.text?.[populated.text.length - 1] ?? "",
     boxId,
     createAt: new Date().toISOString(),
-    createBy: populated.createBy?._id?.toString() ?? populated.createBy?.toString(),
+    createBy:
+      populated.createBy?._id?.toString() ?? populated.createBy?.toString(),
     createName: populated.createBy?.name ?? "Unknown",
     createAvatar: populated.createBy?.avatar ?? "",
   };
@@ -209,7 +232,9 @@ export const MessageService = {
     let box = await MessageBoxModel.findById(data.boxId);
 
     if (box) {
-      const receiverIds: string[] = box.receiverIds.map((id: any) => id.toString());
+      const receiverIds: string[] = box.receiverIds.map((id: any) =>
+        id.toString()
+      );
 
       if (receiverIds.length > 2) {
         // Group chat
@@ -221,7 +246,12 @@ export const MessageService = {
           );
         }
 
-        const message = await buildMessageContent(data, file, userId, memberIds);
+        const message = await buildMessageContent(
+          data,
+          file,
+          userId,
+          memberIds
+        );
         box = await MessageBoxModel.findByIdAndUpdate(
           data.boxId,
           { $push: { messageIds: message._id }, $set: { senderId: userId } },
@@ -233,7 +263,9 @@ export const MessageService = {
             "BOX_UPDATE_FAILED"
           );
 
-        const populated = await populateMessageForPusher(message._id as Types.ObjectId);
+        const populated = await populateMessageForPusher(
+          message._id as Types.ObjectId
+        );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
         await pusherServer
@@ -257,7 +289,12 @@ export const MessageService = {
           );
 
         const memberIds = [...receiverIds, box.senderId.toString()];
-        const message = await buildMessageContent(data, file, userId, memberIds);
+        const message = await buildMessageContent(
+          data,
+          file,
+          userId,
+          memberIds
+        );
 
         box = await MessageBoxModel.findByIdAndUpdate(
           box._id,
@@ -269,7 +306,9 @@ export const MessageService = {
           { new: true }
         );
 
-        const populated = await populateMessageForPusher(message._id as Types.ObjectId);
+        const populated = await populateMessageForPusher(
+          message._id as Types.ObjectId
+        );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
         await pusherServer
@@ -298,8 +337,13 @@ export const MessageService = {
         status: true,
       });
 
-      const populated = await populateMessageForPusher(message._id as Types.ObjectId);
-      const pusherPayload = buildPusherNewMessage(populated, newBox._id.toString());
+      const populated = await populateMessageForPusher(
+        message._id as Types.ObjectId
+      );
+      const pusherPayload = buildPusherNewMessage(
+        populated,
+        newBox._id.toString()
+      );
 
       await pusherServer
         .trigger(`private-${userId}`, "new-message", pusherPayload)
@@ -323,7 +367,9 @@ export const MessageService = {
     if (!leaderExists)
       throw new NotFoundError("Leader user not found", "LEADER_NOT_FOUND");
 
-    const foundCount = await UserModel.countDocuments({ _id: { $in: membersIds } });
+    const foundCount = await UserModel.countDocuments({
+      _id: { $in: membersIds },
+    });
     if (foundCount !== membersIds.length) {
       throw new NotFoundError(
         "One or more member IDs do not exist",
@@ -398,8 +444,16 @@ export const MessageService = {
         });
         if (!msg) return null;
 
-        await msg.populate({ path: "contentId", model: "File", options: { strictPopulate: false } });
-        await msg.populate({ path: "createBy", model: "User", select: "name avatar" });
+        await msg.populate({
+          path: "contentId",
+          model: "File",
+          options: { strictPopulate: false },
+        });
+        await msg.populate({
+          path: "createBy",
+          model: "User",
+          select: "name avatar",
+        });
 
         const sender = (msg as any).createBy;
         return {
@@ -408,10 +462,11 @@ export const MessageService = {
           isReact: msg.isReact,
           readedId: msg.readedId.map((id: any) => id.toString()),
           contentId: msg.flag
-            ? (msg.contentId as any)[(msg.contentId as any).length - 1] ?? undefined
+            ? ((msg.contentId as any)[(msg.contentId as any).length - 1] ??
+              undefined)
             : undefined,
           text: msg.flag
-            ? (msg.text[(msg.text.length - 1)] ?? "")
+            ? (msg.text[msg.text.length - 1] ?? "")
             : "unsent message",
           boxId: msg.boxId.toString(),
           createAt: msg.createAt,
@@ -429,10 +484,7 @@ export const MessageService = {
 
   async getDirectBoxes(userId: string) {
     const boxes = await MessageBoxModel.find({
-      $and: [
-        { receiverIds: { $in: [userId] } },
-        { receiverIds: { $size: 2 } },
-      ],
+      $and: [{ receiverIds: { $in: [userId] } }, { receiverIds: { $size: 2 } }],
     }).populate("receiverIds", "name avatar phoneNumber onlineStatus");
 
     if (!boxes.length) return { success: true, box: [] };
@@ -448,14 +500,16 @@ export const MessageService = {
         const validIds = filteredIds.filter(Boolean);
         const lastId = validIds[validIds.length - 1];
 
-        if (!lastId) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastId)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
         const lastMsg = await MessageModel.findById(lastId).populate({
           path: "contentId",
           model: "File",
           options: { strictPopulate: false },
         });
-        if (!lastMsg) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastMsg)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
         const readStatus = lastMsg.readedId.some(
           (id: any) => id.toString() === userId
@@ -470,8 +524,12 @@ export const MessageService = {
     );
 
     withDetails.sort((a, b) => {
-      const dA = a.lastMessage?.createAt ? new Date(a.lastMessage.createAt).getTime() : 0;
-      const dB = b.lastMessage?.createAt ? new Date(b.lastMessage.createAt).getTime() : 0;
+      const dA = a.lastMessage?.createAt
+        ? new Date(a.lastMessage.createAt).getTime()
+        : 0;
+      const dB = b.lastMessage?.createAt
+        ? new Date(b.lastMessage.createAt).getTime()
+        : 0;
       return dB - dA;
     });
 
@@ -495,7 +553,9 @@ export const MessageService = {
     });
     if (!lastMsg) return { box: { ...box.toObject(), readStatus: false } };
 
-    return { box: { ...box.toObject(), readStatus: lastMsg.readedId.length > 0 } };
+    return {
+      box: { ...box.toObject(), readStatus: lastMsg.readedId.length > 0 },
+    };
   },
 
   async getGroupBoxes(userId: string) {
@@ -521,16 +581,20 @@ export const MessageService = {
         const validIds = filteredIds.filter(Boolean);
         const lastId = validIds[validIds.length - 1];
 
-        if (!lastId) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastId)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
         const lastMsg = await MessageModel.findById(lastId).populate({
           path: "contentId",
           model: "File",
           select: "",
         });
-        if (!lastMsg) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastMsg)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
-        const readStatus = lastMsg.readedId.some((id: any) => id.toString() === userId);
+        const readStatus = lastMsg.readedId.some(
+          (id: any) => id.toString() === userId
+        );
 
         return {
           ...box.toObject(),
@@ -551,8 +615,7 @@ export const MessageService = {
       [`visibility.${userId}`]: true,
       flag: true,
     });
-    if (!msg)
-      throw new NotFoundError("Message not found", "MESSAGE_NOT_FOUND");
+    if (!msg) throw new NotFoundError("Message not found", "MESSAGE_NOT_FOUND");
     if (msg.createBy.toString() !== userId) {
       throw new ForbiddenError(
         "Only the message author can edit this message",
@@ -580,10 +643,11 @@ export const MessageService = {
     userId: string
   ) {
     const msg = await MessageModel.findById(messageId);
-    if (!msg)
-      throw new NotFoundError("Message not found", "MESSAGE_NOT_FOUND");
+    if (!msg) throw new NotFoundError("Message not found", "MESSAGE_NOT_FOUND");
 
-    const isParticipant = msg.readedId.some((id: any) => id.toString() === userId);
+    const isParticipant = msg.readedId.some(
+      (id: any) => id.toString() === userId
+    );
     if (!isParticipant)
       throw new ForbiddenError(
         "User is not a participant of this message",
@@ -676,7 +740,8 @@ export const MessageService = {
 
   async markAsRead(boxId: string, userId: string) {
     const userExists = await UserModel.findById(userId);
-    if (!userExists) throw new NotFoundError("User not found", "USER_NOT_FOUND");
+    if (!userExists)
+      throw new NotFoundError("User not found", "USER_NOT_FOUND");
 
     const box = await MessageBoxModel.findById(boxId).populate("messageIds");
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
@@ -691,7 +756,10 @@ export const MessageService = {
       await Promise.all(
         box.messageIds.map(async (msgId: any) => {
           const msg = await MessageModel.findById(msgId);
-          if (msg && !msg.readedId.some((id: any) => id.toString() === userId)) {
+          if (
+            msg &&
+            !msg.readedId.some((id: any) => id.toString() === userId)
+          ) {
             msg.readedId.push(new Types.ObjectId(userId));
             await msg.save();
           }
@@ -705,13 +773,16 @@ export const MessageService = {
 
   async checkReadStatus(boxIds: string[], userId: string) {
     const userExists = await UserModel.findById(userId);
-    if (!userExists) throw new NotFoundError("User not found", "USER_NOT_FOUND");
+    if (!userExists)
+      throw new NotFoundError("User not found", "USER_NOT_FOUND");
 
     return Promise.all(
       boxIds.map(async (boxId) => {
-        const box = await MessageBoxModel.findById(boxId).populate("messageIds");
+        const box =
+          await MessageBoxModel.findById(boxId).populate("messageIds");
         if (!box) return { boxId, isRead: false, message: "Box not found" };
-        if (box.messageIds.length === 0) return { boxId, isRead: false, message: "No messages" };
+        if (box.messageIds.length === 0)
+          return { boxId, isRead: false, message: "No messages" };
 
         const lastMsg = box.messageIds[box.messageIds.length - 1] as any;
         const isRead = lastMsg.readedId?.some(
@@ -821,7 +892,10 @@ export const MessageService = {
     const user = await UserModel.findById(userId);
     if (!user) throw new NotFoundError("User not found", "USER_NOT_FOUND");
 
-    await UserModel.updateOne({ _id: userId }, { $set: { onlineStatus: status } });
+    await UserModel.updateOne(
+      { _id: userId },
+      { $set: { onlineStatus: status } }
+    );
 
     const payload = { userId, status, createAt: new Date() };
     const event = status ? "online-status" : "offline-status";
@@ -830,7 +904,11 @@ export const MessageService = {
       .trigger(`private-${userId}`, event, payload)
       .catch((err) => console.error("Pusher error:", err));
 
-    return { success: true, message: `Status updated to ${status ? "online" : "offline"}`, payload };
+    return {
+      success: true,
+      message: `Status updated to ${status ? "online" : "offline"}`,
+      payload,
+    };
   },
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -863,7 +941,11 @@ export const MessageService = {
           else if ("description" in last) content = last.description ?? "";
         }
 
-        return content.replace(/\u00A0/g, " ").trim().toLowerCase().includes(query.toLowerCase());
+        return content
+          .replace(/\u00A0/g, " ")
+          .trim()
+          .toLowerCase()
+          .includes(query.toLowerCase());
       })
       .map((msg) => toMessageResponse(msg));
 
@@ -876,7 +958,9 @@ export const MessageService = {
     const all = await MessageModel.find();
     const withContent = await Promise.all(
       all.map(async (msg) => {
-        const files = await MessageFileModel.find({ _id: { $in: msg.contentId } });
+        const files = await MessageFileModel.find({
+          _id: { $in: msg.contentId },
+        });
         return { ...msg.toObject(), content: files };
       })
     );
@@ -959,14 +1043,20 @@ export const CallService = {
     const { startTime, status, endTime } = dto;
     let duration = 0;
 
-    if (status === "completed" || status === "rejected" || status === "missed") {
+    if (
+      status === "completed" ||
+      status === "rejected" ||
+      status === "missed"
+    ) {
       if (endTime) {
         duration = Math.floor(
           (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000
         );
       }
     } else if (status === "ongoing") {
-      duration = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
+      duration = Math.floor(
+        (Date.now() - new Date(startTime).getTime()) / 1000
+      );
     }
 
     const call = await CallModel.create({
@@ -993,7 +1083,9 @@ export const CallService = {
       );
     }
 
-    const updated = await CallModel.findByIdAndUpdate(callId, updateData, { new: true });
+    const updated = await CallModel.findByIdAndUpdate(callId, updateData, {
+      new: true,
+    });
     return updated;
   },
 };

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
 import { sendSuccess, sendCreated } from "../utils/response";
 import { ValidationError, NotFoundError } from "../errors";
+import { validateObjectId } from "../utils/validators";
 import { MessageService, CallService } from "../services/message.service";
 import {
   SendMessageDto,
@@ -68,6 +69,7 @@ export const getGroupBoxes = asyncHandler(async (req: Request, res: Response) =>
 export const getBoxById = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.getBoxById(boxId);
   sendSuccess(res, result, "Fetched box");
@@ -77,6 +79,7 @@ export const getBoxById = asyncHandler(async (req: Request, res: Response) => {
 export const deleteBox = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.deleteBox(boxId);
   sendSuccess(res, result, result.message);
@@ -88,6 +91,7 @@ export const updateGroupAvatar = asyncHandler(async (req: Request, res: Response
   const { url, publicId } = req.body;
 
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
   if (!url || !publicId) throw new ValidationError("url and publicId are required");
 
   const result = await MessageService.updateGroupAvatar(boxId, url, publicId);
@@ -102,6 +106,7 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
 
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   let content = req.body.content;
   if (!content) throw new ValidationError("content is required");
@@ -126,6 +131,7 @@ export const getMessages = asyncHandler(async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.getMessages(boxId, userId);
   sendSuccess(res, result, "Fetched messages");
@@ -136,6 +142,7 @@ export const getGroupMessages = asyncHandler(async (req: Request, res: Response)
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.getGroupMessages(boxId, userId);
   sendSuccess(res, result, "Fetched group messages");
@@ -148,6 +155,7 @@ export const editMessage = asyncHandler(async (req: Request, res: Response) => {
   const { newContent } = req.body as EditMessageDto;
 
   if (!messageId) throw new ValidationError("messageId is required");
+  validateObjectId(messageId, "messageId");
   if (!newContent?.trim()) throw new ValidationError("newContent is required");
 
   const result = await MessageService.editMessage(messageId, { newContent }, userId);
@@ -161,6 +169,7 @@ export const deleteOrRevokeMessage = asyncHandler(async (req: Request, res: Resp
   const { action } = (req.body ?? {}) as DeleteOrRevokeMessageDto;
 
   if (!messageId) throw new ValidationError("messageId is required");
+  validateObjectId(messageId, "messageId");
   if (!action || !["revoke", "delete", "unsend"].includes(action)) {
     throw new ValidationError("action must be one of: revoke, delete, unsend");
   }
@@ -176,6 +185,7 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.markAsRead(boxId, userId);
   sendSuccess(res, result ?? { message: "No messages to mark" }, "Read status updated");
@@ -194,6 +204,7 @@ export const checkReadStatus = asyncHandler(async (req: Request, res: Response) 
   }
 
   if (boxIds.length === 0) throw new ValidationError("boxIds query param is required");
+  boxIds.forEach((id) => validateObjectId(id, "boxId"));
 
   const result = await MessageService.checkReadStatus(boxIds, userId);
   sendSuccess(res, result, "Read status fetched");
@@ -206,6 +217,7 @@ export const getImageList = asyncHandler(async (req: Request, res: Response) => 
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const files = await MessageService.getImageList(boxId, userId);
   sendSuccess(res, files, "Fetched image list");
@@ -216,6 +228,7 @@ export const getVideoList = asyncHandler(async (req: Request, res: Response) => 
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const files = await MessageService.getVideoList(boxId, userId);
   sendSuccess(res, files, "Fetched video list");
@@ -225,6 +238,7 @@ export const getVideoList = asyncHandler(async (req: Request, res: Response) => 
 export const getAudioList = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const files = await MessageService.getAudioList(boxId);
   sendSuccess(res, files, "Fetched audio list");
@@ -235,6 +249,7 @@ export const getOtherFileList = asyncHandler(async (req: Request, res: Response)
   const userId = getUserId(req);
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const files = await MessageService.getOtherFileList(boxId, userId);
   sendSuccess(res, files, "Fetched file list");
@@ -249,6 +264,7 @@ export const searchMessages = asyncHandler(async (req: Request, res: Response) =
   const q = query(req, "q");
 
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
   if (!q?.trim()) throw new ValidationError("q query param is required");
 
   const result = await MessageService.searchMessagesInBox(boxId, q, userId);
@@ -289,6 +305,7 @@ export const adminGetAllBoxes = asyncHandler(async (req: Request, res: Response)
 export const adminGetBoxMessages = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
 
   const result = await MessageService.getBoxMessages(boxId);
   sendSuccess(res, result, "Box messages fetched");
@@ -298,6 +315,7 @@ export const adminGetBoxMessages = asyncHandler(async (req: Request, res: Respon
 export const adminDeleteMessage = asyncHandler(async (req: Request, res: Response) => {
   const messageId = param(req, "messageId");
   if (!messageId) throw new ValidationError("messageId is required");
+  validateObjectId(messageId, "messageId");
 
   const result = await MessageService.deleteMessage(messageId);
   sendSuccess(res, result, result.message);
@@ -359,6 +377,7 @@ export const updateCallStatus = asyncHandler(async (req: Request, res: Response)
   const dto = req.body as UpdateCallStatusDto;
 
   if (!callId) throw new ValidationError("callId is required");
+  validateObjectId(callId, "callId");
 
   const updated = await CallService.updateCallStatus(callId, {
     ...dto,
