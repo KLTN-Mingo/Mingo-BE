@@ -6,6 +6,7 @@ import onCallAccepted from "./events/onCallAccepted";
 import onCallRejected from "./events/onCallRejected";
 import onHangup from "./events/onHangup";
 import onWebrtcSignal from "./events/onWebrtcSignal";
+import { registerUser, unregisterUser, getOnlineUsers } from "./presence";
 import {
   CallPayload,
   CallAcceptedPayload,
@@ -33,6 +34,21 @@ export function initSocketIO(httpServer: HttpServer): Server {
   io.on("connection", (socket: Socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
+    // ── Presence: app gửi register để server lưu userId <-> socketId ───────────
+    socket.on("register", (data: { userId: string; socketId?: string; name?: string; avatar?: string }) => {
+      const userId = data?.userId;
+      if (userId) {
+        registerUser(socket.id, userId, data.name, data.avatar);
+        const users = getOnlineUsers().map((u) => ({
+          userId: u.userId,
+          socketId: u.socketId,
+          name: u.name,
+          avatar: u.avatar,
+        }));
+        socket.emit("getUsers", users);
+      }
+    });
+
     // ── Call signalling events ────────────────────────────────────────────────
 
     socket.on("call", (payload: CallPayload) => {
@@ -55,9 +71,8 @@ export function initSocketIO(httpServer: HttpServer): Server {
       onWebrtcSignal(io, data);
     });
 
-    // ── Presence ──────────────────────────────────────────────────────────────
-
     socket.on("disconnect", () => {
+      unregisterUser(socket.id);
       console.log(`Socket disconnected: ${socket.id}`);
     });
   });

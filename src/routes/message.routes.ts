@@ -68,6 +68,8 @@ router.patch("/calls/:callId", authMiddleware, updateCallStatus);
 // ─── Boxes ────────────────────────────────────────────────────────────────────
 router.post("/boxes", authMiddleware, createGroup);
 router.get("/boxes", authMiddleware, getDirectBoxes);
+// Alias: /conversations → same as /boxes (list direct chats), so "conversations" is not treated as boxId
+router.get("/conversations", authMiddleware, getDirectBoxes);
 router.get("/boxes/groups", authMiddleware, getGroupBoxes);
 router.get("/boxes/read-status", authMiddleware, checkReadStatus);
 router.get("/boxes/:boxId", authMiddleware, getBoxById);

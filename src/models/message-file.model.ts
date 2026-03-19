@@ -11,6 +11,7 @@ export interface IMessageFile extends Document {
   height: string;
   format: string;
   type: "Image" | "Video" | "Audio" | "Other";
+   duration?: number;
   createBy: Types.ObjectId;
   createAt: Date;
 }
@@ -28,6 +29,7 @@ const MessageFileSchema = new Schema<IMessageFile>({
     enum: ["Image", "Video", "Audio", "Other"],
     required: true,
   },
+  duration: { type: Number, default: 0 },
   createBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   createAt: { type: Date, default: Date.now },
 });

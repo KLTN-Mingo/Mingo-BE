@@ -29,7 +29,6 @@ const PostMentionSchema = new Schema<IPostMention>(
 );
 
 // Indexes
-PostMentionSchema.index({ postId: 1 });
 PostMentionSchema.index({ mentionedUserId: 1, createdAt: -1 });
 
 // Prevent duplicate mentions
