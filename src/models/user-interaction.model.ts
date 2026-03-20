@@ -2,27 +2,51 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export enum InteractionSource {
-  FEED = "feed",
-  EXPLORE = "explore",
-  PROFILE = "profile",
-  SEARCH = "search",
+  FEED         = "feed",
+  EXPLORE      = "explore",
+  PROFILE      = "profile",
+  SEARCH       = "search",
   NOTIFICATION = "notification",
 }
 
+export enum FeedbackType {
+  ORGANIC        = "organic",
+  HIDE           = "hide",
+  NOT_INTERESTED = "not_interested",
+  SEE_MORE       = "see_more",
+  REPORT         = "report",
+}
+
+export enum InteractionType {
+  VIEW             = "view",
+  LIKE             = "like",
+  COMMENT          = "comment",
+  SHARE            = "share",
+  SAVE             = "save",
+  FOLLOW_FROM_POST = "follow_from_post",
+  HIDE             = "hide",
+  NOT_INTERESTED   = "not_interested",
+  SEE_MORE         = "see_more",
+  REPORT           = "report",
+}
+
 export interface IUserInteraction extends Document {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  postId: Types.ObjectId;
+  _id:      Types.ObjectId;
+  userId:   Types.ObjectId;
+  postId:   Types.ObjectId;
 
-  // Interaction Types
-  viewed: boolean;
-  viewDuration?: number; // seconds
-  liked: boolean;
+  viewed:    boolean;
+  liked:     boolean;
   commented: boolean;
-  shared: boolean;
-  saved: boolean;
+  shared:    boolean;
+  saved:     boolean;
 
-  source: InteractionSource;
+  weight:       number;  // Cộng dồn từ mọi lần track (like + comment + ...)
+  feedbackType: FeedbackType;
+  viewDuration?: number;
+  scrollDepth?:  number;
+
+  source:     InteractionSource;
   deviceType?: string;
 
   createdAt: Date;
@@ -43,52 +67,38 @@ const UserInteractionSchema = new Schema<IUserInteraction>(
       index: true,
     },
 
-    // Interaction Types
-    viewed: {
-      type: Boolean,
-      default: false,
+    viewed:    { type: Boolean, default: false },
+    liked:     { type: Boolean, default: false },
+    commented: { type: Boolean, default: false },
+    shared:    { type: Boolean, default: false },
+    saved:     { type: Boolean, default: false },
+
+    weight: { type: Number, default: 1 },
+    feedbackType: {
+      type:    String,
+      enum:    Object.values(FeedbackType),
+      default: FeedbackType.ORGANIC,
     },
-    viewDuration: {
-      type: Number,
-      min: 0,
-    },
-    liked: {
-      type: Boolean,
-      default: false,
-    },
-    commented: {
-      type: Boolean,
-      default: false,
-    },
-    shared: {
-      type: Boolean,
-      default: false,
-    },
-    saved: {
-      type: Boolean,
-      default: false,
-    },
+    viewDuration: { type: Number, min: 0 },   
+    scrollDepth: { type: Number, min: 0, max: 1 },
 
     source: {
-      type: String,
-      enum: Object.values(InteractionSource),
+      type:     String,
+      enum:     Object.values(InteractionSource),
       required: true,
     },
-    deviceType: {
-      type: String,
-    },
+    deviceType: { type: String },
   },
-  {
-    timestamps: { createdAt: true, updatedAt: false },
-  }
+  { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-// Indexes
 UserInteractionSchema.index({ userId: 1, createdAt: -1 });
 UserInteractionSchema.index({ userId: 1, liked: 1 });
 UserInteractionSchema.index({ userId: 1, source: 1, createdAt: -1 });
+UserInteractionSchema.index({ userId: 1, feedbackType: 1 });
 
-// TTL index - delete interactions older than 90 days
+UserInteractionSchema.index({ userId: 1, postId: 1 }, { unique: true });
+
 UserInteractionSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 90 * 24 * 60 * 60 }
