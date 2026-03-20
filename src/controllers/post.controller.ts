@@ -51,25 +51,27 @@ export const getTrendingPosts = asyncHandler(
 
 /**
  * @route   GET /api/posts/feed
- * @desc    Lấy feed bài viết của user hiện tại (từ những người đang follow)
+ * @query   tab=friends | explore (mặc định: explore)
+ * @desc    Tab "friends": bài từ bạn bè/bạn thân (người đang follow), sort mới nhất. Tab "explore": feed khám phá đề xuất cá nhân hóa.
  * @access  Private
  */
 export const getFeedPosts = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId as string;
-    const { page: pageStr, limit: limitStr } = req.query as Record<
+    const { page: pageStr, limit: limitStr, tab: tabStr } = req.query as Record<
       string,
       string
     >;
 
     const page = parseInt(pageStr) || 1;
     const limit = parseInt(limitStr) || 10;
+    const tab = tabStr === "friends" ? "friends" : "explore";
 
     if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
     if (limit < 1 || limit > 50)
       throw new ValidationError("Limit phải từ 1 đến 50");
 
-    const result = await PostService.getFeedPosts(userId, page, limit);
+    const result = await PostService.getFeedPosts(userId, page, limit, tab);
 
     sendPaginated(res, result.posts, result.pagination);
   }
