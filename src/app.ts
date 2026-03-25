@@ -13,12 +13,17 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error-handler.middleware";
-
+import cors from "cors";
 export const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
-
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  })
+);
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
