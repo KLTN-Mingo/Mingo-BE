@@ -41,9 +41,14 @@ export class GetPostsQueryDto {
   visibility?: PostVisibility;
 }
 
+/** Tab trang chủ: friends = bài bạn bè/bạn thân, explore = khám phá đề xuất cá nhân hóa */
+export type FeedTab = "friends" | "explore";
+
 export class GetFeedDto {
   page?: number;
   limit?: number;
+  /** friends | explore. Mặc định: explore */
+  tab?: FeedTab;
 }
 
 export class SearchPostsDto {
