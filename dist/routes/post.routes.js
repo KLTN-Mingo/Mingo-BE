@@ -10,6 +10,8 @@ const router = (0, express_1.Router)();
 // ── Special routes (trước :id để tránh conflict) ──────────────────────────────
 router.get("/trending", post_controller_1.getTrendingPosts);
 router.get("/feed", auth_middleware_1.authMiddleware, post_controller_1.getFeedPosts);
+router.post("/feed/feedback", auth_middleware_1.authMiddleware, post_controller_1.submitFeedFeedback);
+router.get("/feed/metrics", auth_middleware_1.authMiddleware, post_controller_1.getFeedMetrics);
 router.get("/stats/count", auth_middleware_1.authMiddleware, post_controller_1.getPostStats);
 // ── Post CRUD ─────────────────────────────────────────────────────────────────
 router.get("/", auth_middleware_1.authMiddleware, post_controller_1.getAllPosts);

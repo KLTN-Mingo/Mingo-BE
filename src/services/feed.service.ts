@@ -1,8 +1,16 @@
 // src/services/feed.service.ts
 
 import { Types } from "mongoose";
-import { PostModel, PostVisibility, ModerationStatus } from "../models/post.model";
-import { FollowModel, FollowStatus, CloseFriendStatus } from "../models/follow.model";
+import {
+  PostModel,
+  PostVisibility,
+  ModerationStatus,
+} from "../models/post.model";
+import {
+  FollowModel,
+  FollowStatus,
+  CloseFriendStatus,
+} from "../models/follow.model";
 import { UserProfileModel } from "../models/user-profile.model";
 import { scoringService } from "./scoring.service";
 import {
@@ -23,6 +31,7 @@ import { PostMentionModel } from "../models/post-mention.model";
 import { LikeModel } from "../models/like.model";
 import { UserModel } from "../models/user.model";
 import { toUserMinimal } from "../dtos/user.dto";
+import { feedAnalyticsService } from "./feed-analytics.service";
 
 export interface SocialIds {
   followingIds: Set<string>;
@@ -47,10 +56,7 @@ async function getSocialIds(userId: string): Promise<SocialIds> {
       .select("followerId")
       .lean(),
     FollowModel.find({
-      $or: [
-        { followerId: userObjectId },
-        { followingId: userObjectId },
-      ],
+      $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
       closeFriendStatus: CloseFriendStatus.ACCEPTED,
     })
       .select("followerId followingId")
@@ -251,7 +257,10 @@ async function loadPostRelationsForFeedBatch(
 function applyExploration<T>(sorted: T[], explorationRate: number): T[] {
   if (sorted.length <= 1 || explorationRate <= 0) return sorted;
 
-  const keepTop = Math.max(1, Math.floor(sorted.length * (1 - explorationRate)));
+  const keepTop = Math.max(
+    1,
+    Math.floor(sorted.length * (1 - explorationRate))
+  );
   const top = sorted.slice(0, keepTop);
   const rest = sorted.slice(keepTop);
   if (rest.length === 0) return top;
@@ -287,7 +296,9 @@ export const FeedService = {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - MAX_POST_AGE_DAYS);
 
-    const followingObjectIds = [...social.followingIds].map((id) => new Types.ObjectId(id));
+    const followingObjectIds = [...social.followingIds].map(
+      (id) => new Types.ObjectId(id)
+    );
     if (followingObjectIds.length === 0) {
       return {
         posts: [],
@@ -298,7 +309,9 @@ export const FeedService = {
     const rawCandidates = await PostModel.find({
       userId: { $in: followingObjectIds },
       isHidden: false,
-      moderationStatus: { $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING] },
+      moderationStatus: {
+        $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING],
+      },
       createdAt: { $gte: cutoff },
     })
       .sort({ createdAt: -1 })
@@ -320,7 +333,13 @@ export const FeedService = {
     if (slice.length === 0) {
       return {
         posts: [],
-        pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasMore: page < totalPages,
+        },
       };
     }
 
@@ -348,9 +367,31 @@ export const FeedService = {
       return toPostResponse(post as any, relations);
     });
 
+    try {
+      await feedAnalyticsService.trackImpressions(
+        userId,
+        "friends",
+        slice.map((post, index) => ({
+          postId: post._id.toString(),
+          position: start + index + 1,
+        }))
+      );
+    } catch (err) {
+      console.error(
+        "[FeedService.getFriendsFeed] trackImpressions error:",
+        err
+      );
+    }
+
     return {
       posts,
-      pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
     };
   },
 
@@ -373,19 +414,23 @@ export const FeedService = {
 
     const rawCandidates = await PostModel.find({
       isHidden: false,
-      moderationStatus: { $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING] },
+      moderationStatus: {
+        $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING],
+      },
       createdAt: { $gte: cutoff },
     })
       .sort({ createdAt: -1 })
       .limit(CANDIDATE_POOL_SIZE * 2)
       .lean();
 
-    const candidates: IPost[] = (rawCandidates as IPost[]).filter((post) => {
-      if (viewedPostIds.has(post._id.toString())) return false;
-      const authorId = post.userId?.toString();
-      if (authorId && blockedUserIds.has(authorId)) return false;
-      return canViewPost(post, userId, social);
-    }).slice(0, CANDIDATE_POOL_SIZE);
+    const candidates: IPost[] = (rawCandidates as IPost[])
+      .filter((post) => {
+        if (viewedPostIds.has(post._id.toString())) return false;
+        const authorId = post.userId?.toString();
+        if (authorId && blockedUserIds.has(authorId)) return false;
+        return canViewPost(post, userId, social);
+      })
+      .slice(0, CANDIDATE_POOL_SIZE);
 
     if (candidates.length === 0) {
       return {
@@ -442,6 +487,23 @@ export const FeedService = {
       };
       return toPostResponse(post as any, relations);
     });
+
+    try {
+      await feedAnalyticsService.trackImpressions(
+        userId,
+        "explore",
+        slice.map((row, index) => ({
+          postId: row.post._id.toString(),
+          position: start + index + 1,
+          score: row.breakdown,
+        }))
+      );
+    } catch (err) {
+      console.error(
+        "[FeedService.getPersonalizedFeed] trackImpressions error:",
+        err
+      );
+    }
 
     return {
       posts,

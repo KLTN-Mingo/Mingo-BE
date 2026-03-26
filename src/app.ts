@@ -8,6 +8,7 @@ import followRoutes from "./routes/follow.routes";
 import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notification.routes";
 import userRoutes from "./routes/user.routes";
+import interactionRoutes from "./routes/interaction.routes";
 import {
   errorHandler,
   notFoundHandler,
@@ -25,6 +26,7 @@ app.use("/api/follow", followRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/interactions", interactionRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

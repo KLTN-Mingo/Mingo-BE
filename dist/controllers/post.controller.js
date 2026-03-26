@@ -1,12 +1,16 @@
 "use strict";
 // src/controllers/post.controller.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.unlikePost = exports.likePost = exports.deletePost = exports.updatePost = exports.createPost = exports.getPostById = exports.getPostStats = exports.getFeedPosts = exports.getTrendingPosts = exports.getAllPosts = void 0;
+exports.unlikePost = exports.likePost = exports.deletePost = exports.updatePost = exports.createPost = exports.getPostById = exports.getPostStats = exports.getFeedMetrics = exports.submitFeedFeedback = exports.getFeedPosts = exports.getTrendingPosts = exports.getAllPosts = void 0;
+const mongoose_1 = require("mongoose");
 const async_handler_1 = require("../utils/async-handler");
 const errors_1 = require("../errors");
 const response_1 = require("../utils/response");
 const post_model_1 = require("../models/post.model");
 const post_service_1 = require("../services/post.service");
+const interaction_tracker_service_1 = require("../services/interaction-tracker.service");
+const user_interaction_model_1 = require("../models/user-interaction.model");
+const feed_analytics_service_1 = require("../services/feed-analytics.service");
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function validateVisibility(visibility) {
     if (!Object.values(post_model_1.PostVisibility).includes(visibility)) {
@@ -36,20 +40,71 @@ exports.getTrendingPosts = (0, async_handler_1.asyncHandler)(async (req, res) =>
 });
 /**
  * @route   GET /api/posts/feed
- * @desc    Lấy feed bài viết của user hiện tại (từ những người đang follow)
+ * @query   tab=friends | explore (mặc định: explore)
+ * @desc    Tab "friends": bài từ bạn bè/bạn thân (người đang follow), sort mới nhất. Tab "explore": feed khám phá đề xuất cá nhân hóa.
  * @access  Private
  */
 exports.getFeedPosts = (0, async_handler_1.asyncHandler)(async (req, res) => {
     const userId = req.user?.userId;
-    const { page: pageStr, limit: limitStr } = req.query;
+    const { page: pageStr, limit: limitStr, tab: tabStr } = req.query;
     const page = parseInt(pageStr) || 1;
     const limit = parseInt(limitStr) || 10;
+    const tab = tabStr === "friends" ? "friends" : "explore";
     if (page < 1)
         throw new errors_1.ValidationError("Số trang phải lớn hơn 0");
     if (limit < 1 || limit > 50)
         throw new errors_1.ValidationError("Limit phải từ 1 đến 50");
-    const result = await post_service_1.PostService.getFeedPosts(userId, page, limit);
+    const result = await post_service_1.PostService.getFeedPosts(userId, page, limit, tab);
     (0, response_1.sendPaginated)(res, result.posts, result.pagination);
+});
+/**
+ * @route   POST /api/posts/feed/feedback
+ * @desc    Nhận feedback để điều chỉnh profile recommendation
+ * @access  Private
+ */
+exports.submitFeedFeedback = (0, async_handler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user?.userId;
+    const { postId, feedbackType, tab } = req.body;
+    if (!postId || !feedbackType) {
+        throw new errors_1.ValidationError("postId và feedbackType là bắt buộc");
+    }
+    if (!mongoose_1.Types.ObjectId.isValid(postId)) {
+        throw new errors_1.ValidationError("postId không hợp lệ", "INVALID_POST_ID");
+    }
+    const feedbackToInteraction = {
+        hide: user_interaction_model_1.InteractionType.HIDE,
+        not_interested: user_interaction_model_1.InteractionType.NOT_INTERESTED,
+        see_more: user_interaction_model_1.InteractionType.SEE_MORE,
+    };
+    const interactionType = feedbackToInteraction[feedbackType];
+    if (!interactionType) {
+        throw new errors_1.ValidationError("feedbackType không hợp lệ. Chỉ chấp nhận: hide, not_interested, see_more", "INVALID_FEEDBACK_TYPE");
+    }
+    const source = tab === "friends" ? user_interaction_model_1.InteractionSource.FEED : user_interaction_model_1.InteractionSource.EXPLORE;
+    const payload = {
+        userId,
+        postId,
+        type: interactionType,
+        source,
+    };
+    await interaction_tracker_service_1.interactionTrackerService.track(payload);
+    (0, response_1.sendSuccess)(res, { postId, feedbackType, source }, "Đã ghi nhận phản hồi feed");
+});
+/**
+ * @route   GET /api/posts/feed/metrics
+ * @query   days=7&tab=friends|explore
+ * @desc    Tổng hợp CTR/engagement cho feed recommendation
+ * @access  Private
+ */
+exports.getFeedMetrics = (0, async_handler_1.asyncHandler)(async (req, res) => {
+    const { days: daysStr, tab: tabStr } = req.query;
+    const days = daysStr ? Number.parseInt(daysStr, 10) : 7;
+    if (Number.isNaN(days) || days < 1 || days > 90) {
+        throw new errors_1.ValidationError("days phải nằm trong khoảng 1 đến 90");
+    }
+    const tab = tabStr === "friends" || tabStr === "explore" ? tabStr : undefined;
+    const metrics = await feed_analytics_service_1.feedAnalyticsService.getMetrics(days, tab);
+    (0, response_1.sendSuccess)(res, metrics);
 });
 /**
  * @route   GET /api/posts/stats/count

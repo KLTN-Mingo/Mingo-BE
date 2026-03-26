@@ -20,7 +20,6 @@ const PostMentionSchema = new mongoose_1.Schema({
     timestamps: { createdAt: true, updatedAt: false },
 });
 // Indexes
-PostMentionSchema.index({ postId: 1 });
 PostMentionSchema.index({ mentionedUserId: 1, createdAt: -1 });
 // Prevent duplicate mentions
 PostMentionSchema.index({ postId: 1, mentionedUserId: 1 }, { unique: true });

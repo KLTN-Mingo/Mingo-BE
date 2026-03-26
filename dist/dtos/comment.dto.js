@@ -40,7 +40,7 @@ exports.PaginatedCommentsDto = PaginatedCommentsDto;
 function toCommentResponse(comment, options = {}) {
     return {
         id: comment._id.toString(),
-        postId: comment.postId.toString(),
+        postId: comment.postId?.toString() ?? "",
         userId: comment.userId.toString(),
         user: options.user,
         contentText: comment.contentText,

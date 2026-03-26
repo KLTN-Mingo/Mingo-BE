@@ -1,5 +1,38 @@
 "use strict";
 // src/services/post.service.ts
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostService = void 0;
 const date_fns_1 = require("date-fns");
@@ -14,6 +47,7 @@ const post_mention_model_1 = require("../models/post-mention.model");
 const like_model_1 = require("../models/like.model");
 const comment_model_1 = require("../models/comment.model");
 const user_model_1 = require("../models/user.model");
+const topic_extractor_service_1 = require("./topic-extractor.service");
 // ─── Helper: load related data cho một post ───────────────────────────────────
 async function loadPostRelations(postId, currentUserId) {
     const post = await post_model_1.PostModel.findById(postId).lean();
@@ -73,39 +107,12 @@ exports.PostService = {
         }));
     },
     // ── Get feed ───────────────────────────────────────────────────────────────
-    async getFeedPosts(userId, page, limit) {
-        const skip = (page - 1) * limit;
-        const currentUser = await user_model_1.UserModel.findById(userId)
-            .select("following")
-            .lean();
-        const followingIds = currentUser?.following?.map((id) => id.toString()) ?? [];
-        const relatedIds = [userId, ...followingIds];
-        const [posts, total] = await Promise.all([
-            post_model_1.PostModel.find({ userId: { $in: relatedIds }, isHidden: false })
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            post_model_1.PostModel.countDocuments({
-                userId: { $in: relatedIds },
-                isHidden: false,
-            }),
-        ]);
-        const postDtos = await Promise.all(posts.map(async (post) => {
-            const relations = await loadPostRelations(post._id, userId);
-            return (0, post_dto_1.toPostResponse)(post, relations);
-        }));
-        const totalPages = Math.ceil(total / limit);
-        return {
-            posts: postDtos,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages,
-                hasMore: page < totalPages,
-            },
-        };
+    async getFeedPosts(userId, page, limit, tab = "explore") {
+        const { FeedService } = await Promise.resolve().then(() => __importStar(require("./feed.service")));
+        if (tab === "friends") {
+            return FeedService.getFriendsFeed(userId, page, limit);
+        }
+        return FeedService.getPersonalizedFeed(userId, page, limit);
     },
     // ── Get single post ────────────────────────────────────────────────────────
     async getPostById(postId, currentUserId) {
@@ -165,6 +172,12 @@ exports.PostService = {
     },
     // ── Create post ────────────────────────────────────────────────────────────
     async createPost(userId, dto) {
+        const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
+        const topics = topic_extractor_service_1.topicExtractorService.extract({
+            contentText: dto.contentText,
+            hashtags: dto.hashtags ?? [],
+            mediaTypes,
+        });
         const post = await post_model_1.PostModel.create({
             userId: new mongoose_1.Types.ObjectId(userId),
             contentText: dto.contentText,
@@ -173,6 +186,7 @@ exports.PostService = {
             locationName: dto.locationName,
             locationLatitude: dto.locationLatitude,
             locationLongitude: dto.locationLongitude,
+            topics,
         });
         if (dto.mediaFiles?.length) {
             await post_media_model_1.PostMediaModel.insertMany(dto.mediaFiles.map((m, i) => ({
@@ -211,8 +225,16 @@ exports.PostService = {
         if (post.userId.toString() !== userId) {
             throw new errors_1.ForbiddenError("Bạn không có quyền chỉnh sửa bài viết này");
         }
-        if (dto.contentText !== undefined)
+        if (dto.contentText !== undefined) {
             post.contentText = dto.contentText;
+            const currentHashtags = await post_hashtag_model_1.PostHashtagModel
+                .find({ postId: post._id })
+                .distinct("hashtag");
+            post.topics = topic_extractor_service_1.topicExtractorService.extract({
+                contentText: dto.contentText,
+                hashtags: currentHashtags,
+            });
+        }
         if (dto.visibility !== undefined)
             post.visibility = dto.visibility;
         post.isEdited = true;

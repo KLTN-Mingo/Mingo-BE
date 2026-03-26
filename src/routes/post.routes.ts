@@ -5,6 +5,8 @@ import {
   getAllPosts,
   getTrendingPosts,
   getFeedPosts,
+  submitFeedFeedback,
+  getFeedMetrics,
   getPostById,
   createPost,
   updatePost,
@@ -18,10 +20,7 @@ import {
   createComment,
   createReply,
 } from "../controllers/comment.controller";
-import {
-  createMedia,
-  getPostMedia,
-} from "../controllers/media.controller";
+import { createMedia, getPostMedia } from "../controllers/media.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -29,6 +28,8 @@ const router = Router();
 // ── Special routes (trước :id để tránh conflict) ──────────────────────────────
 router.get("/trending", getTrendingPosts);
 router.get("/feed", authMiddleware, getFeedPosts);
+router.post("/feed/feedback", authMiddleware, submitFeedFeedback);
+router.get("/feed/metrics", authMiddleware, getFeedMetrics);
 router.get("/stats/count", authMiddleware, getPostStats);
 
 // ── Post CRUD ─────────────────────────────────────────────────────────────────
@@ -45,7 +46,11 @@ router.delete("/:id/like", authMiddleware, unlikePost);
 // ── Comments của post ─────────────────────────────────────────────────────────
 router.get("/:postId/comments", authMiddleware, getPostComments);
 router.post("/:postId/comments", authMiddleware, createComment);
-router.post("/:postId/comments/:commentId/replies", authMiddleware, createReply);
+router.post(
+  "/:postId/comments/:commentId/replies",
+  authMiddleware,
+  createReply
+);
 
 // ── Media của post ────────────────────────────────────────────────────────────
 router.get("/:postId/media", authMiddleware, getPostMedia);

@@ -209,8 +209,6 @@ export const CommentService = {
       postId: new Types.ObjectId(postId),
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
-      parentCommentId: null,
-      originalCommentId: null,
     });
 
     // Tăng commentsCount của post
@@ -245,8 +243,12 @@ export const CommentService = {
       postId: new Types.ObjectId(postId),
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
-      parentCommentId: new Types.ObjectId(dto.parentCommentId),
-      originalCommentId: new Types.ObjectId(dto.originalCommentId),
+      parentCommentId: dto.parentCommentId
+        ? new Types.ObjectId(dto.parentCommentId)
+        : undefined,
+      originalCommentId: dto.originalCommentId
+        ? new Types.ObjectId(dto.originalCommentId)
+        : undefined,
     });
 
     // Tăng repliesCount của originalComment và commentsCount của post

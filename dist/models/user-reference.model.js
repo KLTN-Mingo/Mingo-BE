@@ -62,7 +62,6 @@ const UserInteractionSchema = new mongoose_1.Schema({
 });
 // Indexes
 UserInteractionSchema.index({ userId: 1, createdAt: -1 });
-UserInteractionSchema.index({ postId: 1 });
 UserInteractionSchema.index({ userId: 1, liked: 1 });
 UserInteractionSchema.index({ userId: 1, source: 1, createdAt: -1 });
 // TTL index - delete interactions older than 90 days

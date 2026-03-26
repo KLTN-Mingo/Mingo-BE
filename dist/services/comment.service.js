@@ -143,8 +143,6 @@ exports.CommentService = {
             postId: new mongoose_1.Types.ObjectId(postId),
             userId: new mongoose_1.Types.ObjectId(userId),
             contentText: dto.contentText,
-            parentCommentId: null,
-            originalCommentId: null,
         });
         // Tăng commentsCount của post
         await post_model_1.PostModel.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
@@ -170,8 +168,8 @@ exports.CommentService = {
             postId: new mongoose_1.Types.ObjectId(postId),
             userId: new mongoose_1.Types.ObjectId(userId),
             contentText: dto.contentText,
-            parentCommentId: new mongoose_1.Types.ObjectId(dto.parentCommentId),
-            originalCommentId: new mongoose_1.Types.ObjectId(dto.originalCommentId),
+            parentCommentId: dto.parentCommentId ? new mongoose_1.Types.ObjectId(dto.parentCommentId) : undefined,
+            originalCommentId: dto.originalCommentId ? new mongoose_1.Types.ObjectId(dto.originalCommentId) : undefined,
         });
         // Tăng repliesCount của originalComment và commentsCount của post
         await Promise.all([
