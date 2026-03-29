@@ -109,7 +109,10 @@ export function toCommentResponse(
 ): CommentResponseDto {
   return {
     id: comment._id.toString(),
-    postId: comment.postId.toString(),
+    postId:
+      comment.postId?.toString() ??
+      comment.mediaId?.toString() ??
+      "",
     userId: comment.userId.toString(),
     user: options.user,
 
