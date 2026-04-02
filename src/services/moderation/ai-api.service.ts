@@ -76,12 +76,10 @@ function getFetch(): typeof fetch {
 export const AIApiService = {
   async analyzeContent(text: string): Promise<AIScoreResult> {
     try {
-      console.log("API KEY:", process.env.GEMINI_API_KEY);
       console.log("🤖 [AI] analyzeContent called");
       console.log("📄 Content:", text);
 
       const apiKey = process.env.GEMINI_API_KEY;
-      console.log("🔑 API KEY exists:", !!apiKey);
 
       // ❌ Không có key → fallback
       if (!apiKey) {
@@ -176,6 +174,145 @@ ${safe}
         toxic: 0.2,
         hateSpeech: 0,
         spam: 0.2,
+        reason: "fallback_exception",
+      };
+    }
+  },
+
+  async analyzeImage(imageUrl: string): Promise<AIScoreResult> {
+    try {
+      console.log("🤖 [AI] analyzeImage called");
+      console.log("📄 Image URL:", imageUrl);
+
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (!apiKey) {
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "no_api_key",
+        };
+      }
+
+      const fetchImpl = getFetch();
+
+      let imageRes: Response;
+      try {
+        imageRes = await fetchImpl(imageUrl);
+      } catch (err) {
+        console.warn("⚠️ [AI] Image fetch failed:", err);
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "image_fetch_error",
+        };
+      }
+
+      if (!imageRes.ok) {
+        console.warn("⚠️ [AI] Image fetch HTTP error:", imageRes.status);
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "image_fetch_error",
+        };
+      }
+
+      let arrayBuffer: ArrayBuffer;
+      try {
+        arrayBuffer = await imageRes.arrayBuffer();
+      } catch (err) {
+        console.warn("⚠️ [AI] Image buffer read failed:", err);
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "image_fetch_error",
+        };
+      }
+
+      const base64String = Buffer.from(arrayBuffer).toString("base64");
+      const mimeType = imageRes.headers.get("content-type") || "image/jpeg";
+
+      const prompt = `You are an image content safety classifier for a Vietnamese social network.
+Analyze this image and return ONLY valid JSON:
+{"toxic": number 0-1, "hate_speech": number 0-1, "spam": number 0-1, "reason": string}
+Check for: nudity/18+, violence, weapons, drugs, hate symbols.
+If image is safe return low scores and reason="clean".`;
+
+      console.log("📤 [AI] Sending multimodal request...");
+
+      const res = await fetchImpl(`${API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType,
+                    data: base64String,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("📥 [AI] Raw response:", JSON.stringify(data));
+
+      if (!res.ok) {
+        console.warn("⚠️ [AI] HTTP error:", res.status);
+
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "fallback_http_error",
+        };
+      }
+
+      const output = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+      const parsed = parseAiJson(output);
+
+      if (!parsed) {
+        console.warn("⚠️ [AI] Parse failed");
+
+        return {
+          toxic: 0,
+          hateSpeech: 0,
+          spam: 0,
+          reason: "fallback_parse_error",
+        };
+      }
+
+      const result: AIScoreResult = {
+        toxic: clamp01(parsed.toxic ?? 0),
+        hateSpeech: clamp01(parsed.hate_speech ?? 0),
+        spam: clamp01(parsed.spam ?? 0),
+        reason: parsed.reason || "ok",
+      };
+
+      console.log("✅ [AI RESULT]:", result);
+
+      return result;
+    } catch (error) {
+      console.error("💥 [AI ERROR]:", error);
+
+      return {
+        toxic: 0,
+        hateSpeech: 0,
+        spam: 0,
         reason: "fallback_exception",
       };
     }

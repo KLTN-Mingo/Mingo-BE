@@ -191,4 +191,60 @@ export const ModerationService = {
       throw new NotFoundError("Không tìm thấy bình luận");
     }
   },
+
+  async moderateImage(
+    imageUrl: string,
+    postId: string,
+    context?: ModerationContext
+  ): Promise<void> {
+    try {
+      const shouldScan =
+        (context?.reportCount ?? 0) > 0 ||
+        context?.isNewAccount === true ||
+        Math.random() < 0.05;
+
+      console.log(
+        "🖼️ [Image Moderation] shouldScan:",
+        shouldScan,
+        "postId:",
+        postId
+      );
+
+      if (!shouldScan) {
+        await PostModel.findByIdAndUpdate(
+          postId,
+          { moderationStatus: ModerationStatus.APPROVED },
+          { new: true }
+        );
+        console.log("🖼️ [Image Result]:", {
+          status: ModerationStatus.APPROVED,
+          isHidden: false,
+          scores: null,
+        });
+        return;
+      }
+
+      const scores = await AIApiService.analyzeImage(imageUrl);
+      const risk = Math.max(scores.toxic, scores.hateSpeech, scores.spam);
+      const { status, isHidden } = decideFromAiScores(scores);
+
+      console.log("🖼️ [Image Result]:", { status, isHidden, scores });
+
+      await PostModel.findByIdAndUpdate(
+        postId,
+        {
+          aiToxicScore: scores.toxic,
+          aiHateSpeechScore: scores.hateSpeech,
+          aiSpamScore: scores.spam,
+          aiOverallRisk: risk,
+          moderationStatus: status,
+          isHidden,
+          ...(isHidden && { hiddenReason: scores.reason.slice(0, 500) }),
+        },
+        { new: true }
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  },
 };

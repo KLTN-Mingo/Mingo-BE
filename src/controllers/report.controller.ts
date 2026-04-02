@@ -4,11 +4,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
 import { sendCreated, sendSuccess } from "../utils/response";
-import {
-  ValidationError,
-  ForbiddenError,
-  NotFoundError,
-} from "../errors";
+import { ValidationError, ForbiddenError, NotFoundError } from "../errors";
 import {
   ReportModel,
   ReportTargetType,
@@ -18,6 +14,7 @@ import {
 import { PostModel } from "../models/post.model";
 import { CommentModel } from "../models/comment.model";
 import { ModerationService } from "../services/moderation/moderation.service";
+import { PostMediaModel } from "../models/post-media.model"; // 👈 thêm
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +47,7 @@ function toTargetType(entityType: "post" | "comment"): ReportTargetType {
  * @body    { entityType, entityId, reason, description? }
  * @access  Private
  */
+
 export const createReport = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(req);
@@ -60,8 +58,12 @@ export const createReport = asyncHandler(
       description?: string;
     };
 
-    const { entityType: rawType, entityId, reason: rawReason, description } =
-      body;
+    const {
+      entityType: rawType,
+      entityId,
+      reason: rawReason,
+      description,
+    } = body;
 
     if (!rawType || !isReportEntityType(rawType)) {
       throw new ValidationError(
@@ -141,6 +143,7 @@ export const createReport = asyncHandler(
       targetId: oid,
     });
 
+    // ✅ 1. Moderation TEXT (giữ nguyên)
     if (contentText.trim()) {
       void ModerationService.moderateAndUpdate(
         rawType,
@@ -150,6 +153,27 @@ export const createReport = asyncHandler(
       ).catch((err) =>
         console.error("[Moderation] Report-trigger error:", err)
       );
+    }
+
+    // ✅ 2. Moderation IMAGE (THÊM MỚI)
+    if (rawType === "post") {
+      const mediaList = await PostMediaModel.find({
+        postId: oid,
+        mediaType: { $in: ["image", "video"] },
+      }).lean();
+
+      for (const media of mediaList) {
+        const scanUrl =
+          media.mediaType === "image" ? media.mediaUrl : media.thumbnailUrl;
+
+        if (!scanUrl) continue;
+
+        void ModerationService.moderateImage(scanUrl, oid.toString(), {
+          reportCount,
+        }).catch((err) =>
+          console.error("[Image Moderation] Report-trigger error:", err)
+        );
+      }
     }
 
     sendCreated(
@@ -165,47 +189,49 @@ export const createReport = asyncHandler(
  * @query   page (default 1), limit (default 10)
  * @access  Private
  */
-export const getMyReports = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const q = req.query as Record<string, string | undefined>;
-  const page = Math.max(1, parseInt(q.page ?? "1", 10) || 1);
-  const limit = Math.min(
-    50,
-    Math.max(1, parseInt(q.limit ?? "10", 10) || 10)
-  );
-  const skip = (page - 1) * limit;
+export const getMyReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const q = req.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(q.page ?? "1", 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(q.limit ?? "10", 10) || 10)
+    );
+    const skip = (page - 1) * limit;
 
-  const filter = { reporterId: userId };
+    const filter = { reporterId: userId };
 
-  const [rows, total] = await Promise.all([
-    ReportModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    ReportModel.countDocuments(filter),
-  ]);
+    const [rows, total] = await Promise.all([
+      ReportModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      ReportModel.countDocuments(filter),
+    ]);
 
-  const items = rows.map((r) => ({
-    id: r._id.toString(),
-    targetType: r.targetType,
-    targetId: r.targetId.toString(),
-    reason: r.reason,
-    description: r.description,
-    status: r.status,
-    createdAt: r.createdAt,
-  }));
+    const items = rows.map((r) => ({
+      id: r._id.toString(),
+      targetType: r.targetType,
+      targetId: r.targetId.toString(),
+      reason: r.reason,
+      description: r.description,
+      status: r.status,
+      createdAt: r.createdAt,
+    }));
 
-  const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
-  sendSuccess(res, {
-    items,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasMore: page < totalPages,
-    },
-  });
-});
+    sendSuccess(res, {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    });
+  }
+);
