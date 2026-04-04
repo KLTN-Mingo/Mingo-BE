@@ -17,6 +17,7 @@ import {
   InteractionSource,
 } from "../models/user-interaction.model";
 import { feedAnalyticsService } from "../services/feed-analytics.service";
+import { validateObjectId } from "../utils/validators";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -287,7 +288,8 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
 export const updatePost = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const userId = (req as any).user?.userId as string;
-  const { contentText, contentRichText, visibility } = req.body as UpdatePostDto;
+  const { contentText, contentRichText, visibility } =
+    req.body as UpdatePostDto;
 
   if (!contentText && !visibility && contentRichText === undefined) {
     throw new ValidationError("Cần có ít nhất một trường để cập nhật");
@@ -431,9 +433,7 @@ export const sharePost = asyncHandler(async (req: Request, res: Response) => {
 
   const allowed = ["feed", "message", "external"] as const;
   if (!allowed.includes(sharedTo)) {
-    throw new ValidationError(
-      "sharedTo phải là feed, message hoặc external"
-    );
+    throw new ValidationError("sharedTo phải là feed, message hoặc external");
   }
 
   await PostService.sharePost(id, userId, sharedTo, caption);
@@ -447,3 +447,31 @@ export const sharePost = asyncHandler(async (req: Request, res: Response) => {
 
   sendSuccess(res, null, "Đã chia sẻ bài viết");
 });
+
+/**
+ * @route   GET /api/posts/user/:userId
+ * @desc    Bài viết gần đây của user (phân trang)
+ * @access  Private
+ */
+export const getPostsByUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    const { page: pageStr, limit: limitStr } = req.query as Record<
+      string,
+      string
+    >;
+
+    validateObjectId(userId, "User ID");
+
+    const page = parseInt(pageStr, 10) || 1;
+    const limit = parseInt(limitStr, 10) || 10;
+
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+    if (limit < 1 || limit > 20) {
+      throw new ValidationError("Limit phải từ 1 đến 20");
+    }
+
+    const result = await PostService.getPostsByUser(userId, page, limit);
+    sendPaginated(res, result.posts, result.pagination);
+  }
+);

@@ -110,6 +110,7 @@ const PostSchema = new Schema<IPost>(
 PostSchema.index({ userId: 1, createdAt: -1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ moderationStatus: 1 });
+PostSchema.index({ moderationStatus: 1, createdAt: -1 });
 PostSchema.index({ likesCount: -1 });
 PostSchema.index({ hotScore: -1 });
 PostSchema.index({ userId: 1, visibility: 1, createdAt: -1 });

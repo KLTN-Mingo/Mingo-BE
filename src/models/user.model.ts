@@ -161,6 +161,7 @@ const UserSchema = new Schema<IUser>(
 );
 
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ isActive: 1, createdAt: -1 });
 UserSchema.index({ name: "text" });
 
 export const UserModel = model<IUser>("User", UserSchema);

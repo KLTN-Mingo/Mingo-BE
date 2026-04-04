@@ -18,6 +18,7 @@ import {
   savePost,
   unsavePost,
   sharePost,
+  getPostsByUser,
 } from "../controllers/post.controller";
 import {
   getPostComments,
@@ -42,6 +43,7 @@ router.post("/", authMiddleware, createPost);
 router.get("/:id", authMiddleware, getPostById);
 router.put("/:id", authMiddleware, updatePost);
 router.delete("/:id", authMiddleware, deletePost);
+router.get("/user/:userId", authMiddleware, getPostsByUser);
 
 // ── Like / Unlike post ────────────────────────────────────────────────────────
 router.post("/:id/like", authMiddleware, likePost);

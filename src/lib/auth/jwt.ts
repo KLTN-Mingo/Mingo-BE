@@ -50,10 +50,10 @@ export function generateTwoFactorPendingToken(userId: string) {
 }
 
 export function verifyTwoFactorPendingToken(token: string): string {
-  const payload = jwt.verify(
-    token,
-    isRS256 ? PUBLIC_KEY! : SECRET!
-  ) as { userId?: string; purpose?: string };
+  const payload = jwt.verify(token, isRS256 ? PUBLIC_KEY! : SECRET!) as {
+    userId?: string;
+    purpose?: string;
+  };
   if (payload.purpose !== "2fa_pending" || !payload.userId) {
     throw new Error("Invalid 2FA pending token");
   }

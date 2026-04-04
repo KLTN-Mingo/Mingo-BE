@@ -109,5 +109,7 @@ const ReportSchema = new Schema<IReport>(
 
 ReportSchema.index({ reporterId: 1, targetType: 1, targetId: 1 });
 ReportSchema.index({ status: 1, createdAt: -1 });
+ReportSchema.index({ status: 1, reason: 1, createdAt: -1 });
+ReportSchema.index({ reason: 1, createdAt: -1 });
 
 export const ReportModel = model<IReport>("Report", ReportSchema);

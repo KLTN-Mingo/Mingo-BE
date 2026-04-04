@@ -223,9 +223,7 @@ export const CommentService = {
         {
           reportCount: 0,
         }
-      ).catch((err) =>
-        console.error("[Moderation] Comment error:", err)
-      );
+      ).catch((err) => console.error("[Moderation] Comment error:", err));
     }
 
     return this.getCommentById(comment._id.toString(), userId);
@@ -281,9 +279,7 @@ export const CommentService = {
         {
           reportCount: 0,
         }
-      ).catch((err) =>
-        console.error("[Moderation] Reply error:", err)
-      );
+      ).catch((err) => console.error("[Moderation] Reply error:", err));
     }
 
     const { user, isLiked } = await populateCommentUser(reply, userId);

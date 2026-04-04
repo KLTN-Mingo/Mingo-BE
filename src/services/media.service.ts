@@ -18,8 +18,8 @@ import {
   toMediaResponse,
   toMediaDetail,
 } from "../dtos/media.dto";
+import { ModerationService } from "./moderation/moderation.service";
 
-//sxsnjscdcd
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
   if (!Types.ObjectId.isValid(id)) {
@@ -65,6 +65,32 @@ export const MediaService = {
       fileSize: dto.fileSize,
       orderIndex: dto.orderIndex || 0,
     });
+
+    // Chỉ scan ảnh và video, bỏ qua raw/other
+    if (dto.mediaType === "image" || dto.mediaType === "video") {
+      // Lấy URL để scan:
+      // - Ảnh: dùng trực tiếp mediaUrl
+      // - Video: dùng thumbnailUrl nếu có, nếu không thì skip
+      const scanUrl =
+        dto.mediaType === "image" ? dto.mediaUrl : (dto.thumbnailUrl ?? null);
+
+      if (scanUrl) {
+        // Lấy thông tin user để check tài khoản mới
+        const user = await UserModel.findById(userId)
+          .select("createdAt")
+          .lean();
+        const accountAgeDays = user
+          ? (Date.now() - new Date((user as any).createdAt).getTime()) /
+            86400000
+          : 999;
+
+        // Fire-and-forget — KHÔNG await, KHÔNG block response
+        void ModerationService.moderateImage(scanUrl, postId, {
+          isNewAccount: accountAgeDays < 7,
+          reportCount: 0,
+        }).catch((err) => console.error("[Media Moderation]", err));
+      }
+    }
 
     return toMediaResponse(media);
   },

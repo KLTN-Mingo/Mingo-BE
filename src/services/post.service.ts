@@ -217,7 +217,7 @@ export const PostService = {
     const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
     const topics = topicExtractorService.extract({
       contentText: dto.contentText,
-      hashtags:    dto.hashtags ?? [],
+      hashtags: dto.hashtags ?? [],
       mediaTypes,
     });
     const post = await PostModel.create({
@@ -284,9 +284,7 @@ export const PostService = {
             isNewAccount: accountAgeDays < 7,
             reportCount: 0,
           }
-        ).catch((err) =>
-          console.error("[Moderation] Post error:", err)
-        );
+        ).catch((err) => console.error("[Moderation] Post error:", err));
       } catch (err) {
         console.error("[Moderation] Post error:", err);
       }
@@ -317,13 +315,13 @@ export const PostService = {
     if (dto.contentText !== undefined) {
       post.contentText = dto.contentText;
 
-      const currentHashtags = await PostHashtagModel
-        .find({ postId: post._id })
-        .distinct("hashtag");
+      const currentHashtags = await PostHashtagModel.find({
+        postId: post._id,
+      }).distinct("hashtag");
 
       post.topics = topicExtractorService.extract({
         contentText: dto.contentText,
-        hashtags:    currentHashtags,
+        hashtags: currentHashtags,
       });
     }
     if (dto.contentRichText !== undefined) {
@@ -553,5 +551,52 @@ export const PostService = {
       caption: caption?.slice(0, 2000),
     });
     await PostModel.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
+  },
+
+  async getPostsByUser(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{
+    posts: Array<{
+      id: string;
+      contentText?: string;
+      createdAt: Date;
+      likesCount: number;
+      commentsCount: number;
+    }>;
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const oid = new Types.ObjectId(userId);
+
+    const userExists = await UserModel.exists({ _id: oid });
+    if (!userExists) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${userId}`);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [total, rows] = await Promise.all([
+      PostModel.countDocuments({ userId: oid }),
+      PostModel.find({ userId: oid })
+        .select("contentText createdAt likesCount commentsCount")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const posts = rows.map((p) => ({
+      id: p._id.toString(),
+      contentText: p.contentText,
+      createdAt: p.createdAt,
+      likesCount: p.likesCount,
+      commentsCount: p.commentsCount,
+    }));
+
+    return {
+      posts,
+      pagination: { page, limit, total },
+    };
   },
 };

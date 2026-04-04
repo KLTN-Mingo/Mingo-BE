@@ -1,10 +1,7 @@
 // src/services/moderation/moderation.service.ts
 
 import { Types } from "mongoose";
-import {
-  ModerationStatus,
-  PostModel,
-} from "../../models/post.model";
+import { ModerationStatus, PostModel } from "../../models/post.model";
 import {
   CommentModel,
   CommentModerationStatus,
@@ -40,9 +37,19 @@ function scoresFromRule(rule: RuleCheckResult): AIScoreResult {
   const t = rule.violationType;
   const base = rule.score;
   return {
-    toxic: t === "profanity" || t === "too_short" ? base : t === "hate_speech" ? base * 0.9 : base * 0.4,
+    toxic:
+      t === "profanity" || t === "too_short"
+        ? base
+        : t === "hate_speech"
+          ? base * 0.9
+          : base * 0.4,
     hateSpeech: t === "hate_speech" ? base : 0,
-    spam: t === "spam" || t === "spam_soft" ? base : t === "profanity" ? 0 : base * 0.3,
+    spam:
+      t === "spam" || t === "spam_soft"
+        ? base
+        : t === "profanity"
+          ? 0
+          : base * 0.3,
     reason: rule.reason ?? "rule",
   };
 }
@@ -166,11 +173,9 @@ export const ModerationService = {
         baseUpdate.hiddenReason = result.scores.reason.slice(0, 500);
       }
 
-      const updated = await PostModel.findByIdAndUpdate(
-        entityId,
-        baseUpdate,
-        { new: true }
-      ).lean();
+      const updated = await PostModel.findByIdAndUpdate(entityId, baseUpdate, {
+        new: true,
+      }).lean();
 
       if (!updated) {
         throw new NotFoundError("Không tìm thấy bài viết");
@@ -189,6 +194,62 @@ export const ModerationService = {
 
     if (!updated) {
       throw new NotFoundError("Không tìm thấy bình luận");
+    }
+  },
+
+  async moderateImage(
+    imageUrl: string,
+    postId: string,
+    context?: ModerationContext
+  ): Promise<void> {
+    try {
+      const shouldScan =
+        (context?.reportCount ?? 0) > 0 ||
+        context?.isNewAccount === true ||
+        Math.random() < 0.05;
+
+      console.log(
+        "🖼️ [Image Moderation] shouldScan:",
+        shouldScan,
+        "postId:",
+        postId
+      );
+
+      if (!shouldScan) {
+        await PostModel.findByIdAndUpdate(
+          postId,
+          { moderationStatus: ModerationStatus.APPROVED },
+          { new: true }
+        );
+        console.log("🖼️ [Image Result]:", {
+          status: ModerationStatus.APPROVED,
+          isHidden: false,
+          scores: null,
+        });
+        return;
+      }
+
+      const scores = await AIApiService.analyzeImage(imageUrl);
+      const risk = Math.max(scores.toxic, scores.hateSpeech, scores.spam);
+      const { status, isHidden } = decideFromAiScores(scores);
+
+      console.log("🖼️ [Image Result]:", { status, isHidden, scores });
+
+      await PostModel.findByIdAndUpdate(
+        postId,
+        {
+          aiToxicScore: scores.toxic,
+          aiHateSpeechScore: scores.hateSpeech,
+          aiSpamScore: scores.spam,
+          aiOverallRisk: risk,
+          moderationStatus: status,
+          isHidden,
+          ...(isHidden && { hiddenReason: scores.reason.slice(0, 500) }),
+        },
+        { new: true }
+      );
+    } catch (error) {
+      console.error(error);
     }
   },
 };

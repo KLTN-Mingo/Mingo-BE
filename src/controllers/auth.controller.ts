@@ -168,11 +168,12 @@ export const googleLogin = asyncHandler(async (req: Request, res: Response) => {
 
   const raw = process.env.GOOGLE_CLIENT_ID?.trim();
   if (!raw) {
-    throw new ValidationError(
-      "Chưa cấu hình GOOGLE_CLIENT_ID trên server"
-    );
+    throw new ValidationError("Chưa cấu hình GOOGLE_CLIENT_ID trên server");
   }
-  const audiences = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const audiences = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const client = new OAuth2Client();
   let payload: Record<string, unknown> | undefined;
@@ -197,9 +198,7 @@ export const googleLogin = asyncHandler(async (req: Request, res: Response) => {
 
   const googleId = sub;
   const gEmail =
-    typeof payload.email === "string"
-      ? payload.email.toLowerCase()
-      : undefined;
+    typeof payload.email === "string" ? payload.email.toLowerCase() : undefined;
 
   let user = await UserModel.findOne({
     $or: [{ googleId }, ...(gEmail ? [{ email: gEmail }] : [])],
