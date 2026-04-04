@@ -1,10 +1,6 @@
 // src/services/feed.service.ts
 
 import { Types } from "mongoose";
-<<<<<<< HEAD
-import { PostModel, PostVisibility, ModerationStatus } from "../models/post.model";
-import { FollowModel, FollowStatus, CloseFriendStatus } from "../models/follow.model";
-=======
 import {
   PostModel,
   PostVisibility,
@@ -15,7 +11,6 @@ import {
   FollowStatus,
   CloseFriendStatus,
 } from "../models/follow.model";
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 import { UserProfileModel } from "../models/user-profile.model";
 import { scoringService } from "./scoring.service";
 import {
@@ -34,15 +29,10 @@ import { PostMediaModel } from "../models/post-media.model";
 import { PostHashtagModel } from "../models/post-hashtag.model";
 import { PostMentionModel } from "../models/post-mention.model";
 import { LikeModel } from "../models/like.model";
-<<<<<<< HEAD
-import { UserModel } from "../models/user.model";
-import { toUserMinimal } from "../dtos/user.dto";
-=======
 import { SavedPostModel } from "../models/saved-post.model";
 import { UserModel } from "../models/user.model";
 import { toUserMinimal } from "../dtos/user.dto";
 import { feedAnalyticsService } from "./feed-analytics.service";
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 
 export interface SocialIds {
   followingIds: Set<string>;
@@ -67,14 +57,7 @@ async function getSocialIds(userId: string): Promise<SocialIds> {
       .select("followerId")
       .lean(),
     FollowModel.find({
-<<<<<<< HEAD
-      $or: [
-        { followerId: userObjectId },
-        { followingId: userObjectId },
-      ],
-=======
       $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
       closeFriendStatus: CloseFriendStatus.ACCEPTED,
     })
       .select("followerId followingId")
@@ -181,11 +164,7 @@ async function loadPostRelationsForFeedBatch(
   );
   const currentUserObjectId = new Types.ObjectId(currentUserId);
 
-<<<<<<< HEAD
-  const [authors, mediaRows, hashtagRows, mentionRows, likeRows] =
-=======
   const [authors, mediaRows, hashtagRows, mentionRows, likeRows, savedRows] =
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     await Promise.all([
       UserModel.find({ _id: { $in: authorIds } }).lean(),
       PostMediaModel.find({ postId: { $in: postIds } })
@@ -201,15 +180,12 @@ async function loadPostRelationsForFeedBatch(
       })
         .select("postId")
         .lean(),
-<<<<<<< HEAD
-=======
       SavedPostModel.find({
         postId: { $in: postIds },
         userId: currentUserObjectId,
       })
         .select("postId")
         .lean(),
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     ]);
 
   const authorMap = new Map<string, UserMinimalDto>();
@@ -258,12 +234,9 @@ async function loadPostRelationsForFeedBatch(
   const likedPostIds = new Set(
     (likeRows as any[]).map((r) => r.postId?.toString()).filter(Boolean)
   );
-<<<<<<< HEAD
-=======
   const savedPostIds = new Set(
     (savedRows as any[]).map((r) => r.postId?.toString()).filter(Boolean)
   );
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 
   for (const post of posts) {
     const postIdStr = post._id.toString();
@@ -284,11 +257,7 @@ async function loadPostRelationsForFeedBatch(
       mentions: mentionsByPost.get(postIdStr) ?? [],
       location,
       isLiked: likedPostIds.has(postIdStr),
-<<<<<<< HEAD
-      isSaved: false,
-=======
       isSaved: savedPostIds.has(postIdStr),
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     });
   }
 
@@ -298,14 +267,10 @@ async function loadPostRelationsForFeedBatch(
 function applyExploration<T>(sorted: T[], explorationRate: number): T[] {
   if (sorted.length <= 1 || explorationRate <= 0) return sorted;
 
-<<<<<<< HEAD
-  const keepTop = Math.max(1, Math.floor(sorted.length * (1 - explorationRate)));
-=======
   const keepTop = Math.max(
     1,
     Math.floor(sorted.length * (1 - explorationRate))
   );
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
   const top = sorted.slice(0, keepTop);
   const rest = sorted.slice(keepTop);
   if (rest.length === 0) return top;
@@ -341,13 +306,9 @@ export const FeedService = {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - MAX_POST_AGE_DAYS);
 
-<<<<<<< HEAD
-    const followingObjectIds = [...social.followingIds].map((id) => new Types.ObjectId(id));
-=======
     const followingObjectIds = [...social.followingIds].map(
       (id) => new Types.ObjectId(id)
     );
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     if (followingObjectIds.length === 0) {
       return {
         posts: [],
@@ -358,13 +319,9 @@ export const FeedService = {
     const rawCandidates = await PostModel.find({
       userId: { $in: followingObjectIds },
       isHidden: false,
-<<<<<<< HEAD
-      moderationStatus: { $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING] },
-=======
       moderationStatus: {
         $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING],
       },
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
       createdAt: { $gte: cutoff },
     })
       .sort({ createdAt: -1 })
@@ -386,9 +343,6 @@ export const FeedService = {
     if (slice.length === 0) {
       return {
         posts: [],
-<<<<<<< HEAD
-        pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
-=======
         pagination: {
           page,
           limit,
@@ -396,7 +350,6 @@ export const FeedService = {
           totalPages,
           hasMore: page < totalPages,
         },
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
       };
     }
 
@@ -424,11 +377,6 @@ export const FeedService = {
       return toPostResponse(post as any, relations);
     });
 
-<<<<<<< HEAD
-    return {
-      posts,
-      pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
-=======
     try {
       await feedAnalyticsService.trackImpressions(
         userId,
@@ -454,7 +402,6 @@ export const FeedService = {
         totalPages,
         hasMore: page < totalPages,
       },
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     };
   },
 
@@ -477,27 +424,15 @@ export const FeedService = {
 
     const rawCandidates = await PostModel.find({
       isHidden: false,
-<<<<<<< HEAD
-      moderationStatus: { $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING] },
-=======
       moderationStatus: {
         $in: [ModerationStatus.APPROVED, ModerationStatus.PENDING],
       },
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
       createdAt: { $gte: cutoff },
     })
       .sort({ createdAt: -1 })
       .limit(CANDIDATE_POOL_SIZE * 2)
       .lean();
 
-<<<<<<< HEAD
-    const candidates: IPost[] = (rawCandidates as IPost[]).filter((post) => {
-      if (viewedPostIds.has(post._id.toString())) return false;
-      const authorId = post.userId?.toString();
-      if (authorId && blockedUserIds.has(authorId)) return false;
-      return canViewPost(post, userId, social);
-    }).slice(0, CANDIDATE_POOL_SIZE);
-=======
     const candidates: IPost[] = (rawCandidates as IPost[])
       .filter((post) => {
         if (viewedPostIds.has(post._id.toString())) return false;
@@ -506,7 +441,6 @@ export const FeedService = {
         return canViewPost(post, userId, social);
       })
       .slice(0, CANDIDATE_POOL_SIZE);
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 
     if (candidates.length === 0) {
       return {
@@ -564,8 +498,6 @@ export const FeedService = {
       return toPostResponse(post as any, relations);
     });
 
-<<<<<<< HEAD
-=======
     try {
       await feedAnalyticsService.trackImpressions(
         userId,
@@ -583,7 +515,6 @@ export const FeedService = {
       );
     }
 
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
     return {
       posts,
       pagination: {
@@ -595,8 +526,4 @@ export const FeedService = {
       },
     };
   },
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
