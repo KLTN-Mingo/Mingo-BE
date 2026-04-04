@@ -223,9 +223,7 @@ export const CommentService = {
         {
           reportCount: 0,
         }
-      ).catch((err) =>
-        console.error("[Moderation] Comment error:", err)
-      );
+      ).catch((err) => console.error("[Moderation] Comment error:", err));
     }
 
     return this.getCommentById(comment._id.toString(), userId);
@@ -257,8 +255,12 @@ export const CommentService = {
       postId: new Types.ObjectId(postId),
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
-      parentCommentId: new Types.ObjectId(dto.parentCommentId),
-      originalCommentId: new Types.ObjectId(dto.originalCommentId),
+      parentCommentId: dto.parentCommentId
+        ? new Types.ObjectId(dto.parentCommentId)
+        : undefined,
+      originalCommentId: dto.originalCommentId
+        ? new Types.ObjectId(dto.originalCommentId)
+        : undefined,
     });
 
     // Tăng repliesCount của originalComment và commentsCount của post
@@ -277,9 +279,7 @@ export const CommentService = {
         {
           reportCount: 0,
         }
-      ).catch((err) =>
-        console.error("[Moderation] Reply error:", err)
-      );
+      ).catch((err) => console.error("[Moderation] Reply error:", err));
     }
 
     const { user, isLiked } = await populateCommentUser(reply, userId);

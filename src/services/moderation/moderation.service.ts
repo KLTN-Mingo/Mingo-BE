@@ -1,10 +1,7 @@
 // src/services/moderation/moderation.service.ts
 
 import { Types } from "mongoose";
-import {
-  ModerationStatus,
-  PostModel,
-} from "../../models/post.model";
+import { ModerationStatus, PostModel } from "../../models/post.model";
 import {
   CommentModel,
   CommentModerationStatus,
@@ -40,9 +37,19 @@ function scoresFromRule(rule: RuleCheckResult): AIScoreResult {
   const t = rule.violationType;
   const base = rule.score;
   return {
-    toxic: t === "profanity" || t === "too_short" ? base : t === "hate_speech" ? base * 0.9 : base * 0.4,
+    toxic:
+      t === "profanity" || t === "too_short"
+        ? base
+        : t === "hate_speech"
+          ? base * 0.9
+          : base * 0.4,
     hateSpeech: t === "hate_speech" ? base : 0,
-    spam: t === "spam" || t === "spam_soft" ? base : t === "profanity" ? 0 : base * 0.3,
+    spam:
+      t === "spam" || t === "spam_soft"
+        ? base
+        : t === "profanity"
+          ? 0
+          : base * 0.3,
     reason: rule.reason ?? "rule",
   };
 }
@@ -166,11 +173,9 @@ export const ModerationService = {
         baseUpdate.hiddenReason = result.scores.reason.slice(0, 500);
       }
 
-      const updated = await PostModel.findByIdAndUpdate(
-        entityId,
-        baseUpdate,
-        { new: true }
-      ).lean();
+      const updated = await PostModel.findByIdAndUpdate(entityId, baseUpdate, {
+        new: true,
+      }).lean();
 
       if (!updated) {
         throw new NotFoundError("Không tìm thấy bài viết");

@@ -259,6 +259,7 @@ erDiagram
 
 ## Bảng mô tả nhanh
 
+<<<<<<< HEAD
 | Collection        | Mục đích |
 |-------------------|----------|
 | **User**          | Tài khoản, profile cơ bản, denormalized counts (followers, following, posts). |
@@ -275,24 +276,58 @@ erDiagram
 | **Notification**  | Thông báo cho user; entityType/entityId + postId/mediaId/commentId. |
 | **UserInteraction** | Tracking hành vi theo post (view, like, comment, share, save); weight cộng dồn; TTL 90 ngày. |
 | **RefreshToken**  | Refresh token JWT; TTL theo expiresAt. |
+=======
+| Collection          | Mục đích                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **User**            | Tài khoản, profile cơ bản, denormalized counts (followers, following, posts).                                |
+| **UserProfile**     | Cache sở thích cho Personalized Feed: topicScores, hashtagScores, authorScores; cập nhật từ UserInteraction. |
+| **Post**            | Bài viết; có topics, hotScore, engagementRate cho feed ranking.                                              |
+| **PostMedia**       | Ảnh/video của post; mỗi media có like/comment/share riêng.                                                   |
+| **PostHashtag**     | Hashtag của post (collection riêng, Post không có field hashtags).                                           |
+| **PostMention**     | User được mention trong post.                                                                                |
+| **Comment**         | Comment cho Post hoặc PostMedia; tự tham chiếu (parent/original) cho thread.                                 |
+| **Like**            | Like đa hình: Post, Comment, PostMedia (một collection, partial unique index).                               |
+| **Share**           | Share đa hình: Post hoặc PostMedia.                                                                          |
+| **Follow**          | Quan hệ follow + trạng thái bạn thân (followStatus, closeFriendStatus).                                      |
+| **Block**           | User chặn user.                                                                                              |
+| **Notification**    | Thông báo cho user; entityType/entityId + postId/mediaId/commentId.                                          |
+| **UserInteraction** | Tracking hành vi theo post (view, like, comment, share, save); weight cộng dồn; TTL 90 ngày.                 |
+| **RefreshToken**    | Refresh token JWT; TTL theo expiresAt.                                                                       |
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 
 ---
 
 ## Ghi chú quan trọng
 
 ### 1. Comment
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - **postId** và **mediaId** optional: comment thuộc post hoặc media.
 - **parentCommentId**: comment cha trực tiếp (reply).
 - **originalCommentId**: comment gốc cấp 1 của thread (để gom replies).
 
 ### 2. Like (đa hình)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - Một collection cho like post, comment, media.
 - Partial unique index: `(userId, postId)`, `(userId, commentId)`, `(userId, mediaId)` — chỉ áp dụng khi field tương ứng tồn tại, tránh duplicate key khi giá trị null.
 
 ### 3. CommentLike đã xóa
+<<<<<<< HEAD
 - Trước đây có collection CommentLike riêng; đã gộp vào **Like** với `commentId`. Mọi like comment dùng `LikeModel`.
 
 ### 4. UserInteraction
+=======
+
+- Trước đây có collection CommentLike riêng; đã gộp vào **Like** với `commentId`. Mọi like comment dùng `LikeModel`.
+
+### 4. UserInteraction
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - Mỗi cặp **(userId, postId)** một document (unique index).
 - **weight** cộng dồn bằng `$inc` (like + comment + …).
 - Không còn field **type**; dùng các boolean **viewed, liked, commented, shared, saved**.
@@ -300,29 +335,50 @@ erDiagram
 - TTL 90 ngày trên **createdAt**.
 
 ### 5. UserProfile
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - Một document per user (userId unique).
 - **topicScores, hashtagScores, authorScores**: Map&lt;string, number&gt; — cập nhật từ InteractionTracker khi track (post.topics, PostHashtag, post.userId).
 - **interactionCount** để phát hiện cold start (&lt; 10).
 
 ### 6. Post
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - **topics**: array string (NLP hoặc rule từ content).
 - **hotScore**: cache cho feed, cập nhật bởi cron (ví dụ mỗi 30 phút).
 - **engagementRate**: (likes + comments + shares) / views.
 
 ### 7. Notification
+<<<<<<< HEAD
+=======
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - **userId**: người nhận; **actorId**: người gây ra hành động.
 - **entityType** / **entityId** + **postId**, **mediaId**, **commentId** cho ngữ cảnh.
 
 ### 8. RefreshToken
+<<<<<<< HEAD
 - TTL index trên **expiresAt** → token hết hạn tự xóa.
 
 ### 9. File models khác
+=======
+
+- TTL index trên **expiresAt** → token hết hạn tự xóa.
+
+### 9. File models khác
+
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392
 - **culture-translation.model.ts**, **trending-hashtag.model.ts**, **user-reference.model.ts** hiện đang chứa nội dung trùng/giống user-interaction; không tạo collection riêng trong ERD. Cần dọn hoặc tách schema đúng nếu dùng.
 
 ---
 
 ## Source models
 
+<<<<<<< HEAD
 | File | Collection |
 |------|------------|
 | [user.model.ts](../src/models/user.model.ts) | User |
@@ -339,3 +395,21 @@ erDiagram
 | [notification.model.ts](../src/models/notification.model.ts) | Notification |
 | [user-interaction.model.ts](../src/models/user-interaction.model.ts) | UserInteraction |
 | [refresh-token.model.ts](../src/models/refresh-token.model.ts) | RefreshToken |
+=======
+| File                                                                 | Collection      |
+| -------------------------------------------------------------------- | --------------- |
+| [user.model.ts](../src/models/user.model.ts)                         | User            |
+| [user-profile.model.ts](../src/models/user-profile.model.ts)         | UserProfile     |
+| [post.model.ts](../src/models/post.model.ts)                         | Post            |
+| [post-media.model.ts](../src/models/post-media.model.ts)             | PostMedia       |
+| [post-hashtag.model.ts](../src/models/post-hashtag.model.ts)         | PostHashtag     |
+| [post-mention.model.ts](../src/models/post-mention.model.ts)         | PostMention     |
+| [comment.model.ts](../src/models/comment.model.ts)                   | Comment         |
+| [like.model.ts](../src/models/like.model.ts)                         | Like            |
+| [share.model.ts](../src/models/share.model.ts)                       | Share           |
+| [follow.model.ts](../src/models/follow.model.ts)                     | Follow          |
+| [block.model.ts](../src/models/block.model.ts)                       | Block           |
+| [notification.model.ts](../src/models/notification.model.ts)         | Notification    |
+| [user-interaction.model.ts](../src/models/user-interaction.model.ts) | UserInteraction |
+| [refresh-token.model.ts](../src/models/refresh-token.model.ts)       | RefreshToken    |
+>>>>>>> 93b79d8be9c53113febe7a59b9389b8bc2fd7392

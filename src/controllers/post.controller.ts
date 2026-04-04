@@ -1,13 +1,23 @@
 // src/controllers/post.controller.ts
 
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
 import { ValidationError } from "../errors";
 import { sendSuccess, sendPaginated } from "../utils/response";
-import { validateObjectId } from "../utils/validators";
 import { PostVisibility } from "../models/post.model";
 import { type CreatePostDto, type UpdatePostDto } from "../dtos/post.dto";
 import { PostService } from "../services/post.service";
+import {
+  interactionTrackerService,
+  type TrackPayload,
+} from "../services/interaction-tracker.service";
+import {
+  InteractionType,
+  InteractionSource,
+} from "../models/user-interaction.model";
+import { feedAnalyticsService } from "../services/feed-analytics.service";
+import { validateObjectId } from "../utils/validators";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +30,12 @@ function validateVisibility(
       "INVALID_VISIBILITY"
     );
   }
+}
+
+function trackPostInteractionSafely(payload: TrackPayload): void {
+  void interactionTrackerService.track(payload).catch((err) => {
+    console.error("[PostController] track interaction error:", err);
+  });
 }
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
@@ -59,10 +75,11 @@ export const getTrendingPosts = asyncHandler(
 export const getFeedPosts = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId as string;
-    const { page: pageStr, limit: limitStr, tab: tabStr } = req.query as Record<
-      string,
-      string
-    >;
+    const {
+      page: pageStr,
+      limit: limitStr,
+      tab: tabStr,
+    } = req.query as Record<string, string>;
 
     const page = parseInt(pageStr) || 1;
     const limit = parseInt(limitStr) || 10;
@@ -79,30 +96,81 @@ export const getFeedPosts = asyncHandler(
 );
 
 /**
- * @route   GET /api/posts/user/:userId
- * @desc    Bài viết gần đây của user (phân trang)
+ * @route   POST /api/posts/feed/feedback
+ * @desc    Nhận feedback để điều chỉnh profile recommendation
  * @access  Private
  */
-export const getPostsByUser = asyncHandler(
+export const submitFeedFeedback = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req.params as { userId: string };
-    const { page: pageStr, limit: limitStr } = req.query as Record<
-      string,
-      string
-    >;
+    const userId = (req as any).user?.userId as string;
+    const { postId, feedbackType, tab } = req.body as {
+      postId?: string;
+      feedbackType?: "hide" | "not_interested" | "see_more";
+      tab?: "friends" | "explore";
+    };
 
-    validateObjectId(userId, "User ID");
-
-    const page = parseInt(pageStr, 10) || 1;
-    const limit = parseInt(limitStr, 10) || 10;
-
-    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
-    if (limit < 1 || limit > 20) {
-      throw new ValidationError("Limit phải từ 1 đến 20");
+    if (!postId || !feedbackType) {
+      throw new ValidationError("postId và feedbackType là bắt buộc");
     }
 
-    const result = await PostService.getPostsByUser(userId, page, limit);
-    sendPaginated(res, result.posts, result.pagination);
+    if (!Types.ObjectId.isValid(postId)) {
+      throw new ValidationError("postId không hợp lệ", "INVALID_POST_ID");
+    }
+
+    const feedbackToInteraction: Record<string, InteractionType> = {
+      hide: InteractionType.HIDE,
+      not_interested: InteractionType.NOT_INTERESTED,
+      see_more: InteractionType.SEE_MORE,
+    };
+
+    const interactionType = feedbackToInteraction[feedbackType];
+    if (!interactionType) {
+      throw new ValidationError(
+        "feedbackType không hợp lệ. Chỉ chấp nhận: hide, not_interested, see_more",
+        "INVALID_FEEDBACK_TYPE"
+      );
+    }
+
+    const source =
+      tab === "friends" ? InteractionSource.FEED : InteractionSource.EXPLORE;
+
+    const payload: TrackPayload = {
+      userId,
+      postId,
+      type: interactionType,
+      source,
+    };
+
+    await interactionTrackerService.track(payload);
+
+    sendSuccess(
+      res,
+      { postId, feedbackType, source },
+      "Đã ghi nhận phản hồi feed"
+    );
+  }
+);
+
+/**
+ * @route   GET /api/posts/feed/metrics
+ * @query   days=7&tab=friends|explore
+ * @desc    Tổng hợp CTR/engagement cho feed recommendation
+ * @access  Private
+ */
+export const getFeedMetrics = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { days: daysStr, tab: tabStr } = req.query as Record<string, string>;
+
+    const days = daysStr ? Number.parseInt(daysStr, 10) : 7;
+    if (Number.isNaN(days) || days < 1 || days > 90) {
+      throw new ValidationError("days phải nằm trong khoảng 1 đến 90");
+    }
+
+    const tab =
+      tabStr === "friends" || tabStr === "explore" ? tabStr : undefined;
+    const metrics = await feedAnalyticsService.getMetrics(days, tab);
+
+    sendSuccess(res, metrics);
   }
 );
 
@@ -132,6 +200,16 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
   const currentUserId = (req as any).user?.userId as string | undefined;
 
   const post = await PostService.getPostById(id, currentUserId);
+
+  if (currentUserId) {
+    trackPostInteractionSafely({
+      userId: currentUserId,
+      postId: id,
+      type: InteractionType.VIEW,
+      source: InteractionSource.PROFILE,
+    });
+  }
+
   sendSuccess(res, post);
 });
 
@@ -144,6 +222,7 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId as string;
   const {
     contentText,
+    contentRichText,
     visibility = PostVisibility.PUBLIC,
     mediaFiles = [],
     hashtags = [],
@@ -165,6 +244,10 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError(
       "Nội dung bài viết không được vượt quá 10000 ký tự"
     );
+  }
+
+  if (contentRichText && contentRichText.length > 50000) {
+    throw new ValidationError("Rich text không được vượt quá 50000 ký tự");
   }
 
   validateVisibility(visibility);
@@ -205,9 +288,10 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
 export const updatePost = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const userId = (req as any).user?.userId as string;
-  const { contentText, visibility } = req.body as UpdatePostDto;
+  const { contentText, contentRichText, visibility } =
+    req.body as UpdatePostDto;
 
-  if (!contentText && !visibility) {
+  if (!contentText && !visibility && contentRichText === undefined) {
     throw new ValidationError("Cần có ít nhất một trường để cập nhật");
   }
 
@@ -222,12 +306,17 @@ export const updatePost = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  if (contentRichText !== undefined && contentRichText.length > 50000) {
+    throw new ValidationError("Rich text không được vượt quá 50000 ký tự");
+  }
+
   if (visibility !== undefined) {
     validateVisibility(visibility);
   }
 
   const post = await PostService.updatePost(id, userId, {
     contentText,
+    contentRichText,
     visibility,
   });
   sendSuccess(res, post, "Cập nhật bài viết thành công");
@@ -258,6 +347,14 @@ export const likePost = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId as string;
 
   await PostService.likePost(id, userId);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.LIKE,
+    source: InteractionSource.PROFILE,
+  });
+
   sendSuccess(res, null, "Đã thích bài viết");
 });
 
@@ -273,3 +370,108 @@ export const unlikePost = asyncHandler(async (req: Request, res: Response) => {
   await PostService.unlikePost(id, userId);
   sendSuccess(res, null, "Đã bỏ thích bài viết");
 });
+
+/**
+ * @route   GET /api/posts/saved
+ */
+export const getSavedPosts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId as string;
+    const page = parseInt((req.query.page as string) || "1", 10) || 1;
+    const limit = Math.min(
+      50,
+      parseInt((req.query.limit as string) || "20", 10) || 20
+    );
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+
+    const result = await PostService.getSavedPosts(userId, page, limit);
+    sendPaginated(res, result.posts, result.pagination);
+  }
+);
+
+/**
+ * @route   POST /api/posts/:id/save
+ */
+export const savePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+  const { collectionName } = req.body as { collectionName?: string };
+
+  await PostService.savePost(id, userId, collectionName);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.SAVE,
+    source: InteractionSource.PROFILE,
+  });
+
+  sendSuccess(res, null, "Đã lưu bài viết");
+});
+
+/**
+ * @route   DELETE /api/posts/:id/save
+ */
+export const unsavePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+
+  await PostService.unsavePost(id, userId);
+  sendSuccess(res, null, "Đã bỏ lưu bài viết");
+});
+
+/**
+ * @route   POST /api/posts/:id/share
+ */
+export const sharePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+  const { sharedTo = "feed", caption } = req.body as {
+    sharedTo?: "feed" | "message" | "external";
+    caption?: string;
+  };
+
+  const allowed = ["feed", "message", "external"] as const;
+  if (!allowed.includes(sharedTo)) {
+    throw new ValidationError("sharedTo phải là feed, message hoặc external");
+  }
+
+  await PostService.sharePost(id, userId, sharedTo, caption);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.SHARE,
+    source: InteractionSource.PROFILE,
+  });
+
+  sendSuccess(res, null, "Đã chia sẻ bài viết");
+});
+
+/**
+ * @route   GET /api/posts/user/:userId
+ * @desc    Bài viết gần đây của user (phân trang)
+ * @access  Private
+ */
+export const getPostsByUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    const { page: pageStr, limit: limitStr } = req.query as Record<
+      string,
+      string
+    >;
+
+    validateObjectId(userId, "User ID");
+
+    const page = parseInt(pageStr, 10) || 1;
+    const limit = parseInt(limitStr, 10) || 10;
+
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+    if (limit < 1 || limit > 20) {
+      throw new ValidationError("Limit phải từ 1 đến 20");
+    }
+
+    const result = await PostService.getPostsByUser(userId, page, limit);
+    sendPaginated(res, result.posts, result.pagination);
+  }
+);

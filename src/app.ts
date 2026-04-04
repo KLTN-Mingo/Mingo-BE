@@ -8,9 +8,11 @@ import followRoutes from "./routes/follow.routes";
 import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notification.routes";
 import userRoutes from "./routes/user.routes";
+import interactionRoutes from "./routes/interaction.routes";
 import messageRoutes from "./routes/message.routes";
 import reportRoutes from "./routes/report.routes";
 import adminRoutes from "./routes/admin.routes";
+import cultureRoutes from "./routes/culture.routes";
 import {
   errorHandler,
   notFoundHandler,
@@ -33,9 +35,11 @@ app.use("/api/follow", followRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/interactions", interactionRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/culture", cultureRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

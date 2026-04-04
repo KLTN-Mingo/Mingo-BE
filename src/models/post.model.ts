@@ -26,6 +26,8 @@ export interface IPost extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   contentText?: string;
+  /** Rich text (HTML/Markdown tùy FE) — tùy chọn */
+  contentRichText?: string;
   visibility: PostVisibility;
 
   likesCount: number;
@@ -66,6 +68,7 @@ const PostSchema = new Schema<IPost>(
       index: true,
     },
     contentText: { type: String, maxlength: 10000 },
+    contentRichText: { type: String, maxlength: 50000 },
     visibility: {
       type: String,
       enum: Object.values(PostVisibility),

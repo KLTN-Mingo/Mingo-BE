@@ -27,6 +27,8 @@ import { PostMentionModel } from "../models/post-mention.model";
 import { LikeModel } from "../models/like.model";
 import { CommentModel } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
+import { SavedPostModel } from "../models/saved-post.model";
+import { ShareModel } from "../models/share.model";
 import { topicExtractorService } from "./topic-extractor.service";
 import { ModerationService } from "./moderation/moderation.service";
 
@@ -48,7 +50,7 @@ async function loadPostRelations(
   if (!post)
     throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
 
-  const [author, mediaRows, hashtagRows, mentionRows, likeRow] =
+  const [author, mediaRows, hashtagRows, mentionRows, likeRow, savedRow] =
     await Promise.all([
       UserModel.findById(post.userId).lean(),
       PostMediaModel.find({ postId }).sort({ orderIndex: 1 }).lean(),
@@ -56,6 +58,12 @@ async function loadPostRelations(
       PostMentionModel.find({ postId }).populate("mentionedUserId").lean(),
       currentUserId
         ? LikeModel.findOne({ postId, userId: currentUserId }).lean()
+        : Promise.resolve(null),
+      currentUserId
+        ? SavedPostModel.findOne({
+            postId,
+            userId: new Types.ObjectId(currentUserId),
+          }).lean()
         : Promise.resolve(null),
     ]);
 
@@ -209,12 +217,13 @@ export const PostService = {
     const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
     const topics = topicExtractorService.extract({
       contentText: dto.contentText,
-      hashtags:    dto.hashtags ?? [],
+      hashtags: dto.hashtags ?? [],
       mediaTypes,
     });
     const post = await PostModel.create({
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
+      contentRichText: dto.contentRichText,
       visibility: dto.visibility ?? PostVisibility.PUBLIC,
       moderationStatus: ModerationStatus.PENDING,
       locationName: dto.locationName,
@@ -227,6 +236,7 @@ export const PostService = {
       await PostMediaModel.insertMany(
         dto.mediaFiles.map((m, i) => ({
           postId: post._id,
+          userId: new Types.ObjectId(userId),
           mediaType: m.mediaType,
           mediaUrl: m.mediaUrl,
           thumbnailUrl: m.thumbnailUrl,
@@ -274,9 +284,7 @@ export const PostService = {
             isNewAccount: accountAgeDays < 7,
             reportCount: 0,
           }
-        ).catch((err) =>
-          console.error("[Moderation] Post error:", err)
-        );
+        ).catch((err) => console.error("[Moderation] Post error:", err));
       } catch (err) {
         console.error("[Moderation] Post error:", err);
       }
@@ -307,14 +315,17 @@ export const PostService = {
     if (dto.contentText !== undefined) {
       post.contentText = dto.contentText;
 
-      const currentHashtags = await PostHashtagModel
-        .find({ postId: post._id })
-        .distinct("hashtag");
+      const currentHashtags = await PostHashtagModel.find({
+        postId: post._id,
+      }).distinct("hashtag");
 
       post.topics = topicExtractorService.extract({
         contentText: dto.contentText,
-        hashtags:    currentHashtags,
+        hashtags: currentHashtags,
       });
+    }
+    if (dto.contentRichText !== undefined) {
+      (post as any).contentRichText = dto.contentRichText;
     }
     if (dto.visibility !== undefined) post.visibility = dto.visibility;
     post.isEdited = true;
@@ -353,6 +364,8 @@ export const PostService = {
       PostMediaModel.deleteMany({ postId: oid }),
       PostHashtagModel.deleteMany({ postId: oid }),
       PostMentionModel.deleteMany({ postId: oid }),
+      SavedPostModel.deleteMany({ postId: oid }),
+      ShareModel.deleteMany({ postId: oid }),
     ]);
 
     await post.deleteOne();
@@ -413,6 +426,131 @@ export const PostService = {
     return PostModel.countDocuments({
       createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
+  },
+
+  async savePost(
+    postId: string,
+    userId: string,
+    collectionName = "default"
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(postId)) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    }
+    const post = await PostModel.findById(postId);
+    if (!post)
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+
+    const uid = new Types.ObjectId(userId);
+    const pid = new Types.ObjectId(postId);
+    const existing = await SavedPostModel.findOne({ userId: uid, postId: pid });
+    if (existing) return;
+
+    await SavedPostModel.create({
+      userId: uid,
+      postId: pid,
+      collectionName: collectionName.slice(0, 100),
+    });
+    await PostModel.findByIdAndUpdate(postId, { $inc: { savesCount: 1 } });
+  },
+
+  async unsavePost(postId: string, userId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(postId)) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    }
+    const uid = new Types.ObjectId(userId);
+    const pid = new Types.ObjectId(postId);
+    const deleted = await SavedPostModel.findOneAndDelete({
+      userId: uid,
+      postId: pid,
+    });
+    if (!deleted) return;
+    await PostModel.findByIdAndUpdate(postId, {
+      $inc: { savesCount: -1 },
+    });
+  },
+
+  async getSavedPosts(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<PaginatedPostsDto> {
+    const uid = new Types.ObjectId(userId);
+    const total = await SavedPostModel.countDocuments({ userId: uid });
+    const rows = await SavedPostModel.find({ userId: uid })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select("postId")
+      .lean();
+
+    const posts: PostResponseDto[] = [];
+    for (const row of rows as any[]) {
+      const pid = row.postId?.toString();
+      if (!pid) continue;
+      try {
+        const dto = await this.getPostById(pid, userId);
+        posts.push({
+          id: dto.id,
+          userId: dto.userId,
+          user: dto.user,
+          contentText: dto.contentText,
+          contentRichText: dto.contentRichText,
+          visibility: dto.visibility,
+          media: dto.media,
+          hashtags: dto.hashtags,
+          mentions: dto.mentions,
+          location: dto.location,
+          likesCount: dto.likesCount,
+          commentsCount: dto.commentsCount,
+          sharesCount: dto.sharesCount,
+          savesCount: dto.savesCount,
+          viewsCount: dto.viewsCount,
+          isLiked: dto.isLiked,
+          isSaved: true,
+          moderationStatus: dto.moderationStatus,
+          isHidden: dto.isHidden,
+          isEdited: dto.isEdited,
+          createdAt: dto.createdAt,
+          updatedAt: dto.updatedAt,
+        });
+      } catch {
+        /* bài đã xóa — bỏ qua */
+      }
+    }
+
+    const totalPages = Math.ceil(total / limit) || 0;
+    return {
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    };
+  },
+
+  async sharePost(
+    postId: string,
+    userId: string,
+    sharedTo: "feed" | "message" | "external",
+    caption?: string
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(postId)) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    }
+    const post = await PostModel.findById(postId);
+    if (!post)
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+
+    await ShareModel.create({
+      userId: new Types.ObjectId(userId),
+      postId: new Types.ObjectId(postId),
+      sharedTo,
+      caption: caption?.slice(0, 2000),
+    });
+    await PostModel.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
   },
 
   async getPostsByUser(

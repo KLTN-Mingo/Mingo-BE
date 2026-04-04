@@ -7,6 +7,8 @@ export interface IShare extends Document {
   postId?: Types.ObjectId; // Share post
   mediaId?: Types.ObjectId; // Share media
   caption?: string; // Caption khi share
+  /** feed | message | external — chủ yếu cho share post */
+  sharedTo?: "feed" | "message" | "external";
   createdAt: Date;
 }
 
@@ -31,6 +33,11 @@ const ShareSchema = new Schema<IShare>(
     caption: {
       type: String,
       maxlength: 2000,
+    },
+    sharedTo: {
+      type: String,
+      enum: ["feed", "message", "external"],
+      default: "feed",
     },
   },
   {

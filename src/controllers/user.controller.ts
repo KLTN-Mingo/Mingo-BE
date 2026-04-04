@@ -53,20 +53,6 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @route   GET /api/users/:userId/stats
- * @desc    Thống kê user (admin / chi tiết)
- * @access  Private
- */
-export const getUserStats = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { userId } = req.params as { userId: string };
-    validateObjectId(userId, "User ID");
-    const stats = await UserService.getUserStats(userId);
-    sendSuccess(res, stats);
-  }
-);
-
-/**
  * @route   PUT /api/users/me
  * @desc    Cập nhật thông tin user
  * @access  Private
@@ -212,3 +198,17 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
 
   sendPaginated(res, users.map(toUserSummary), { page, limit, total });
 });
+
+/**
+ * @route   GET /api/users/:userId/stats
+ * @desc    Thống kê user (admin / chi tiết)
+ * @access  Private
+ */
+export const getUserStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    validateObjectId(userId, "User ID");
+    const stats = await UserService.getUserStats(userId);
+    sendSuccess(res, stats);
+  }
+);

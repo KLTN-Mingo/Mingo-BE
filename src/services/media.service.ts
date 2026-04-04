@@ -47,7 +47,9 @@ export const MediaService = {
 
     // Chỉ chủ post mới được thêm media
     if (post.userId.toString() !== userId) {
-      throw new ForbiddenError("Bạn không có quyền thêm media cho bài viết này");
+      throw new ForbiddenError(
+        "Bạn không có quyền thêm media cho bài viết này"
+      );
     }
 
     const media = await PostMediaModel.create({
@@ -70,9 +72,7 @@ export const MediaService = {
       // - Ảnh: dùng trực tiếp mediaUrl
       // - Video: dùng thumbnailUrl nếu có, nếu không thì skip
       const scanUrl =
-        dto.mediaType === "image"
-          ? dto.mediaUrl
-          : dto.thumbnailUrl ?? null;
+        dto.mediaType === "image" ? dto.mediaUrl : (dto.thumbnailUrl ?? null);
 
       if (scanUrl) {
         // Lấy thông tin user để check tài khoản mới
@@ -127,7 +127,9 @@ export const MediaService = {
   ): Promise<MediaDetailDto[]> {
     assertObjectId(postId, "ID bài viết");
 
-    const mediaList = await PostMediaModel.find({ postId: new Types.ObjectId(postId) })
+    const mediaList = await PostMediaModel.find({
+      postId: new Types.ObjectId(postId),
+    })
       .sort({ orderIndex: 1 })
       .lean();
 

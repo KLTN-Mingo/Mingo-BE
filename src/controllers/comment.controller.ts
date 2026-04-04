@@ -5,6 +5,11 @@ import { asyncHandler } from "../utils/async-handler";
 import { sendSuccess, sendCreated, sendPaginated } from "../utils/response";
 import { ValidationError } from "../errors";
 import { CommentService } from "../services/comment.service";
+import { interactionTrackerService } from "../services/interaction-tracker.service";
+import {
+  InteractionType,
+  InteractionSource,
+} from "../models/user-interaction.model";
 
 // Helper to get userId from request
 function getUserId(req: Request): string {
@@ -67,6 +72,17 @@ export const createComment = asyncHandler(
       contentText,
     });
 
+    void interactionTrackerService
+      .track({
+        userId,
+        postId,
+        type: InteractionType.COMMENT,
+        source: InteractionSource.PROFILE,
+      })
+      .catch((err) =>
+        console.error("[CommentController] track createComment error:", err)
+      );
+
     sendCreated(res, result, "Tạo comment thành công");
   }
 );
@@ -88,6 +104,17 @@ export const createReply = asyncHandler(async (req: Request, res: Response) => {
     originalCommentId: originalCommentId || parentCommentId,
   });
 
+  void interactionTrackerService
+    .track({
+      userId,
+      postId,
+      type: InteractionType.COMMENT,
+      source: InteractionSource.PROFILE,
+    })
+    .catch((err) =>
+      console.error("[CommentController] track createReply error:", err)
+    );
+
   sendCreated(res, result, "Tạo reply thành công");
 });
 
@@ -105,7 +132,10 @@ export const getCommentById = asyncHandler(
     const commentId = getParam(req.params.commentId);
     const currentUserId = getOptionalUserId(req);
 
-    const result = await CommentService.getCommentById(commentId, currentUserId);
+    const result = await CommentService.getCommentById(
+      commentId,
+      currentUserId
+    );
 
     sendSuccess(res, result, "Lấy comment thành công");
   }

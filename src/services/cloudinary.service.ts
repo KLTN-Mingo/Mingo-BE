@@ -72,8 +72,11 @@ class CloudinaryService {
             });
 
             if (postId) {
-              ModerationService.moderateImage(result.secure_url, postId, context)
-                .catch((err) => console.error("[Image Moderation]", err));
+              ModerationService.moderateImage(
+                result.secure_url,
+                postId,
+                context
+              ).catch((err) => console.error("[Image Moderation]", err));
             }
           }
         );
@@ -137,9 +140,14 @@ class CloudinaryService {
             });
 
             if (postId) {
-              const thumbnailUrl = this.generateVideoThumbnail(result.public_id);
-              ModerationService.moderateImage(thumbnailUrl, postId, context)
-                .catch((err) => console.error("[Video Moderation]", err));
+              const thumbnailUrl = this.generateVideoThumbnail(
+                result.public_id
+              );
+              ModerationService.moderateImage(
+                thumbnailUrl,
+                postId,
+                context
+              ).catch((err) => console.error("[Video Moderation]", err));
             }
           }
         );
