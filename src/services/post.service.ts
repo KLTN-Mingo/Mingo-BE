@@ -27,6 +27,8 @@ import { PostMentionModel } from "../models/post-mention.model";
 import { LikeModel } from "../models/like.model";
 import { CommentModel } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
+import { topicExtractorService } from "./topic-extractor.service";
+import { ModerationService } from "./moderation/moderation.service";
 
 // ─── Helper: load related data cho một post ───────────────────────────────────
 
@@ -116,49 +118,14 @@ export const PostService = {
   async getFeedPosts(
     userId: string,
     page: number,
-    limit: number
+    limit: number,
+    tab: "friends" | "explore" = "explore"
   ): Promise<PaginatedPostsDto> {
-    const skip = (page - 1) * limit;
-
-    const currentUser = await UserModel.findById(userId)
-      .select("following")
-      .lean();
-    const followingIds: string[] =
-      (currentUser as any)?.following?.map((id: any) => id.toString()) ?? [];
-
-    const relatedIds = [userId, ...followingIds];
-
-    const [posts, total] = await Promise.all([
-      PostModel.find({ userId: { $in: relatedIds }, isHidden: false })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      PostModel.countDocuments({
-        userId: { $in: relatedIds },
-        isHidden: false,
-      }),
-    ]);
-
-    const postDtos = await Promise.all(
-      posts.map(async (post) => {
-        const relations = await loadPostRelations(post._id, userId);
-        return toPostResponse(post as any, relations);
-      })
-    );
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      posts: postDtos,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasMore: page < totalPages,
-      },
-    };
+    const { FeedService } = await import("./feed.service");
+    if (tab === "friends") {
+      return FeedService.getFriendsFeed(userId, page, limit);
+    }
+    return FeedService.getPersonalizedFeed(userId, page, limit);
   },
 
   // ── Get single post ────────────────────────────────────────────────────────
@@ -239,6 +206,12 @@ export const PostService = {
 
   // ── Create post ────────────────────────────────────────────────────────────
   async createPost(userId: string, dto: CreatePostDto): Promise<PostDetailDto> {
+    const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
+    const topics = topicExtractorService.extract({
+      contentText: dto.contentText,
+      hashtags:    dto.hashtags ?? [],
+      mediaTypes,
+    });
     const post = await PostModel.create({
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
@@ -247,6 +220,7 @@ export const PostService = {
       locationName: dto.locationName,
       locationLatitude: dto.locationLatitude,
       locationLongitude: dto.locationLongitude,
+      topics,
     });
 
     if (dto.mediaFiles?.length) {
@@ -282,6 +256,32 @@ export const PostService = {
 
     await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } });
 
+    // Fire-and-forget: không block response
+    if (dto.contentText?.trim()) {
+      try {
+        const user = await UserModel.findById(userId)
+          .select("createdAt")
+          .lean();
+        const accountAgeDays = user
+          ? (Date.now() - new Date(user.createdAt).getTime()) / 86400000
+          : 999;
+
+        void ModerationService.moderateAndUpdate(
+          "post",
+          post._id.toString(),
+          dto.contentText,
+          {
+            isNewAccount: accountAgeDays < 7,
+            reportCount: 0,
+          }
+        ).catch((err) =>
+          console.error("[Moderation] Post error:", err)
+        );
+      } catch (err) {
+        console.error("[Moderation] Post error:", err);
+      }
+    }
+
     return this.getPostById(post._id.toString(), userId);
   },
 
@@ -304,7 +304,18 @@ export const PostService = {
       throw new ForbiddenError("Bạn không có quyền chỉnh sửa bài viết này");
     }
 
-    if (dto.contentText !== undefined) post.contentText = dto.contentText;
+    if (dto.contentText !== undefined) {
+      post.contentText = dto.contentText;
+
+      const currentHashtags = await PostHashtagModel
+        .find({ postId: post._id })
+        .distinct("hashtag");
+
+      post.topics = topicExtractorService.extract({
+        contentText: dto.contentText,
+        hashtags:    currentHashtags,
+      });
+    }
     if (dto.visibility !== undefined) post.visibility = dto.visibility;
     post.isEdited = true;
 

@@ -1,12 +1,22 @@
 // src/controllers/post.controller.ts
 
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
 import { ValidationError } from "../errors";
 import { sendSuccess, sendPaginated } from "../utils/response";
 import { PostVisibility } from "../models/post.model";
 import { type CreatePostDto, type UpdatePostDto } from "../dtos/post.dto";
 import { PostService } from "../services/post.service";
+import {
+  interactionTrackerService,
+  type TrackPayload,
+} from "../services/interaction-tracker.service";
+import {
+  InteractionType,
+  InteractionSource,
+} from "../models/user-interaction.model";
+import { feedAnalyticsService } from "../services/feed-analytics.service";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -19,6 +29,12 @@ function validateVisibility(
       "INVALID_VISIBILITY"
     );
   }
+}
+
+function trackPostInteractionSafely(payload: TrackPayload): void {
+  void interactionTrackerService.track(payload).catch((err) => {
+    console.error("[PostController] track interaction error:", err);
+  });
 }
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
@@ -51,27 +67,109 @@ export const getTrendingPosts = asyncHandler(
 
 /**
  * @route   GET /api/posts/feed
- * @desc    Lấy feed bài viết của user hiện tại (từ những người đang follow)
+ * @query   tab=friends | explore (mặc định: explore)
+ * @desc    Tab "friends": bài từ bạn bè/bạn thân (người đang follow), sort mới nhất. Tab "explore": feed khám phá đề xuất cá nhân hóa.
  * @access  Private
  */
 export const getFeedPosts = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId as string;
-    const { page: pageStr, limit: limitStr } = req.query as Record<
-      string,
-      string
-    >;
+    const {
+      page: pageStr,
+      limit: limitStr,
+      tab: tabStr,
+    } = req.query as Record<string, string>;
 
     const page = parseInt(pageStr) || 1;
     const limit = parseInt(limitStr) || 10;
+    const tab = tabStr === "friends" ? "friends" : "explore";
 
     if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
     if (limit < 1 || limit > 50)
       throw new ValidationError("Limit phải từ 1 đến 50");
 
-    const result = await PostService.getFeedPosts(userId, page, limit);
+    const result = await PostService.getFeedPosts(userId, page, limit, tab);
 
     sendPaginated(res, result.posts, result.pagination);
+  }
+);
+
+/**
+ * @route   POST /api/posts/feed/feedback
+ * @desc    Nhận feedback để điều chỉnh profile recommendation
+ * @access  Private
+ */
+export const submitFeedFeedback = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId as string;
+    const { postId, feedbackType, tab } = req.body as {
+      postId?: string;
+      feedbackType?: "hide" | "not_interested" | "see_more";
+      tab?: "friends" | "explore";
+    };
+
+    if (!postId || !feedbackType) {
+      throw new ValidationError("postId và feedbackType là bắt buộc");
+    }
+
+    if (!Types.ObjectId.isValid(postId)) {
+      throw new ValidationError("postId không hợp lệ", "INVALID_POST_ID");
+    }
+
+    const feedbackToInteraction: Record<string, InteractionType> = {
+      hide: InteractionType.HIDE,
+      not_interested: InteractionType.NOT_INTERESTED,
+      see_more: InteractionType.SEE_MORE,
+    };
+
+    const interactionType = feedbackToInteraction[feedbackType];
+    if (!interactionType) {
+      throw new ValidationError(
+        "feedbackType không hợp lệ. Chỉ chấp nhận: hide, not_interested, see_more",
+        "INVALID_FEEDBACK_TYPE"
+      );
+    }
+
+    const source =
+      tab === "friends" ? InteractionSource.FEED : InteractionSource.EXPLORE;
+
+    const payload: TrackPayload = {
+      userId,
+      postId,
+      type: interactionType,
+      source,
+    };
+
+    await interactionTrackerService.track(payload);
+
+    sendSuccess(
+      res,
+      { postId, feedbackType, source },
+      "Đã ghi nhận phản hồi feed"
+    );
+  }
+);
+
+/**
+ * @route   GET /api/posts/feed/metrics
+ * @query   days=7&tab=friends|explore
+ * @desc    Tổng hợp CTR/engagement cho feed recommendation
+ * @access  Private
+ */
+export const getFeedMetrics = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { days: daysStr, tab: tabStr } = req.query as Record<string, string>;
+
+    const days = daysStr ? Number.parseInt(daysStr, 10) : 7;
+    if (Number.isNaN(days) || days < 1 || days > 90) {
+      throw new ValidationError("days phải nằm trong khoảng 1 đến 90");
+    }
+
+    const tab =
+      tabStr === "friends" || tabStr === "explore" ? tabStr : undefined;
+    const metrics = await feedAnalyticsService.getMetrics(days, tab);
+
+    sendSuccess(res, metrics);
   }
 );
 
@@ -101,6 +199,16 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
   const currentUserId = (req as any).user?.userId as string | undefined;
 
   const post = await PostService.getPostById(id, currentUserId);
+
+  if (currentUserId) {
+    trackPostInteractionSafely({
+      userId: currentUserId,
+      postId: id,
+      type: InteractionType.VIEW,
+      source: InteractionSource.PROFILE,
+    });
+  }
+
   sendSuccess(res, post);
 });
 
@@ -227,6 +335,14 @@ export const likePost = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId as string;
 
   await PostService.likePost(id, userId);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.LIKE,
+    source: InteractionSource.PROFILE,
+  });
+
   sendSuccess(res, null, "Đã thích bài viết");
 });
 

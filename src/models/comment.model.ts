@@ -10,7 +10,8 @@ export enum CommentModerationStatus {
 
 export interface IComment extends Document {
   _id: Types.ObjectId;
-  postId: Types.ObjectId;
+  postId?: Types.ObjectId; // Comment cho post (optional nếu comment cho media)
+  mediaId?: Types.ObjectId; // Comment cho media (optional nếu comment cho post)
   userId: Types.ObjectId;
   parentCommentId?: Types.ObjectId; // comment cha trực tiếp (reply của reply)
   originalCommentId?: Types.ObjectId; // comment gốc cấp 1 trong thread
@@ -34,7 +35,11 @@ const CommentSchema = new Schema<IComment>(
     postId: {
       type: Schema.Types.ObjectId,
       ref: "Post",
-      required: true,
+      index: true,
+    },
+    mediaId: {
+      type: Schema.Types.ObjectId,
+      ref: "PostMedia",
       index: true,
     },
     userId: {
@@ -102,9 +107,11 @@ const CommentSchema = new Schema<IComment>(
 );
 
 CommentSchema.index({ postId: 1, createdAt: -1 });
+CommentSchema.index({ mediaId: 1, createdAt: -1 });
 CommentSchema.index({ userId: 1, createdAt: -1 });
 CommentSchema.index({ parentCommentId: 1, createdAt: -1 });
 CommentSchema.index({ originalCommentId: 1, createdAt: -1 });
 CommentSchema.index({ postId: 1, parentCommentId: 1 });
+CommentSchema.index({ mediaId: 1, parentCommentId: 1 });
 
 export const CommentModel = model<IComment>("Comment", CommentSchema);
