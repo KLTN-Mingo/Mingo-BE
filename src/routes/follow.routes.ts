@@ -20,12 +20,25 @@ import {
   getRelationshipStatus,
   getFollowStats,
 } from "../controllers/follow.controller";
+import {
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
+} from "../controllers/block.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
 // Tất cả routes đều cần authenticate
 router.use(authMiddleware);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLOCK (đặt trước /:userId để không conflict)
+// ══════════════════════════════════════════════════════════════════════════════
+
+router.post("/blocks", blockUser);
+router.delete("/blocks/:userId", unblockUser);
+router.get("/blocks", getBlockedUsers);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FOLLOW REQUEST ROUTES

@@ -221,6 +221,7 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId as string;
   const {
     contentText,
+    contentRichText,
     visibility = PostVisibility.PUBLIC,
     mediaFiles = [],
     hashtags = [],
@@ -242,6 +243,10 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError(
       "Nội dung bài viết không được vượt quá 10000 ký tự"
     );
+  }
+
+  if (contentRichText && contentRichText.length > 50000) {
+    throw new ValidationError("Rich text không được vượt quá 50000 ký tự");
   }
 
   validateVisibility(visibility);
@@ -282,9 +287,9 @@ export const createPost = asyncHandler(async (req: Request, res: Response) => {
 export const updatePost = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const userId = (req as any).user?.userId as string;
-  const { contentText, visibility } = req.body as UpdatePostDto;
+  const { contentText, contentRichText, visibility } = req.body as UpdatePostDto;
 
-  if (!contentText && !visibility) {
+  if (!contentText && !visibility && contentRichText === undefined) {
     throw new ValidationError("Cần có ít nhất một trường để cập nhật");
   }
 
@@ -299,12 +304,17 @@ export const updatePost = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  if (contentRichText !== undefined && contentRichText.length > 50000) {
+    throw new ValidationError("Rich text không được vượt quá 50000 ký tự");
+  }
+
   if (visibility !== undefined) {
     validateVisibility(visibility);
   }
 
   const post = await PostService.updatePost(id, userId, {
     contentText,
+    contentRichText,
     visibility,
   });
   sendSuccess(res, post, "Cập nhật bài viết thành công");
@@ -357,4 +367,83 @@ export const unlikePost = asyncHandler(async (req: Request, res: Response) => {
 
   await PostService.unlikePost(id, userId);
   sendSuccess(res, null, "Đã bỏ thích bài viết");
+});
+
+/**
+ * @route   GET /api/posts/saved
+ */
+export const getSavedPosts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId as string;
+    const page = parseInt((req.query.page as string) || "1", 10) || 1;
+    const limit = Math.min(
+      50,
+      parseInt((req.query.limit as string) || "20", 10) || 20
+    );
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+
+    const result = await PostService.getSavedPosts(userId, page, limit);
+    sendPaginated(res, result.posts, result.pagination);
+  }
+);
+
+/**
+ * @route   POST /api/posts/:id/save
+ */
+export const savePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+  const { collectionName } = req.body as { collectionName?: string };
+
+  await PostService.savePost(id, userId, collectionName);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.SAVE,
+    source: InteractionSource.PROFILE,
+  });
+
+  sendSuccess(res, null, "Đã lưu bài viết");
+});
+
+/**
+ * @route   DELETE /api/posts/:id/save
+ */
+export const unsavePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+
+  await PostService.unsavePost(id, userId);
+  sendSuccess(res, null, "Đã bỏ lưu bài viết");
+});
+
+/**
+ * @route   POST /api/posts/:id/share
+ */
+export const sharePost = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const userId = (req as any).user?.userId as string;
+  const { sharedTo = "feed", caption } = req.body as {
+    sharedTo?: "feed" | "message" | "external";
+    caption?: string;
+  };
+
+  const allowed = ["feed", "message", "external"] as const;
+  if (!allowed.includes(sharedTo)) {
+    throw new ValidationError(
+      "sharedTo phải là feed, message hoặc external"
+    );
+  }
+
+  await PostService.sharePost(id, userId, sharedTo, caption);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.SHARE,
+    source: InteractionSource.PROFILE,
+  });
+
+  sendSuccess(res, null, "Đã chia sẻ bài viết");
 });

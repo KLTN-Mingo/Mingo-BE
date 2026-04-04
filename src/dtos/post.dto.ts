@@ -9,6 +9,8 @@ import { UserMinimalDto } from "./user.dto";
 
 export class CreatePostDto {
   contentText?: string;
+  /** Rich text (HTML/Markdown) — tùy chọn */
+  contentRichText?: string;
   visibility?: PostVisibility;
   mediaFiles?: MediaFileDto[];
   hashtags?: string[];
@@ -20,6 +22,7 @@ export class CreatePostDto {
 
 export class UpdatePostDto {
   contentText?: string;
+  contentRichText?: string;
   visibility?: PostVisibility;
 }
 
@@ -122,6 +125,7 @@ export class PostResponseDto {
   user?: UserMinimalDto;
 
   contentText?: string;
+  contentRichText?: string;
   visibility!: PostVisibility;
 
   // Media & metadata
@@ -228,6 +232,7 @@ export function toPostResponse(
     user: options.user,
 
     contentText: post.contentText,
+    contentRichText: (post as any).contentRichText,
     visibility: post.visibility,
 
     media: options.media ?? [],

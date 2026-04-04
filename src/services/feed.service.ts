@@ -29,6 +29,7 @@ import { PostMediaModel } from "../models/post-media.model";
 import { PostHashtagModel } from "../models/post-hashtag.model";
 import { PostMentionModel } from "../models/post-mention.model";
 import { LikeModel } from "../models/like.model";
+import { SavedPostModel } from "../models/saved-post.model";
 import { UserModel } from "../models/user.model";
 import { toUserMinimal } from "../dtos/user.dto";
 import { feedAnalyticsService } from "./feed-analytics.service";
@@ -163,7 +164,7 @@ async function loadPostRelationsForFeedBatch(
   );
   const currentUserObjectId = new Types.ObjectId(currentUserId);
 
-  const [authors, mediaRows, hashtagRows, mentionRows, likeRows] =
+  const [authors, mediaRows, hashtagRows, mentionRows, likeRows, savedRows] =
     await Promise.all([
       UserModel.find({ _id: { $in: authorIds } }).lean(),
       PostMediaModel.find({ postId: { $in: postIds } })
@@ -174,6 +175,12 @@ async function loadPostRelationsForFeedBatch(
         .populate("mentionedUserId")
         .lean(),
       LikeModel.find({
+        postId: { $in: postIds },
+        userId: currentUserObjectId,
+      })
+        .select("postId")
+        .lean(),
+      SavedPostModel.find({
         postId: { $in: postIds },
         userId: currentUserObjectId,
       })
@@ -227,6 +234,9 @@ async function loadPostRelationsForFeedBatch(
   const likedPostIds = new Set(
     (likeRows as any[]).map((r) => r.postId?.toString()).filter(Boolean)
   );
+  const savedPostIds = new Set(
+    (savedRows as any[]).map((r) => r.postId?.toString()).filter(Boolean)
+  );
 
   for (const post of posts) {
     const postIdStr = post._id.toString();
@@ -247,7 +257,7 @@ async function loadPostRelationsForFeedBatch(
       mentions: mentionsByPost.get(postIdStr) ?? [],
       location,
       isLiked: likedPostIds.has(postIdStr),
-      isSaved: false,
+      isSaved: savedPostIds.has(postIdStr),
     });
   }
 

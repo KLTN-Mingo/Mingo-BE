@@ -12,6 +12,7 @@ import interactionRoutes from "./routes/interaction.routes";
 import messageRoutes from "./routes/message.routes";
 import reportRoutes from "./routes/report.routes";
 import adminRoutes from "./routes/admin.routes";
+import cultureRoutes from "./routes/culture.routes";
 import {
   errorHandler,
   notFoundHandler,
@@ -38,6 +39,7 @@ app.use("/api/interactions", interactionRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/culture", cultureRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
