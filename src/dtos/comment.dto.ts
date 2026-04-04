@@ -50,7 +50,8 @@ export class CommentAuthorDto {
 
 export class CommentResponseDto {
   id!: string;
-  postId!: string;
+  postId?: string | null;
+  mediaId?: string | null;
   userId!: string;
   user?: UserMinimalDto;
 
@@ -95,8 +96,6 @@ export class PaginatedCommentsDto {
 // MAPPER
 // ==========================================
 
-import { toUserMinimal } from "./user.dto";
-
 type CommentResponseOptions = {
   user?: UserMinimalDto;
   isLiked?: boolean;
@@ -109,7 +108,8 @@ export function toCommentResponse(
 ): CommentResponseDto {
   return {
     id: comment._id.toString(),
-    postId: comment.postId?.toString() ?? "",
+    postId: comment.postId?.toString() ?? null,
+    mediaId: comment.mediaId?.toString() ?? null,
     userId: comment.userId.toString(),
     user: options.user,
 

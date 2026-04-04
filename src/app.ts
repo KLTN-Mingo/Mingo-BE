@@ -9,16 +9,24 @@ import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notification.routes";
 import userRoutes from "./routes/user.routes";
 import interactionRoutes from "./routes/interaction.routes";
+import messageRoutes from "./routes/message.routes";
+import reportRoutes from "./routes/report.routes";
+import adminRoutes from "./routes/admin.routes";
 import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error-handler.middleware";
-
+import cors from "cors";
 export const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
-
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  })
+);
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
@@ -27,6 +35,9 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/interactions", interactionRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

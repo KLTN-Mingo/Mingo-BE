@@ -17,6 +17,7 @@ import {
   toCommentResponse,
   toCommentDetail,
 } from "../dtos/comment.dto";
+import { ModerationService } from "./moderation/moderation.service";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,19 @@ export const CommentService = {
     // Tăng commentsCount của post
     await PostModel.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
+    if (dto.contentText?.trim()) {
+      void ModerationService.moderateAndUpdate(
+        "comment",
+        comment._id.toString(),
+        dto.contentText,
+        {
+          reportCount: 0,
+        }
+      ).catch((err) =>
+        console.error("[Moderation] Comment error:", err)
+      );
+    }
+
     return this.getCommentById(comment._id.toString(), userId);
   },
 
@@ -258,6 +272,19 @@ export const CommentService = {
       }),
       PostModel.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } }),
     ]);
+
+    if (dto.contentText?.trim()) {
+      void ModerationService.moderateAndUpdate(
+        "comment",
+        reply._id.toString(),
+        dto.contentText,
+        {
+          reportCount: 0,
+        }
+      ).catch((err) =>
+        console.error("[Moderation] Reply error:", err)
+      );
+    }
 
     const { user, isLiked } = await populateCommentUser(reply, userId);
     return toCommentResponse(reply, { user, isLiked });

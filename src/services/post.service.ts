@@ -28,6 +28,7 @@ import { LikeModel } from "../models/like.model";
 import { CommentModel } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
 import { topicExtractorService } from "./topic-extractor.service";
+import { ModerationService } from "./moderation/moderation.service";
 
 // ─── Helper: load related data cho một post ───────────────────────────────────
 
@@ -254,6 +255,32 @@ export const PostService = {
     }
 
     await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } });
+
+    // Fire-and-forget: không block response
+    if (dto.contentText?.trim()) {
+      try {
+        const user = await UserModel.findById(userId)
+          .select("createdAt")
+          .lean();
+        const accountAgeDays = user
+          ? (Date.now() - new Date(user.createdAt).getTime()) / 86400000
+          : 999;
+
+        void ModerationService.moderateAndUpdate(
+          "post",
+          post._id.toString(),
+          dto.contentText,
+          {
+            isNewAccount: accountAgeDays < 7,
+            reportCount: 0,
+          }
+        ).catch((err) =>
+          console.error("[Moderation] Post error:", err)
+        );
+      } catch (err) {
+        console.error("[Moderation] Post error:", err);
+      }
+    }
 
     return this.getPostById(post._id.toString(), userId);
   },

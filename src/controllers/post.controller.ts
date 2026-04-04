@@ -31,6 +31,12 @@ function validateVisibility(
   }
 }
 
+function trackPostInteractionSafely(payload: TrackPayload): void {
+  void interactionTrackerService.track(payload).catch((err) => {
+    console.error("[PostController] track interaction error:", err);
+  });
+}
+
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 /**
@@ -193,6 +199,16 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
   const currentUserId = (req as any).user?.userId as string | undefined;
 
   const post = await PostService.getPostById(id, currentUserId);
+
+  if (currentUserId) {
+    trackPostInteractionSafely({
+      userId: currentUserId,
+      postId: id,
+      type: InteractionType.VIEW,
+      source: InteractionSource.PROFILE,
+    });
+  }
+
   sendSuccess(res, post);
 });
 
@@ -319,6 +335,14 @@ export const likePost = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId as string;
 
   await PostService.likePost(id, userId);
+
+  trackPostInteractionSafely({
+    userId,
+    postId: id,
+    type: InteractionType.LIKE,
+    source: InteractionSource.PROFILE,
+  });
+
   sendSuccess(res, null, "Đã thích bài viết");
 });
 
