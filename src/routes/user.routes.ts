@@ -8,6 +8,7 @@ import {
   deleteUser,
   getCurrentUser,
   getUserById,
+  getUserStats,
   getUsers,
   updateProfile,
 } from "../controllers/user.controller";
@@ -29,6 +30,7 @@ function adminMiddleware(req: Request, _res: Response, next: NextFunction) {
 // ── Current user routes (đặt trước :id để tránh conflict) ───────────────────
 router.get("/me", authMiddleware, getCurrentUser);
 router.put("/me", authMiddleware, updateProfile);
+router.get("/:userId/stats", authMiddleware, getUserStats);
 
 // ── Admin routes ─────────────────────────────────────────────────────────────
 router.get("/", authMiddleware, adminMiddleware, getUsers);

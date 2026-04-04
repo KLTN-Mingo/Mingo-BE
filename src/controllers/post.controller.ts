@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
 import { ValidationError } from "../errors";
 import { sendSuccess, sendPaginated } from "../utils/response";
+import { validateObjectId } from "../utils/validators";
 import { PostVisibility } from "../models/post.model";
 import { type CreatePostDto, type UpdatePostDto } from "../dtos/post.dto";
 import { PostService } from "../services/post.service";
@@ -73,6 +74,34 @@ export const getFeedPosts = asyncHandler(
 
     const result = await PostService.getFeedPosts(userId, page, limit, tab);
 
+    sendPaginated(res, result.posts, result.pagination);
+  }
+);
+
+/**
+ * @route   GET /api/posts/user/:userId
+ * @desc    Bài viết gần đây của user (phân trang)
+ * @access  Private
+ */
+export const getPostsByUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    const { page: pageStr, limit: limitStr } = req.query as Record<
+      string,
+      string
+    >;
+
+    validateObjectId(userId, "User ID");
+
+    const page = parseInt(pageStr, 10) || 1;
+    const limit = parseInt(limitStr, 10) || 10;
+
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+    if (limit < 1 || limit > 20) {
+      throw new ValidationError("Limit phải từ 1 đến 20");
+    }
+
+    const result = await PostService.getPostsByUser(userId, page, limit);
     sendPaginated(res, result.posts, result.pagination);
   }
 );

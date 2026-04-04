@@ -106,6 +106,7 @@ const PostMediaSchema = new Schema<IPostMedia>(
 // Indexes
 PostMediaSchema.index({ postId: 1, orderIndex: 1 });
 PostMediaSchema.index({ userId: 1, createdAt: -1 });
+PostMediaSchema.index({ createdAt: -1 });
 PostMediaSchema.index({ likesCount: -1 });
 
 export const PostMediaModel = model<IPostMedia>("PostMedia", PostMediaSchema);

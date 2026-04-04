@@ -3,7 +3,7 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
-import { sendCreated, sendSuccess } from "../utils/response";
+import { sendCreated, sendPaginated, sendSuccess } from "../utils/response";
 import { ValidationError, ForbiddenError, NotFoundError } from "../errors";
 import {
   ReportModel,
@@ -15,6 +15,8 @@ import { PostModel } from "../models/post.model";
 import { CommentModel } from "../models/comment.model";
 import { ModerationService } from "../services/moderation/moderation.service";
 import { PostMediaModel } from "../models/post-media.model"; // 👈 thêm
+import { validateObjectId } from "../utils/validators";
+import { ReportService } from "../services/report.service";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -233,5 +235,38 @@ export const getMyReports = asyncHandler(
         hasMore: page < totalPages,
       },
     });
+  }
+);
+
+/**
+ * @route   GET /api/reports/related/:userId
+ * @desc    Báo cáo liên quan bài viết của user
+ * @access  Private
+ */
+export const getReportsByUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    const { page: pageStr, limit: limitStr } = req.query as Record<
+      string,
+      string
+    >;
+
+    validateObjectId(userId, "User ID");
+
+    const page = parseInt(pageStr, 10) || 1;
+    const limit = parseInt(limitStr, 10) || 10;
+
+    if (page < 1) throw new ValidationError("Số trang phải lớn hơn 0");
+    if (limit < 1 || limit > 20) {
+      throw new ValidationError("Limit phải từ 1 đến 20");
+    }
+
+    const { items, pagination } = await ReportService.getReportsByUser(
+      userId,
+      page,
+      limit
+    );
+
+    sendPaginated(res, items, pagination);
   }
 );

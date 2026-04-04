@@ -11,6 +11,7 @@ import {
   toUserSummary,
   type UpdateProfileDto,
 } from "../dtos/user.dto";
+import { UserService } from "../services/user.service";
 
 /**
  * @route   GET /api/users/me
@@ -50,6 +51,20 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   // Trả public profile - ẩn thông tin nhạy cảm
   sendSuccess(res, toPublicUser(user));
 });
+
+/**
+ * @route   GET /api/users/:userId/stats
+ * @desc    Thống kê user (admin / chi tiết)
+ * @access  Private
+ */
+export const getUserStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params as { userId: string };
+    validateObjectId(userId, "User ID");
+    const stats = await UserService.getUserStats(userId);
+    sendSuccess(res, stats);
+  }
+);
 
 /**
  * @route   PUT /api/users/me

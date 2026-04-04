@@ -414,4 +414,51 @@ export const PostService = {
       createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
   },
+
+  async getPostsByUser(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{
+    posts: Array<{
+      id: string;
+      contentText?: string;
+      createdAt: Date;
+      likesCount: number;
+      commentsCount: number;
+    }>;
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const oid = new Types.ObjectId(userId);
+
+    const userExists = await UserModel.exists({ _id: oid });
+    if (!userExists) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${userId}`);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [total, rows] = await Promise.all([
+      PostModel.countDocuments({ userId: oid }),
+      PostModel.find({ userId: oid })
+        .select("contentText createdAt likesCount commentsCount")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const posts = rows.map((p) => ({
+      id: p._id.toString(),
+      contentText: p.contentText,
+      createdAt: p.createdAt,
+      likesCount: p.likesCount,
+      commentsCount: p.commentsCount,
+    }));
+
+    return {
+      posts,
+      pagination: { page, limit, total },
+    };
+  },
 };

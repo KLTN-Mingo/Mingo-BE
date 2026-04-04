@@ -12,6 +12,7 @@ import {
   likePost,
   unlikePost,
   getPostStats,
+  getPostsByUser,
 } from "../controllers/post.controller";
 import {
   getPostComments,
@@ -30,6 +31,7 @@ const router = Router();
 router.get("/trending", getTrendingPosts);
 router.get("/feed", authMiddleware, getFeedPosts);
 router.get("/stats/count", authMiddleware, getPostStats);
+router.get("/user/:userId", authMiddleware, getPostsByUser);
 
 // ── Post CRUD ─────────────────────────────────────────────────────────────────
 router.get("/", authMiddleware, getAllPosts);
