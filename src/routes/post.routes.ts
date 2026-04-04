@@ -14,6 +14,10 @@ import {
   likePost,
   unlikePost,
   getPostStats,
+  getSavedPosts,
+  savePost,
+  unsavePost,
+  sharePost,
 } from "../controllers/post.controller";
 import {
   getPostComments,
@@ -42,6 +46,10 @@ router.delete("/:id", authMiddleware, deletePost);
 // ── Like / Unlike post ────────────────────────────────────────────────────────
 router.post("/:id/like", authMiddleware, likePost);
 router.delete("/:id/like", authMiddleware, unlikePost);
+
+router.post("/:id/save", authMiddleware, savePost);
+router.delete("/:id/save", authMiddleware, unsavePost);
+router.post("/:id/share", authMiddleware, sharePost);
 
 // ── Comments của post ─────────────────────────────────────────────────────────
 router.get("/:postId/comments", authMiddleware, getPostComments);

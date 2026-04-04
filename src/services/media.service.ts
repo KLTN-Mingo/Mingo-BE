@@ -19,6 +19,7 @@ import {
   toMediaDetail,
 } from "../dtos/media.dto";
 
+//sxsnjscdcd
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
   if (!Types.ObjectId.isValid(id)) {
@@ -46,7 +47,9 @@ export const MediaService = {
 
     // Chỉ chủ post mới được thêm media
     if (post.userId.toString() !== userId) {
-      throw new ForbiddenError("Bạn không có quyền thêm media cho bài viết này");
+      throw new ForbiddenError(
+        "Bạn không có quyền thêm media cho bài viết này"
+      );
     }
 
     const media = await PostMediaModel.create({
@@ -98,7 +101,9 @@ export const MediaService = {
   ): Promise<MediaDetailDto[]> {
     assertObjectId(postId, "ID bài viết");
 
-    const mediaList = await PostMediaModel.find({ postId: new Types.ObjectId(postId) })
+    const mediaList = await PostMediaModel.find({
+      postId: new Types.ObjectId(postId),
+    })
       .sort({ orderIndex: 1 })
       .lean();
 
