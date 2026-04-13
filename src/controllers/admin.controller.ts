@@ -1151,3 +1151,405 @@ export const getAdminUserReports = asyncHandler(
     });
   }
 );
+
+/**
+ * @route   GET /api/admin/users/:id/stats
+ * Trả về thống kê riêng của 1 user: posts, friends/followers, reports nhận & gửi
+ */
+export const getAdminUserStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "User ID");
+
+    const user = await UserModel.findById(id)
+      .select("postsCount followersCount followingCount")
+      .lean();
+
+    if (!user) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
+
+    const userId = new Types.ObjectId(id);
+
+    const [totalReportsReceived, totalReportsMade] = await Promise.all([
+      // Số báo cáo mà user này BỊ người khác tố
+      ReportModel.countDocuments({ targetId: userId }),
+      // Số báo cáo mà user này ĐÃ TỐ người khác
+      ReportModel.countDocuments({ reporterId: userId }),
+    ]);
+
+    sendSuccess(res, {
+      totalPosts: user.postsCount ?? 0,
+      // Dùng followersCount làm "friends" — đổi thành FollowModel nếu có
+      totalFriends: user.followersCount ?? 0,
+      totalReportsReceived,
+      totalReportsMade,
+    });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+//  POST MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+const POST_ACTIONS = ["hide", "unhide", "delete"] as const;
+type PostAdminAction = (typeof POST_ACTIONS)[number];
+
+function isPostAdminAction(v: string): v is PostAdminAction {
+  return (POST_ACTIONS as readonly string[]).includes(v);
+}
+
+function parseModerationStatus(
+  raw: string | undefined
+): ModerationStatus | undefined {
+  if (!raw) return undefined;
+  if (Object.values(ModerationStatus).includes(raw as ModerationStatus)) {
+    return raw as ModerationStatus;
+  }
+  return undefined;
+}
+
+/**
+ * @route   GET /api/admin/posts
+ * Query: page, limit, keyword, status (pending|approved|rejected|flagged), isHidden
+ */
+export const getAdminPosts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+    const q = req.query as Record<string, string | undefined>;
+
+    const filter: Record<string, unknown> = {};
+
+    // Lọc theo moderationStatus
+    const status = parseModerationStatus(q.status);
+    if (status) filter.moderationStatus = status;
+
+    // Lọc theo isHidden
+    const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
+    if (isHidden !== undefined) filter.isHidden = isHidden;
+
+    // Tìm kiếm theo nội dung hoặc userId
+    const keyword = q.keyword?.trim();
+    if (keyword) {
+      const safe = escapeRegex(keyword);
+      filter.$or = [{ contentText: { $regex: safe, $options: "i" } }];
+    }
+
+    const [posts, total] = await Promise.all([
+      PostModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "_id name avatar email phoneNumber",
+        })
+        .select(
+          "contentText moderationStatus isHidden isEdited likesCount commentsCount sharesCount aiOverallRisk aiToxicScore aiHateSpeechScore aiSpamScore visibility createdAt updatedAt userId"
+        )
+        .lean(),
+      PostModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { posts, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id
+ */
+export const getAdminPostById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const post = await PostModel.findById(id)
+      .populate({
+        path: "userId",
+        select: "_id name avatar email phoneNumber isBlocked isActive",
+      })
+      .lean();
+
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    // Lấy media của post nếu có PostMediaModel
+    let mediaUrls: string[] = [];
+    try {
+      const { PostMediaModel } = await import("../models/post-media.model");
+      const medias = await PostMediaModel.find({ postId: id })
+        .select("mediaUrl mediaType")
+        .lean();
+      mediaUrls = medias.map((m) => m.mediaUrl).filter(Boolean);
+    } catch {
+      // PostMediaModel không tồn tại hoặc lỗi — bỏ qua
+    }
+
+    // Đếm tổng báo cáo của post này
+    const totalReports = await ReportModel.countDocuments({
+      targetType: ReportTargetType.POST,
+      targetId: id,
+    });
+
+    sendSuccess(res, { ...post, mediaUrls, totalReports });
+  }
+);
+
+/**
+ * @route   PATCH /api/admin/posts/:id
+ * Body: { action: "hide" | "unhide" | "delete" }
+ */
+export const patchAdminPost = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const body = req.body as { action?: string; reason?: string };
+
+    if (!body.action || !isPostAdminAction(body.action)) {
+      throw new ValidationError(
+        `action không hợp lệ. Cho phép: ${POST_ACTIONS.join(", ")}`,
+        "INVALID_POST_ACTION"
+      );
+    }
+
+    const post = await PostModel.findById(id).lean();
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    const reason =
+      typeof body.reason === "string" ? body.reason.slice(0, 500) : undefined;
+
+    let updatePayload: Record<string, unknown> = {};
+
+    if (body.action === "hide") {
+      updatePayload = {
+        isHidden: true,
+        moderationStatus: ModerationStatus.REJECTED,
+        ...(reason ? { hiddenReason: reason } : {}),
+      };
+    } else if (body.action === "unhide") {
+      updatePayload = {
+        isHidden: false,
+        moderationStatus: ModerationStatus.APPROVED,
+        hiddenReason: undefined,
+      };
+    } else {
+      // "delete" → soft delete: ẩn + rejected
+      updatePayload = {
+        isHidden: true,
+        moderationStatus: ModerationStatus.REJECTED,
+        hiddenReason: reason ?? "admin_deleted",
+      };
+    }
+
+    const updated = await PostModel.findByIdAndUpdate(
+      id,
+      { $set: updatePayload },
+      { new: true }
+    )
+      .select("_id moderationStatus isHidden hiddenReason updatedAt")
+      .lean();
+
+    if (!updated) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    const msgMap: Record<PostAdminAction, string> = {
+      hide: "Đã ẩn bài viết",
+      unhide: "Đã hiển thị bài viết",
+      delete: "Đã xóa bài viết",
+    };
+
+    sendSuccess(res, updated, msgMap[body.action]);
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/comments
+ * Query: page, limit
+ */
+export const getAdminPostComments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    // Chỉ lấy top-level comments (parentCommentId = null)
+    const filter = { postId: id, parentCommentId: null };
+
+    const [comments, total] = await Promise.all([
+      CommentModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "_id name avatar",
+        })
+        .select(
+          "contentText isHidden moderationStatus likesCount repliesCount isEdited createdAt userId"
+        )
+        .lean(),
+      CommentModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { comments, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/reports
+ * Query: page, limit
+ */
+export const getAdminPostReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const filter = {
+      targetType: ReportTargetType.POST,
+      targetId: new Types.ObjectId(id),
+    };
+
+    const [reports, total] = await Promise.all([
+      ReportModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "reporterId",
+          select: "_id name avatar phoneNumber",
+        })
+        .select(
+          "reason description status actionTaken reviewedAt resolutionNote createdAt reporterId"
+        )
+        .lean(),
+      ReportModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { reports, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/activity
+ * Tổng hợp lịch sử hoạt động của bài viết từ ReportModel
+ * (Nếu sau này có AuditLogModel riêng thì thay thế)
+ */
+export const getAdminPostActivity = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const post = await PostModel.findById(id)
+      .select(
+        "createdAt updatedAt moderationStatus isHidden hiddenReason userId"
+      )
+      .lean();
+
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    // Lấy tất cả reports đã được xử lý của post này
+    const resolvedReports = await ReportModel.find({
+      targetType: ReportTargetType.POST,
+      targetId: new Types.ObjectId(id),
+      status: { $ne: ReportStatus.PENDING },
+    })
+      .sort({ reviewedAt: -1 })
+      .populate({
+        path: "reviewedBy",
+        select: "_id name",
+      })
+      .select(
+        "actionTaken status resolutionNote reviewedAt createdAt reason reviewedBy"
+      )
+      .lean();
+
+    // Tổng hợp thành activity log
+    const logs: Array<{
+      _id: string;
+      action: string;
+      adminName: string;
+      createdAt: Date | string;
+      note?: string;
+    }> = [];
+
+    // Event 1: Bài viết được tạo
+    logs.push({
+      _id: `${id}_created`,
+      action: "Bài viết được đăng",
+      adminName: "System",
+      createdAt: post.createdAt,
+    });
+
+    // Events từ reports đã xử lý
+    for (const r of resolvedReports) {
+      const reviewer = r.reviewedBy as
+        | { _id: unknown; name?: string }
+        | null
+        | undefined;
+      const adminName = reviewer?.name ?? "Admin";
+
+      const actionLabel: Record<string, string> = {
+        approved_content: "Duyệt bài viết",
+        removed_content: "Ẩn bài viết",
+        warned_user: "Cảnh báo tác giả",
+        blocked_user: "Chặn tác giả",
+        hide: "Ẩn bài viết",
+        dismiss: "Bỏ qua báo cáo",
+      };
+
+      logs.push({
+        _id: r._id.toString(),
+        action:
+          actionLabel[r.actionTaken ?? ""] ??
+          `Xử lý báo cáo (${r.actionTaken ?? r.status})`,
+        adminName,
+        createdAt: r.reviewedAt ?? r.createdAt,
+        note: r.resolutionNote || undefined,
+      });
+    }
+
+    // Nếu bài đang bị ẩn mà không có resolved report nào → log thêm
+    if (post.isHidden && resolvedReports.length === 0 && post.hiddenReason) {
+      logs.push({
+        _id: `${id}_hidden`,
+        action: "Bài viết bị ẩn",
+        adminName: "Admin",
+        createdAt: post.updatedAt,
+        note: post.hiddenReason,
+      });
+    }
+
+    // Sắp xếp theo thời gian tăng dần
+    logs.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    sendSuccess(res, { logs, total: logs.length });
+  }
+);
