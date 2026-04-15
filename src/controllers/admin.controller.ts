@@ -16,6 +16,13 @@ import { PostModel, ModerationStatus } from "../models/post.model";
 import { CommentModel, CommentModerationStatus } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
 import { PostMediaModel } from "../models/post-media.model";
+import {
+  LogAction,
+  LogActorRole,
+  LogSeverity,
+  LogTargetType,
+} from "../models/log.model";
+import { LogService } from "../services/log.service";
 import { validateObjectId } from "../utils/validators";
 import type { ModerationResult } from "../services/moderation/moderation.service";
 
@@ -46,6 +53,70 @@ function getAdminUserId(req: Request): string {
     throw new ForbiddenError("Cần đăng nhập");
   }
   return userId;
+}
+
+function getAdminActorId(req: Request): string {
+  const authUser = (req as Request & {
+    user?: { _id?: string | Types.ObjectId; userId?: string };
+  }).user;
+  const actorId = authUser?._id ?? authUser?.userId;
+  if (!actorId) {
+    throw new ForbiddenError("Cần đăng nhập");
+  }
+  return String(actorId);
+}
+
+function getRequestLogContext(req: Request): {
+  ipAddress?: string;
+  userAgent?: string;
+  note?: string;
+} {
+  const reqBody = req.body as { reason?: unknown; note?: unknown } | undefined;
+  const noteFromBody =
+    typeof reqBody?.reason === "string"
+      ? reqBody.reason
+      : typeof reqBody?.note === "string"
+      ? reqBody.note
+      : undefined;
+  const userAgent = req.headers["user-agent"];
+  return {
+    ipAddress: req.ip,
+    userAgent: typeof userAgent === "string" ? userAgent : undefined,
+    note: noteFromBody?.slice(0, 1000),
+  };
+}
+
+function fireAndForgetAdminLog(
+  req: Request,
+  action: LogAction,
+  opts: {
+    severity?: LogSeverity;
+    targetType?: LogTargetType;
+    targetId?: Types.ObjectId | string;
+    affectedUserId?: Types.ObjectId | string;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
+    note?: string;
+    metadata?: Record<string, unknown>;
+  }
+): void {
+  try {
+    const adminId = getAdminActorId(req);
+    const requestContext = getRequestLogContext(req);
+    void LogService.adminAction(adminId, action, {
+      ...opts,
+      severity: opts.severity ?? LogSeverity.WARNING,
+      metadata: {
+        actorRole: LogActorRole.ADMIN,
+        ...(opts.metadata ?? {}),
+      },
+      note: opts.note ?? requestContext.note,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    }).catch(() => undefined);
+  } catch {
+    // Bỏ qua lỗi lấy context admin để không ảnh hưởng luồng chính
+  }
 }
 
 function parsePagination(
@@ -438,6 +509,36 @@ export const handleReport = asyncHandler(
     if (!updated) {
       throw new NotFoundError("Không tìm thấy báo cáo");
     }
+
+    fireAndForgetAdminLog(req, LogAction.ADMIN_REPORT_RESOLVE, {
+      severity:
+        body.action === "blocked_user"
+          ? LogSeverity.CRITICAL
+          : LogSeverity.WARNING,
+      targetType: LogTargetType.REPORT,
+      targetId: reportId,
+      affectedUserId:
+        report.targetType === ReportTargetType.USER
+          ? report.targetId
+          : report.reporterId,
+      before: {
+        status: report.status,
+        reviewedBy: report.reviewedBy?.toString(),
+        reviewedAt: report.reviewedAt,
+        actionTaken: report.actionTaken,
+      },
+      after: {
+        status: updated.status,
+        reviewedBy: updated.reviewedBy?.toString(),
+        reviewedAt: updated.reviewedAt,
+        actionTaken: updated.actionTaken,
+      },
+      metadata: {
+        reportTargetType: report.targetType,
+        reportTargetId: report.targetId?.toString(),
+        actionTaken: body.action,
+      },
+    });
 
     sendSuccess(res, updated);
   }
@@ -910,6 +1011,42 @@ export const resolveAdminReport = asyncHandler(
       throw new NotFoundError("Không tìm thấy báo cáo");
     }
 
+    fireAndForgetAdminLog(
+      req,
+      body.action === "dismiss"
+        ? LogAction.ADMIN_REPORT_DISMISS
+        : LogAction.ADMIN_REPORT_RESOLVE,
+      {
+        severity:
+          body.action === "hide" ? LogSeverity.WARNING : LogSeverity.INFO,
+        targetType: LogTargetType.REPORT,
+        targetId: id,
+        affectedUserId:
+          report.targetType === ReportTargetType.USER
+            ? report.targetId
+            : report.reporterId,
+        before: {
+          status: report.status,
+          reviewedBy: report.reviewedBy?.toString(),
+          reviewedAt: report.reviewedAt,
+          actionTaken: report.actionTaken,
+        },
+        after: {
+          status: updated.status,
+          reviewedBy: updated.reviewedBy?.toString(),
+          reviewedAt: updated.reviewedAt,
+          actionTaken: updated.actionTaken,
+          resolutionNote: updated.resolutionNote,
+        },
+        note: note || undefined,
+        metadata: {
+          reportTargetType: report.targetType,
+          reportTargetId: report.targetId?.toString(),
+          actionTaken: body.action,
+        },
+      }
+    );
+
     sendSuccess(res, {
       id: updated._id.toString(),
       status: updated.status,
@@ -986,6 +1123,13 @@ export const patchAdminUserBlock = asyncHandler(
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
 
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive role")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
+
     const user = await UserModel.findByIdAndUpdate(
       id,
       { $set: { isBlocked: true } },
@@ -998,6 +1142,15 @@ export const patchAdminUserBlock = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_BLOCK, {
+      severity: LogSeverity.CRITICAL,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isBlocked: before.isBlocked, isActive: before.isActive },
+      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+    });
+
     sendSuccess(res, user, "Đã chặn người dùng");
   }
 );
@@ -1006,6 +1159,13 @@ export const patchAdminUserUnblock = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
+
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive role")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
 
     const user = await UserModel.findByIdAndUpdate(
       id,
@@ -1019,6 +1179,15 @@ export const patchAdminUserUnblock = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_UNBLOCK, {
+      severity: LogSeverity.WARNING,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isBlocked: before.isBlocked, isActive: before.isActive },
+      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+    });
+
     sendSuccess(res, user, "Đã bỏ chặn người dùng");
   }
 );
@@ -1028,7 +1197,9 @@ export const patchAdminUserToggleActive = asyncHandler(
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
 
-    const current = await UserModel.findById(id).select("isActive").lean();
+    const current = await UserModel.findById(id)
+      .select("isActive isBlocked")
+      .lean();
     if (!current) {
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
@@ -1045,6 +1216,21 @@ export const patchAdminUserToggleActive = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(
+      req,
+      current.isActive
+        ? LogAction.ADMIN_USER_DEACTIVATE
+        : LogAction.ADMIN_USER_ACTIVATE,
+      {
+        severity: LogSeverity.WARNING,
+        targetType: LogTargetType.USER,
+        targetId: id,
+        affectedUserId: id,
+        before: { isActive: current.isActive, isBlocked: current.isBlocked },
+        after: { isActive: user.isActive, isBlocked: user.isBlocked },
+      }
+    );
+
     sendSuccess(res, user, "Đã cập nhật trạng thái hoạt động");
   }
 );
@@ -1053,6 +1239,13 @@ export const deleteAdminUser = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
+
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
 
     const user = await UserModel.findByIdAndUpdate(
       id,
@@ -1065,6 +1258,15 @@ export const deleteAdminUser = asyncHandler(
     if (!user) {
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
+
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_DELETE, {
+      severity: LogSeverity.CRITICAL,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isActive: before.isActive, isBlocked: before.isBlocked },
+      after: { isActive: user.isActive, isBlocked: user.isBlocked },
+    });
 
     sendSuccess(res, user, "Đã xóa mềm người dùng");
   }
@@ -1367,6 +1569,31 @@ export const patchAdminPost = asyncHandler(
       unhide: "Đã hiển thị bài viết",
       delete: "Đã xóa bài viết",
     };
+
+    const actionMap: Record<PostAdminAction, LogAction> = {
+      hide: LogAction.ADMIN_POST_HIDE,
+      unhide: LogAction.ADMIN_POST_UNHIDE,
+      delete: LogAction.ADMIN_POST_DELETE,
+    };
+
+    fireAndForgetAdminLog(req, actionMap[body.action], {
+      severity:
+        body.action === "delete" ? LogSeverity.CRITICAL : LogSeverity.WARNING,
+      targetType: LogTargetType.POST,
+      targetId: id,
+      affectedUserId: post.userId,
+      before: {
+        isHidden: post.isHidden,
+        moderationStatus: post.moderationStatus,
+        hiddenReason: post.hiddenReason,
+      },
+      after: {
+        isHidden: updated.isHidden,
+        moderationStatus: updated.moderationStatus,
+        hiddenReason: updated.hiddenReason,
+      },
+      note: reason,
+    });
 
     sendSuccess(res, updated, msgMap[body.action]);
   }
