@@ -17,6 +17,7 @@ import { CommentModel, CommentModerationStatus } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
 import { PostMediaModel } from "../models/post-media.model";
 import {
+  LogModel,
   LogAction,
   LogActorRole,
   LogSeverity,
@@ -1387,6 +1388,396 @@ export const getAdminUserStats = asyncHandler(
       totalReportsReceived,
       totalReportsMade,
     });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+//  COMMENT MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+const COMMENT_ACTIONS = ["hide", "unhide", "approve", "reject", "delete"] as const;
+type CommentAdminAction = (typeof COMMENT_ACTIONS)[number];
+
+function isCommentAdminAction(v: string): v is CommentAdminAction {
+  return (COMMENT_ACTIONS as readonly string[]).includes(v);
+}
+
+function parseCommentModerationStatus(
+  raw: string | undefined
+): CommentModerationStatus | undefined {
+  if (!raw) return undefined;
+  if (
+    Object.values(CommentModerationStatus).includes(raw as CommentModerationStatus)
+  ) {
+    return raw as CommentModerationStatus;
+  }
+  return undefined;
+}
+
+/**
+ * @route   GET /api/admin/comments
+ * @query   page        - Trang hiện tại (default: 1)
+ * @query   limit       - Số bản ghi / trang (default: 10, max: 50)
+ * @query   keyword     - Tìm theo nội dung bình luận
+ * @query   status      - pending | approved | rejected | flagged
+ * @query   postId      - Lọc theo bài viết
+ * @query   isHidden    - true | false
+ * @query   replyOnly   - true = chỉ reply | false = chỉ top-level | bỏ qua = tất cả
+ */
+export const getAdminComments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const q = req.query as Record<string, string | undefined>;
+    const filter: Record<string, unknown> = {};
+
+    const status = parseCommentModerationStatus(q.status);
+    if (status) filter.moderationStatus = status;
+
+    const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
+    if (isHidden !== undefined) filter.isHidden = isHidden;
+
+    const postId = q.postId?.trim();
+    if (postId) {
+      validateObjectId(postId, "Post ID");
+      filter.postId = new Types.ObjectId(postId);
+    }
+
+    const replyOnly = parseQueryBoolean(q.replyOnly, "replyOnly");
+    if (replyOnly === true) filter.parentCommentId = { $ne: null };
+    else if (replyOnly === false) filter.parentCommentId = null;
+
+    const keyword = q.keyword?.trim();
+    if (keyword) {
+      const safe = escapeRegex(keyword);
+      filter.contentText = { $regex: safe, $options: "i" };
+    }
+
+    const [comments, total] = await Promise.all([
+      CommentModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: "userId", select: "_id name avatar email" })
+        .populate({ path: "postId", select: "_id contentText" })
+        .select(
+          "contentText moderationStatus isHidden isEdited " +
+            "likesCount repliesCount parentCommentId originalCommentId " +
+            "createdAt updatedAt userId postId"
+        )
+        .lean(),
+      CommentModel.countDocuments(filter),
+    ]);
+
+    const flaggedIds = comments
+      .filter((c) => c.moderationStatus === CommentModerationStatus.FLAGGED)
+      .map((c) => c._id);
+
+    const reportCounts =
+      flaggedIds.length > 0
+        ? await ReportModel.aggregate([
+            {
+              $match: {
+                targetType: ReportTargetType.COMMENT,
+                targetId: { $in: flaggedIds },
+              },
+            },
+            { $group: { _id: "$targetId", count: { $sum: 1 } } },
+          ])
+        : [];
+
+    const reportCountMap = new Map<string, number>(
+      reportCounts.map((r) => [r._id.toString(), r.count as number])
+    );
+
+    const result = comments.map((c) => ({
+      ...c,
+      reportsCount: reportCountMap.get(c._id.toString()) ?? 0,
+    }));
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    sendSuccess(res, { comments: result, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id
+ * @desc    Chi tiết bình luận — user, post gốc, comment cha (nếu reply),
+ *          tổng số báo cáo.
+ */
+export const getAdminCommentById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const comment = await CommentModel.findById(id)
+      .populate({
+        path: "userId",
+        select: "_id name avatar email phoneNumber isBlocked isActive",
+      })
+      .populate({
+        path: "postId",
+        select: "_id contentText moderationStatus isHidden",
+      })
+      .populate({
+        path: "parentCommentId",
+        select: "_id contentText userId createdAt",
+        populate: { path: "userId", select: "_id name avatar" },
+      })
+      .lean();
+
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const totalReports = await ReportModel.countDocuments({
+      targetType: ReportTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    });
+
+    sendSuccess(res, { ...comment, totalReports });
+  }
+);
+
+/**
+ * @route   PATCH /api/admin/comments/:id
+ * @body    { action: "hide"|"unhide"|"approve"|"reject"|"delete", reason?: string }
+ */
+export const patchAdminComment = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const body = req.body as { action?: string; reason?: string };
+    if (!body.action || !isCommentAdminAction(body.action)) {
+      throw new ValidationError(
+        `action không hợp lệ. Cho phép: ${COMMENT_ACTIONS.join(", ")}`,
+        "INVALID_COMMENT_ACTION"
+      );
+    }
+
+    const comment = await CommentModel.findById(id)
+      .select("_id userId moderationStatus isHidden hiddenReason")
+      .lean();
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const reason =
+      typeof body.reason === "string" ? body.reason.slice(0, 500) : undefined;
+
+    type UpdatePayload = {
+      moderationStatus: CommentModerationStatus;
+      isHidden: boolean;
+      hiddenReason?: string | undefined;
+    };
+
+    const payloadMap: Record<CommentAdminAction, UpdatePayload> = {
+      hide: {
+        isHidden: true,
+        moderationStatus: CommentModerationStatus.REJECTED,
+        ...(reason ? { hiddenReason: reason } : {}),
+      },
+      unhide: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.APPROVED,
+        hiddenReason: undefined,
+      },
+      approve: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.APPROVED,
+      },
+      reject: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.REJECTED,
+      },
+      delete: {
+        isHidden: true,
+        moderationStatus: CommentModerationStatus.REJECTED,
+        hiddenReason: reason ?? "admin_deleted",
+      },
+    };
+
+    const updated = await CommentModel.findByIdAndUpdate(
+      id,
+      { $set: payloadMap[body.action] },
+      { new: true }
+    )
+      .select("_id moderationStatus isHidden hiddenReason updatedAt")
+      .lean();
+
+    if (!updated) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const logActionMap: Record<CommentAdminAction, LogAction> = {
+      hide: LogAction.ADMIN_COMMENT_HIDE,
+      unhide: LogAction.ADMIN_COMMENT_UNHIDE,
+      approve: LogAction.ADMIN_COMMENT_MOD_APPROVE,
+      reject: LogAction.ADMIN_COMMENT_MOD_REJECT,
+      delete: LogAction.ADMIN_COMMENT_DELETE,
+    };
+
+    fireAndForgetAdminLog(req, logActionMap[body.action], {
+      severity:
+        body.action === "delete" ? LogSeverity.CRITICAL : LogSeverity.WARNING,
+      targetType: LogTargetType.COMMENT,
+      targetId: id,
+      affectedUserId: comment.userId as Types.ObjectId,
+      before: {
+        isHidden: comment.isHidden,
+        moderationStatus: comment.moderationStatus,
+      },
+      after: {
+        isHidden: updated.isHidden,
+        moderationStatus: updated.moderationStatus,
+      },
+      note: reason,
+    });
+
+    const msgMap: Record<CommentAdminAction, string> = {
+      hide: "Đã ẩn bình luận",
+      unhide: "Đã hiển thị bình luận",
+      approve: "Đã duyệt bình luận",
+      reject: "Đã từ chối bình luận",
+      delete: "Đã xóa bình luận",
+    };
+
+    sendSuccess(res, updated, msgMap[body.action]);
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id/reports
+ * @query   page, limit
+ */
+export const getAdminCommentReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const exists = await CommentModel.exists({ _id: id });
+    if (!exists) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const filter = {
+      targetType: ReportTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    };
+
+    const [reports, total] = await Promise.all([
+      ReportModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "reporterId",
+          select: "_id name avatar phoneNumber",
+        })
+        .select(
+          "reason description status actionTaken " +
+            "reviewedAt resolutionNote createdAt reporterId"
+        )
+        .lean(),
+      ReportModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    sendSuccess(res, { reports, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id/activity
+ * @desc    Lịch sử kiểm duyệt của bình luận, lấy từ LogModel.
+ */
+export const getAdminCommentActivity = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const comment = await CommentModel.findById(id)
+      .select("createdAt moderationStatus isHidden userId")
+      .lean();
+
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const logs = await LogModel.find({
+      targetType: LogTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    })
+      .sort({ createdAt: 1 })
+      .populate({ path: "actorId", select: "_id name avatar" })
+      .select("action actorId actorRole severity before after note createdAt")
+      .lean();
+
+    const actionLabelMap: Partial<Record<LogAction, string>> = {
+      [LogAction.ADMIN_COMMENT_HIDE]: "Đã ẩn bình luận",
+      [LogAction.ADMIN_COMMENT_UNHIDE]: "Đã hiển thị bình luận",
+      [LogAction.ADMIN_COMMENT_DELETE]: "Đã xóa bình luận",
+      [LogAction.ADMIN_COMMENT_MOD_APPROVE]: "Đã duyệt bình luận",
+      [LogAction.ADMIN_COMMENT_MOD_REJECT]: "Đã từ chối bình luận",
+      [LogAction.SYSTEM_COMMENT_AUTO_FLAGGED]: "Hệ thống tự động gắn cờ",
+    };
+
+    type ActivityItem = {
+      _id: string;
+      action: string;
+      adminName: string;
+      adminAvatar?: string;
+      actorRole: string;
+      severity?: string;
+      before?: Record<string, unknown>;
+      after?: Record<string, unknown>;
+      note?: string;
+      createdAt: Date;
+    };
+
+    const activity: ActivityItem[] = [];
+
+    activity.push({
+      _id: `${id}_created`,
+      action: "Bình luận được đăng",
+      adminName: "System",
+      actorRole: LogActorRole.USER,
+      createdAt: comment.createdAt,
+    });
+
+    for (const log of logs) {
+      const actor = log.actorId as
+        | { _id: unknown; name?: string; avatar?: string }
+        | null
+        | undefined;
+
+      activity.push({
+        _id: log._id.toString(),
+        action: actionLabelMap[log.action as LogAction] ?? log.action,
+        adminName:
+          log.actorRole === LogActorRole.SYSTEM
+            ? "Hệ thống"
+            : actor?.name ?? "Admin",
+        adminAvatar: actor?.avatar,
+        actorRole: log.actorRole,
+        severity: log.severity,
+        before: log.before as Record<string, unknown> | undefined,
+        after: log.after as Record<string, unknown> | undefined,
+        note: log.note,
+        createdAt: log.createdAt as Date,
+      });
+    }
+
+    sendSuccess(res, { activity, total: activity.length });
   }
 );
 

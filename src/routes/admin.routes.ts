@@ -83,6 +83,12 @@ import {
   getAdminPostComments, // ← MỚI
   getAdminPostReports, // ← MỚI
   getAdminPostActivity, // ← MỚI
+  // ── Comments ────────────────────────────────────────────────
+  getAdminComments,
+  getAdminCommentById,
+  patchAdminComment,
+  getAdminCommentReports,
+  getAdminCommentActivity,
 } from "../controllers/admin.controller";
 
 const router = Router();
@@ -123,6 +129,15 @@ router.patch("/posts/:id", patchAdminPost); // body: { action: "hide"|"unhide"|"
 router.get("/posts/:id/comments", getAdminPostComments);
 router.get("/posts/:id/reports", getAdminPostReports);
 router.get("/posts/:id/activity", getAdminPostActivity);
+
+// ─────────────────────────────────────────────────────────────
+//  COMMENTS
+// ─────────────────────────────────────────────────────────────
+router.get("/comments", getAdminComments);
+router.get("/comments/:id", getAdminCommentById);
+router.patch("/comments/:id", patchAdminComment);
+router.get("/comments/:id/reports", getAdminCommentReports);
+router.get("/comments/:id/activity", getAdminCommentActivity);
 
 // ─────────────────────────────────────────────────────────────
 //  REPORTS
