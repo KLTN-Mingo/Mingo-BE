@@ -62,6 +62,7 @@ import {
   getAiPerformance,
   // ── Reports ─────────────────────────────────────────────────
   getReports,
+  getAdminReportById,
   handleReport,
   getPendingReportsAdmin,
   resolveAdminReport,
@@ -144,6 +145,7 @@ router.get("/comments/:id/activity", getAdminCommentActivity);
 // ─────────────────────────────────────────────────────────────
 router.get("/reports/pending", getPendingReportsAdmin); // phải trước /reports/:id
 router.get("/reports", getReports);
+router.get("/reports/:id", getAdminReportById);
 router.patch("/reports/:reportId", handleReport);
 router.put("/reports/:id/resolve", resolveAdminReport);
 
