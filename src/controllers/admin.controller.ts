@@ -16,6 +16,14 @@ import { PostModel, ModerationStatus } from "../models/post.model";
 import { CommentModel, CommentModerationStatus } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
 import { PostMediaModel } from "../models/post-media.model";
+import {
+  LogModel,
+  LogAction,
+  LogActorRole,
+  LogSeverity,
+  LogTargetType,
+} from "../models/log.model";
+import { LogService } from "../services/log.service";
 import { validateObjectId } from "../utils/validators";
 import type { ModerationResult } from "../services/moderation/moderation.service";
 
@@ -46,6 +54,70 @@ function getAdminUserId(req: Request): string {
     throw new ForbiddenError("Cần đăng nhập");
   }
   return userId;
+}
+
+function getAdminActorId(req: Request): string {
+  const authUser = (req as Request & {
+    user?: { _id?: string | Types.ObjectId; userId?: string };
+  }).user;
+  const actorId = authUser?._id ?? authUser?.userId;
+  if (!actorId) {
+    throw new ForbiddenError("Cần đăng nhập");
+  }
+  return String(actorId);
+}
+
+function getRequestLogContext(req: Request): {
+  ipAddress?: string;
+  userAgent?: string;
+  note?: string;
+} {
+  const reqBody = req.body as { reason?: unknown; note?: unknown } | undefined;
+  const noteFromBody =
+    typeof reqBody?.reason === "string"
+      ? reqBody.reason
+      : typeof reqBody?.note === "string"
+      ? reqBody.note
+      : undefined;
+  const userAgent = req.headers["user-agent"];
+  return {
+    ipAddress: req.ip,
+    userAgent: typeof userAgent === "string" ? userAgent : undefined,
+    note: noteFromBody?.slice(0, 1000),
+  };
+}
+
+function fireAndForgetAdminLog(
+  req: Request,
+  action: LogAction,
+  opts: {
+    severity?: LogSeverity;
+    targetType?: LogTargetType;
+    targetId?: Types.ObjectId | string;
+    affectedUserId?: Types.ObjectId | string;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
+    note?: string;
+    metadata?: Record<string, unknown>;
+  }
+): void {
+  try {
+    const adminId = getAdminActorId(req);
+    const requestContext = getRequestLogContext(req);
+    void LogService.adminAction(adminId, action, {
+      ...opts,
+      severity: opts.severity ?? LogSeverity.WARNING,
+      metadata: {
+        actorRole: LogActorRole.ADMIN,
+        ...(opts.metadata ?? {}),
+      },
+      note: opts.note ?? requestContext.note,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    }).catch(() => undefined);
+  } catch {
+    // Bỏ qua lỗi lấy context admin để không ảnh hưởng luồng chính
+  }
 }
 
 function parsePagination(
@@ -119,202 +191,184 @@ function badgeFromAiScores(
   return "Spam";
 }
 
-const REPORT_ACTIONS = [
-  "approved_content",
-  "removed_content",
-  "warned_user",
-  "blocked_user",
+const REPORT_STATUSES = ["pending", "reviewing", "resolved", "dismissed"] as const;
+const REPORT_TARGET_TYPES = ["post", "comment", "user"] as const;
+const REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "hate_speech",
+  "inappropriate",
+  "scam",
+  "copyright",
+  "violence",
+  "misinformation",
+  "other",
 ] as const;
+const REPORT_ACTIONS = ["review", "resolve", "dismiss"] as const;
 
-type ReportAdminAction = (typeof REPORT_ACTIONS)[number];
+type AdminReportStatus = (typeof REPORT_STATUSES)[number];
+type AdminReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
+type AdminReportReason = (typeof REPORT_REASONS)[number];
+type AdminReportAction = (typeof REPORT_ACTIONS)[number];
 
-function isReportAdminAction(v: string): v is ReportAdminAction {
-  return (REPORT_ACTIONS as readonly string[]).includes(v);
+const isReportStatus = (v?: string): v is AdminReportStatus =>
+  REPORT_STATUSES.includes(v as AdminReportStatus);
+const isReportTargetType = (v?: string): v is AdminReportTargetType =>
+  REPORT_TARGET_TYPES.includes(v as AdminReportTargetType);
+const isReportReason = (v?: string): v is AdminReportReason =>
+  REPORT_REASONS.includes(v as AdminReportReason);
+const isReportAction = (v?: string): v is AdminReportAction =>
+  REPORT_ACTIONS.includes(v as AdminReportAction);
+
+async function resolveTargetPreview(
+  targetType: AdminReportTargetType,
+  targetId: Types.ObjectId
+): Promise<{
+  targetPreview?: string;
+  targetUserName?: string;
+  targetUserAvatar?: string;
+}> {
+  try {
+    if (targetType === "post") {
+      const doc = await PostModel.findById(targetId)
+        .select("contentText userId")
+        .populate<{ userId: { name?: string; avatar?: string } }>(
+          "userId",
+          "name avatar"
+        )
+        .lean();
+      if (!doc) return {};
+      return {
+        targetPreview: (doc.contentText as string | undefined)?.slice(0, 120),
+        targetUserName: doc.userId?.name,
+        targetUserAvatar: doc.userId?.avatar,
+      };
+    }
+
+    if (targetType === "comment") {
+      const doc = await CommentModel.findById(targetId)
+        .select("contentText userId")
+        .populate<{ userId: { name?: string; avatar?: string } }>(
+          "userId",
+          "name avatar"
+        )
+        .lean();
+      if (!doc) return {};
+      return {
+        targetPreview: (doc.contentText as string | undefined)?.slice(0, 120),
+        targetUserName: doc.userId?.name,
+        targetUserAvatar: doc.userId?.avatar,
+      };
+    }
+
+    const doc = await UserModel.findById(targetId).select("name avatar bio").lean();
+    if (!doc) return {};
+    return {
+      targetPreview: (doc.bio as string | undefined)?.slice(0, 120),
+      targetUserName: doc.name as string | undefined,
+      targetUserAvatar: doc.avatar as string | undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
-function parseAdminReportStatus(
-  raw: string | undefined
-): ReportStatus | undefined {
-  if (!raw) return undefined;
-  if (raw === "pending") return ReportStatus.PENDING;
-  if (raw === "reviewed") return ReportStatus.REVIEWED;
-  if (raw === "dismissed") return ReportStatus.DISMISSED;
-  return undefined;
-}
+async function buildAdminReportPayload(
+  report: {
+    _id: Types.ObjectId;
+    reporterId?:
+      | Types.ObjectId
+      | { _id: Types.ObjectId; name?: string; avatar?: string }
+      | null;
+    targetType: ReportTargetType | string;
+    targetId: Types.ObjectId;
+    reason?: ReportReason | string;
+    description?: string;
+    status: ReportStatus | string;
+    resolutionNote?: string;
+    reviewedBy?:
+      | Types.ObjectId
+      | { _id: Types.ObjectId; name?: string }
+      | null;
+    reviewedAt?: Date;
+    actionTaken?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    priorityScore?: number;
+  }
+) {
+  const isReporterPopulated = (
+    value: typeof report.reporterId
+  ): value is { _id: Types.ObjectId; name?: string; avatar?: string } =>
+    Boolean(value && typeof value === "object" && "_id" in value && "name" in value);
+  const isReviewerPopulated = (
+    value: typeof report.reviewedBy
+  ): value is { _id: Types.ObjectId; name?: string } =>
+    Boolean(value && typeof value === "object" && "_id" in value && "name" in value);
 
-function parseEntityTypeFilter(
-  raw: string | undefined
-): ReportTargetType | undefined {
-  if (!raw) return undefined;
-  if (raw === "post") return ReportTargetType.POST;
-  if (raw === "comment") return ReportTargetType.COMMENT;
-  return undefined;
-}
+  const reporter = isReporterPopulated(report.reporterId) ? report.reporterId : null;
+  const reviewer = isReviewerPopulated(report.reviewedBy) ? report.reviewedBy : null;
 
-function mapReporter(
-  reporter: {
-    _id: unknown;
-    name?: string;
-    phoneNumber?: string;
-    avatar?: string;
-  } | null
-): { _id: string; username: string; avatarUrl: string } | null {
-  if (!reporter || !reporter._id) return null;
+  const preview = await resolveTargetPreview(
+    report.targetType as AdminReportTargetType,
+    report.targetId
+  );
+
   return {
-    _id: String(reporter._id),
-    username: reporter.name ?? reporter.phoneNumber ?? "",
-    avatarUrl: reporter.avatar ?? "",
+    _id: report._id.toString(),
+    reporterId: reporter?._id?.toString() ?? String(report.reporterId ?? ""),
+    reporterName: reporter?.name ?? "",
+    reporterAvatar: reporter?.avatar ?? "",
+    targetType: report.targetType,
+    targetId: report.targetId.toString(),
+    reason: report.reason,
+    description: report.description ?? "",
+    status:
+      report.status === ReportStatus.REVIEWED ? "resolved" : report.status,
+    resolutionNote: report.resolutionNote,
+    reviewedBy:
+      reviewer?._id?.toString() ??
+      (report.reviewedBy instanceof Types.ObjectId
+        ? report.reviewedBy.toString()
+        : undefined),
+    reviewedByName: reviewer?.name,
+    reviewedAt: report.reviewedAt,
+    actionTaken: report.actionTaken,
+    priorityScore: report.priorityScore ?? 0,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    ...preview,
   };
 }
 
-async function loadEntitiesForReports(
-  reports: Array<{
-    targetType: ReportTargetType;
-    targetId: { toString(): string };
-  }>
-): Promise<
-  Map<
-    string,
-    {
-      contentText?: string;
-      aiToxicScore?: number;
-      aiHateSpeechScore?: number;
-      aiSpamScore?: number;
-      aiOverallRisk?: number;
-    }
-  >
-> {
-  const postIds = reports
-    .filter((r) => r.targetType === ReportTargetType.POST)
-    .map((r) => r.targetId.toString());
-  const commentIds = reports
-    .filter((r) => r.targetType === ReportTargetType.COMMENT)
-    .map((r) => r.targetId.toString());
-
-  const map = new Map<
-    string,
-    {
-      contentText?: string;
-      aiToxicScore?: number;
-      aiHateSpeechScore?: number;
-      aiSpamScore?: number;
-      aiOverallRisk?: number;
-    }
-  >();
-
-  if (postIds.length) {
-    const posts = await PostModel.find({ _id: { $in: postIds } })
-      .select(
-        "contentText aiToxicScore aiHateSpeechScore aiSpamScore aiOverallRisk"
-      )
-      .lean();
-    for (const p of posts) {
-      map.set(p._id.toString(), {
-        contentText: p.contentText,
-        aiToxicScore: p.aiToxicScore,
-        aiHateSpeechScore: p.aiHateSpeechScore,
-        aiSpamScore: p.aiSpamScore,
-        aiOverallRisk: p.aiOverallRisk,
-      });
-    }
-  }
-
-  if (commentIds.length) {
-    const comments = await CommentModel.find({ _id: { $in: commentIds } })
-      .select("contentText")
-      .lean();
-    for (const c of comments) {
-      map.set(c._id.toString(), { contentText: c.contentText });
-    }
-  }
-
-  return map;
-}
-
-async function applyReportSideEffect(
-  report: {
-    targetType: ReportTargetType;
-    targetId: Types.ObjectId;
-  },
-  action: ReportAdminAction
-): Promise<void> {
-  if (report.targetType === ReportTargetType.USER) {
-    if (action === "blocked_user") {
-      await UserModel.findByIdAndUpdate(report.targetId, { isBlocked: true });
-    }
-    return;
-  }
-
-  if (action === "warned_user") {
-    return;
-  }
-
-  if (action === "blocked_user") {
-    if (report.targetType === ReportTargetType.POST) {
-      const p = await PostModel.findById(report.targetId)
-        .select("userId")
-        .lean();
-      if (p?.userId) {
-        await UserModel.findByIdAndUpdate(p.userId, { isBlocked: true });
-      }
-    } else {
-      const c = await CommentModel.findById(report.targetId)
-        .select("userId")
-        .lean();
-      if (c?.userId) {
-        await UserModel.findByIdAndUpdate(c.userId, { isBlocked: true });
-      }
-    }
-    return;
-  }
-
-  if (report.targetType === ReportTargetType.POST) {
-    if (action === "removed_content") {
-      await PostModel.findByIdAndUpdate(report.targetId, {
-        isHidden: true,
-        moderationStatus: ModerationStatus.REJECTED,
-      });
-    } else if (action === "approved_content") {
-      await PostModel.findByIdAndUpdate(report.targetId, {
-        isHidden: false,
-        moderationStatus: ModerationStatus.APPROVED,
-      });
-    }
-    return;
-  }
-
-  if (report.targetType === ReportTargetType.COMMENT) {
-    if (action === "removed_content") {
-      await CommentModel.findByIdAndUpdate(report.targetId, {
-        isHidden: true,
-        moderationStatus: CommentModerationStatus.REJECTED,
-      });
-    } else if (action === "approved_content") {
-      await CommentModel.findByIdAndUpdate(report.targetId, {
-        isHidden: false,
-        moderationStatus: CommentModerationStatus.APPROVED,
-      });
-    }
-  }
+function mapReportActionToLogAction(action: AdminReportAction): LogAction {
+  if (action === "review") return LogAction.ADMIN_REPORT_START_REVIEW;
+  if (action === "dismiss") return LogAction.ADMIN_REPORT_DISMISS;
+  return LogAction.ADMIN_REPORT_RESOLVE;
 }
 
 /**
  * @route   GET /api/admin/reports
  */
 export const getReports = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, skip } = parsePagination(req, {
+    defaultLimit: 10,
+    maxLimit: 50,
+  });
   const q = req.query as Record<string, string | undefined>;
-  const page = Math.max(1, parseInt(q.page ?? "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(q.limit ?? "20", 10) || 20));
-  const skip = (page - 1) * limit;
 
   const filter: Record<string, unknown> = {};
-  const st = parseAdminReportStatus(q.status);
-  if (st) {
-    filter.status = st;
-  }
-  const et = parseEntityTypeFilter(q.entityType);
-  if (et) {
-    filter.targetType = et;
+  if (isReportStatus(q.status)) filter.status = q.status;
+  if (isReportTargetType(q.targetType)) filter.targetType = q.targetType;
+  if (isReportReason(q.reason)) filter.reason = q.reason;
+
+  const keyword = q.keyword?.trim();
+  if (keyword) {
+    const safe = escapeRegex(keyword);
+    filter.$or = [
+      { description: { $regex: safe, $options: "i" } },
+      { actionTaken: { $regex: safe, $options: "i" } },
+    ];
   }
 
   const [rows, total] = await Promise.all([
@@ -322,124 +376,197 @@ export const getReports = asyncHandler(async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate({
-        path: "reporterId",
-        select: "_id name phoneNumber avatar",
-      })
+      .populate({ path: "reporterId", select: "_id name avatar" })
+      .populate({ path: "reviewedBy", select: "_id name" })
       .lean(),
     ReportModel.countDocuments(filter),
   ]);
 
-  const entityMap = await loadEntitiesForReports(
-    rows as Array<{
-      targetType: ReportTargetType;
-      targetId: { toString(): string };
-    }>
-  );
-
-  const reports = rows.map((r) => {
-    const rep = r.reporterId as unknown as Parameters<typeof mapReporter>[0];
-    const key = r.targetId.toString();
-    const entity = entityMap.get(key);
-    return {
-      id: r._id.toString(),
-      reporterId: mapReporter(rep),
-      targetType: r.targetType,
-      targetId: key,
-      reason: r.reason,
-      description: r.description,
-      status: r.status,
-      resolutionNote: r.resolutionNote,
-      reviewedBy: r.reviewedBy?.toString(),
-      reviewedAt: r.reviewedAt,
-      actionTaken: r.actionTaken,
-      moderationSnapshot: r.moderationSnapshot,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-      entity: entity
-        ? {
-            contentText: entity.contentText,
-            aiScores:
-              entity.aiToxicScore !== undefined ||
-              entity.aiHateSpeechScore !== undefined ||
-              entity.aiSpamScore !== undefined ||
-              entity.aiOverallRisk !== undefined
-                ? {
-                    toxic: entity.aiToxicScore,
-                    hateSpeech: entity.aiHateSpeechScore,
-                    spam: entity.aiSpamScore,
-                    overallRisk: entity.aiOverallRisk,
-                  }
-                : undefined,
-          }
-        : null,
-    };
+  const reports = (
+    await Promise.all(rows.map((row) => buildAdminReportPayload(row as never)))
+  ).filter((report) => {
+    if (!keyword) return true;
+    const kw = keyword.toLowerCase();
+    return (
+      report.reporterName.toLowerCase().includes(kw) ||
+      report.targetPreview?.toLowerCase().includes(kw) ||
+      report.description.toLowerCase().includes(kw)
+    );
   });
-
-  const totalPages = Math.ceil(total / limit) || 1;
 
   sendSuccess(res, {
     reports,
-    total,
+    total: keyword ? reports.length : total,
     page,
-    totalPages,
+    totalPages: Math.ceil((keyword ? reports.length : total) / limit) || 1,
   });
 });
+
+export const getAdminReportById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Report ID");
+
+    const report = await ReportModel.findById(id)
+      .populate({ path: "reporterId", select: "_id name avatar" })
+      .populate({ path: "reviewedBy", select: "_id name" })
+      .lean();
+    if (!report) {
+      throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
+    }
+
+    const [detail, relatedRows, logs] = await Promise.all([
+      buildAdminReportPayload(report as never),
+      ReportModel.find({
+        targetType: report.targetType,
+        targetId: report.targetId,
+        _id: { $ne: report._id },
+      })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate({ path: "reporterId", select: "_id name avatar" })
+        .populate({ path: "reviewedBy", select: "_id name" })
+        .lean(),
+      LogModel.find({
+        targetType: LogTargetType.REPORT,
+        targetId: report._id,
+      })
+        .sort({ createdAt: 1 })
+        .populate({ path: "actorId", select: "_id name avatar" })
+        .select("action actorId actorRole note createdAt")
+        .lean(),
+    ]);
+
+    const activity = [
+      {
+        _id: `${id}_created`,
+        action: "Báo cáo được tạo",
+        adminName: "System",
+        note: undefined,
+        createdAt: report.createdAt,
+      },
+      ...logs.map((log) => {
+        const actor = log.actorId as { name?: string } | null | undefined;
+        const actionMap: Partial<Record<LogAction, string>> = {
+          [LogAction.ADMIN_REPORT_START_REVIEW]:
+            "Admin chuyển trạng thái sang đang xem xét",
+          [LogAction.ADMIN_REPORT_RESOLVE]: "Admin xử lý và đóng báo cáo",
+          [LogAction.ADMIN_REPORT_DISMISS]: "Báo cáo bị bỏ qua do không vi phạm",
+        };
+        return {
+          _id: log._id.toString(),
+          action: actionMap[log.action as LogAction] ?? log.action,
+          adminName:
+            log.actorRole === LogActorRole.SYSTEM
+              ? "System"
+              : actor?.name ?? "Admin",
+          note: log.note,
+          createdAt: log.createdAt,
+        };
+      }),
+    ];
+
+    const relatedReports = await Promise.all(
+      relatedRows.map((row) => buildAdminReportPayload(row as never))
+    );
+
+    sendSuccess(res, {
+      ...detail,
+      activity,
+      relatedReports,
+    });
+  }
+);
 
 /**
  * @route   PATCH /api/admin/reports/:reportId
  */
 export const handleReport = asyncHandler(
   async (req: Request, res: Response) => {
-    const adminId = (req as any).user?.userId as string | undefined;
-    if (!adminId) {
-      throw new ForbiddenError("Cần đăng nhập");
-    }
+    const { reportId } = req.params as { reportId: string };
+    validateObjectId(reportId, "Report ID");
 
-    const reportId = String(req.params.reportId);
-    const body = req.body as { action?: string };
-
-    if (!body.action || !isReportAdminAction(body.action)) {
+    const body = req.body as {
+      action?: string;
+      note?: string;
+      actionTaken?: string;
+    };
+    if (!isReportAction(body.action)) {
       throw new ValidationError(
         `action không hợp lệ. Cho phép: ${REPORT_ACTIONS.join(", ")}`,
         "INVALID_REPORT_ACTION"
       );
     }
 
-    const report = await ReportModel.findById(reportId).lean();
+    const report = await ReportModel.findById(reportId)
+      .select("_id status reporterId targetType targetId actionTaken")
+      .lean();
     if (!report) {
-      throw new NotFoundError("Không tìm thấy báo cáo");
+      throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${reportId}`);
     }
 
-    await applyReportSideEffect(
-      {
-        targetType: report.targetType as ReportTargetType,
-        targetId: report.targetId,
+    const note =
+      typeof body.note === "string" ? body.note.slice(0, 500) : undefined;
+    const actionTaken =
+      typeof body.actionTaken === "string"
+        ? body.actionTaken.slice(0, 200)
+        : undefined;
+    const adminId =
+      ((req as Request & { user?: { _id?: string; userId?: string } }).user?._id ??
+        (req as Request & { user?: { _id?: string; userId?: string } }).user
+          ?.userId) ||
+      undefined;
+
+    const payloadMap: Record<AdminReportAction, Record<string, unknown>> = {
+      review: { status: ReportStatus.REVIEWING },
+      resolve: {
+        status: ReportStatus.RESOLVED,
+        resolutionNote: note,
+        actionTaken,
+        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
+        reviewedAt: new Date(),
       },
-      body.action
-    );
+      dismiss: {
+        status: ReportStatus.DISMISSED,
+        resolutionNote: note,
+        actionTaken,
+        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
+        reviewedAt: new Date(),
+      },
+    };
 
     const updated = await ReportModel.findByIdAndUpdate(
       reportId,
-      {
-        status: ReportStatus.REVIEWED,
-        reviewedBy: new Types.ObjectId(adminId),
-        reviewedAt: new Date(),
-        actionTaken: body.action,
-      },
+      { $set: payloadMap[body.action] },
       { new: true }
     )
-      .populate({
-        path: "reporterId",
-        select: "_id name phoneNumber avatar",
-      })
+      .populate({ path: "reporterId", select: "_id name avatar" })
+      .populate({ path: "reviewedBy", select: "_id name" })
       .lean();
 
     if (!updated) {
-      throw new NotFoundError("Không tìm thấy báo cáo");
+      throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${reportId}`);
     }
 
-    sendSuccess(res, updated);
+    fireAndForgetAdminLog(req, mapReportActionToLogAction(body.action), {
+      severity: body.action === "resolve" ? LogSeverity.WARNING : LogSeverity.INFO,
+      targetType: LogTargetType.REPORT,
+      targetId: reportId,
+      affectedUserId: report.reporterId,
+      before: { status: report.status, actionTaken: report.actionTaken },
+      after: { status: updated.status, actionTaken: updated.actionTaken },
+      note,
+    });
+
+    sendSuccess(
+      res,
+      await buildAdminReportPayload(updated as never),
+      body.action === "review"
+        ? "Đã chuyển báo cáo sang đang xem xét"
+        : body.action === "resolve"
+        ? "Đã xử lý và đóng báo cáo"
+        : "Đã bỏ qua báo cáo"
+    );
   }
 );
 
@@ -514,144 +641,21 @@ export const getPendingReportsAdmin = asyncHandler(
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
+        .populate({ path: "reporterId", select: "_id name avatar" })
+        .populate({ path: "reviewedBy", select: "_id name" })
         .lean(),
       ReportModel.countDocuments(filter),
     ]);
 
-    const postIds = rows
-      .filter((r) => r.targetType === ReportTargetType.POST)
-      .map((r) => r.targetId.toString());
-    const commentIds = rows
-      .filter((r) => r.targetType === ReportTargetType.COMMENT)
-      .map((r) => r.targetId.toString());
-    const userIds = rows
-      .filter((r) => r.targetType === ReportTargetType.USER)
-      .map((r) => r.targetId.toString());
-
-    const uniquePost = [...new Set(postIds)];
-    const uniqueComment = [...new Set(commentIds)];
-    const uniqueUser = [...new Set(userIds)];
-
-    const uniqueOrPairs = [
-      ...new Map(
-        rows.map((r) => [
-          `${r.targetType}:${r.targetId.toString()}`,
-          { targetType: r.targetType, targetId: r.targetId },
-        ])
-      ).values(),
-    ];
-    const reportCounts =
-      uniqueOrPairs.length === 0
-        ? []
-        : await ReportModel.aggregate<{
-            _id: { targetType: string; targetId: Types.ObjectId };
-            c: number;
-          }>([
-            {
-              $match: {
-                $or: uniqueOrPairs.map((p) => ({
-                  targetType: p.targetType,
-                  targetId: p.targetId,
-                })),
-              },
-            },
-            {
-              $group: {
-                _id: { targetType: "$targetType", targetId: "$targetId" },
-                c: { $sum: 1 },
-              },
-            },
-          ]);
-    const countMap = new Map<string, number>();
-    for (const row of reportCounts) {
-      countMap.set(
-        `${row._id.targetType}:${row._id.targetId.toString()}`,
-        row.c
-      );
-    }
-
-    const [posts, comments, users] = await Promise.all([
-      uniquePost.length
-        ? PostModel.find({ _id: { $in: uniquePost } })
-            .select(
-              "contentText aiToxicScore aiHateSpeechScore aiSpamScore aiOverallRisk"
-            )
-            .lean()
-        : [],
-      uniqueComment.length
-        ? CommentModel.find({ _id: { $in: uniqueComment } })
-            .select("contentText")
-            .lean()
-        : [],
-      uniqueUser.length
-        ? UserModel.find({ _id: { $in: uniqueUser } })
-            .select("name phoneNumber")
-            .lean()
-        : [],
-    ]);
-
-    const postMap = new Map(posts.map((p) => [p._id.toString(), p]));
-    const commentMap = new Map(comments.map((c) => [c._id.toString(), c]));
-    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
-
-    const items = rows.map((r) => {
-      const key = `${r.targetType}:${r.targetId.toString()}`;
-      const snapScores = scoresFromSnapshot(
-        r.moderationSnapshot as ModerationResult | undefined
-      );
-      let toxic = snapScores.toxic;
-      let hate = snapScores.hate;
-      let spam = snapScores.spam;
-      let overall = 0;
-
-      let name = "";
-      if (r.targetType === ReportTargetType.POST) {
-        const p = postMap.get(r.targetId.toString());
-        name = (p?.contentText ?? "").trim().slice(0, 120) || "Bài viết";
-        if (p) {
-          toxic = Math.max(toxic, p.aiToxicScore ?? 0);
-          hate = Math.max(hate, p.aiHateSpeechScore ?? 0);
-          spam = Math.max(spam, p.aiSpamScore ?? 0);
-          overall = p.aiOverallRisk ?? Math.max(toxic, hate, spam);
-        }
-      } else if (r.targetType === ReportTargetType.COMMENT) {
-        const c = commentMap.get(r.targetId.toString());
-        name = (c?.contentText ?? "").trim().slice(0, 120) || "Bình luận";
-      } else {
-        const u = userMap.get(r.targetId.toString());
-        name = u?.name?.trim() || u?.phoneNumber || "Người dùng";
-      }
-
-      if (!overall) {
-        overall = Math.max(toxic, hate, spam);
-      }
-
-      const badge = badgeFromAiScores(toxic, hate, spam);
-      const reportCountForTarget = countMap.get(key) ?? 1;
-
-      return {
-        id: r._id.toString(),
-        badge,
-        name,
-        meta: {
-          score: overall,
-          reportCount: reportCountForTarget,
-          reason: r.reason ?? null,
-        },
-      };
-    });
-
-    const totalPages = Math.ceil(total / limit) || 1;
+    const reports = await Promise.all(
+      rows.map((row) => buildAdminReportPayload(row as never))
+    );
 
     sendSuccess(res, {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasMore: page < totalPages,
-      },
+      reports,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
     });
   }
 );
@@ -851,72 +855,65 @@ export const getAiPerformance = asyncHandler(
  */
 export const resolveAdminReport = asyncHandler(
   async (req: Request, res: Response) => {
-    const adminId = getAdminUserId(req);
-    const id = String(req.params.id);
-    if (!Types.ObjectId.isValid(id)) {
-      throw new ValidationError("id báo cáo không hợp lệ", "INVALID_REPORT_ID");
-    }
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Report ID");
 
-    const body = req.body as { action?: string; note?: string };
-    if (!body.action || !isResolveAction(body.action)) {
-      throw new ValidationError(
-        `action phải là: ${RESOLVE_ACTIONS.join(", ")}`,
-        "INVALID_RESOLVE_ACTION"
-      );
-    }
+    const body = req.body as { note?: string; actionTaken?: string };
+    const note =
+      typeof body.note === "string" ? body.note.slice(0, 500) : undefined;
+    const actionTaken =
+      typeof body.actionTaken === "string"
+        ? body.actionTaken.slice(0, 200)
+        : undefined;
+    const adminId =
+      ((req as Request & { user?: { _id?: string; userId?: string } }).user?._id ??
+        (req as Request & { user?: { _id?: string; userId?: string } }).user
+          ?.userId) ||
+      undefined;
 
-    const note = typeof body.note === "string" ? body.note.slice(0, 1000) : "";
-
-    const report = await ReportModel.findById(id).lean();
+    const report = await ReportModel.findById(id)
+      .select("_id status reporterId")
+      .lean();
     if (!report) {
-      throw new NotFoundError("Không tìm thấy báo cáo");
-    }
-
-    if (report.status !== ReportStatus.PENDING) {
-      throw new ValidationError(
-        "Chỉ có thể xử lý báo cáo đang ở trạng thái chờ (pending)",
-        "REPORT_NOT_PENDING"
-      );
-    }
-
-    if (body.action === "hide") {
-      if (report.targetType === ReportTargetType.POST) {
-        await PostModel.findByIdAndUpdate(report.targetId, {
-          isHidden: true,
-          hiddenReason: note || "admin_hide_report",
-          moderationStatus: ModerationStatus.REJECTED,
-        });
-      } else if (report.targetType === ReportTargetType.COMMENT) {
-        await CommentModel.findByIdAndUpdate(report.targetId, {
-          isHidden: true,
-          moderationStatus: CommentModerationStatus.REJECTED,
-        });
-      }
+      throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
     }
 
     const updated = await ReportModel.findByIdAndUpdate(
       id,
       {
-        status: ReportStatus.RESOLVED,
-        resolutionNote: note || undefined,
-        reviewedBy: new Types.ObjectId(adminId),
-        reviewedAt: new Date(),
-        actionTaken: body.action,
+        $set: {
+          status: ReportStatus.RESOLVED,
+          resolutionNote: note,
+          actionTaken,
+          reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
+          reviewedAt: new Date(),
+        },
       },
       { new: true }
-    ).lean();
+    )
+      .populate({ path: "reporterId", select: "_id name avatar" })
+      .populate({ path: "reviewedBy", select: "_id name" })
+      .lean();
 
     if (!updated) {
-      throw new NotFoundError("Không tìm thấy báo cáo");
+      throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
     }
 
-    sendSuccess(res, {
-      id: updated._id.toString(),
-      status: updated.status,
-      actionTaken: updated.actionTaken,
-      resolutionNote: updated.resolutionNote,
-      reviewedAt: updated.reviewedAt,
+    fireAndForgetAdminLog(req, LogAction.ADMIN_REPORT_RESOLVE, {
+      severity: LogSeverity.WARNING,
+      targetType: LogTargetType.REPORT,
+      targetId: id,
+      affectedUserId: report.reporterId,
+      before: { status: report.status },
+      after: { status: ReportStatus.RESOLVED },
+      note,
     });
+
+    sendSuccess(
+      res,
+      await buildAdminReportPayload(updated as never),
+      "Đã xử lý và đóng báo cáo"
+    );
   }
 );
 
@@ -986,6 +983,13 @@ export const patchAdminUserBlock = asyncHandler(
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
 
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive role")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
+
     const user = await UserModel.findByIdAndUpdate(
       id,
       { $set: { isBlocked: true } },
@@ -998,6 +1002,15 @@ export const patchAdminUserBlock = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_BLOCK, {
+      severity: LogSeverity.CRITICAL,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isBlocked: before.isBlocked, isActive: before.isActive },
+      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+    });
+
     sendSuccess(res, user, "Đã chặn người dùng");
   }
 );
@@ -1006,6 +1019,13 @@ export const patchAdminUserUnblock = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
+
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive role")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
 
     const user = await UserModel.findByIdAndUpdate(
       id,
@@ -1019,6 +1039,15 @@ export const patchAdminUserUnblock = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_UNBLOCK, {
+      severity: LogSeverity.WARNING,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isBlocked: before.isBlocked, isActive: before.isActive },
+      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+    });
+
     sendSuccess(res, user, "Đã bỏ chặn người dùng");
   }
 );
@@ -1028,7 +1057,9 @@ export const patchAdminUserToggleActive = asyncHandler(
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
 
-    const current = await UserModel.findById(id).select("isActive").lean();
+    const current = await UserModel.findById(id)
+      .select("isActive isBlocked")
+      .lean();
     if (!current) {
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
@@ -1045,6 +1076,21 @@ export const patchAdminUserToggleActive = asyncHandler(
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    fireAndForgetAdminLog(
+      req,
+      current.isActive
+        ? LogAction.ADMIN_USER_DEACTIVATE
+        : LogAction.ADMIN_USER_ACTIVATE,
+      {
+        severity: LogSeverity.WARNING,
+        targetType: LogTargetType.USER,
+        targetId: id,
+        affectedUserId: id,
+        before: { isActive: current.isActive, isBlocked: current.isBlocked },
+        after: { isActive: user.isActive, isBlocked: user.isBlocked },
+      }
+    );
+
     sendSuccess(res, user, "Đã cập nhật trạng thái hoạt động");
   }
 );
@@ -1053,6 +1099,13 @@ export const deleteAdminUser = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     validateObjectId(id, "User ID");
+
+    const before = await UserModel.findById(id)
+      .select("isBlocked isActive")
+      .lean();
+    if (!before) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
 
     const user = await UserModel.findByIdAndUpdate(
       id,
@@ -1065,6 +1118,15 @@ export const deleteAdminUser = asyncHandler(
     if (!user) {
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
+
+    fireAndForgetAdminLog(req, LogAction.ADMIN_USER_DELETE, {
+      severity: LogSeverity.CRITICAL,
+      targetType: LogTargetType.USER,
+      targetId: id,
+      affectedUserId: id,
+      before: { isActive: before.isActive, isBlocked: before.isBlocked },
+      after: { isActive: user.isActive, isBlocked: user.isBlocked },
+    });
 
     sendSuccess(res, user, "Đã xóa mềm người dùng");
   }
@@ -1149,5 +1211,822 @@ export const getAdminUserReports = asyncHandler(
       page,
       totalPages: Math.ceil(total / limit) || 1,
     });
+  }
+);
+
+/**
+ * @route   GET /api/admin/users/:id/stats
+ * Trả về thống kê riêng của 1 user: posts, friends/followers, reports nhận & gửi
+ */
+export const getAdminUserStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "User ID");
+
+    const user = await UserModel.findById(id)
+      .select("postsCount followersCount followingCount")
+      .lean();
+
+    if (!user) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
+    }
+
+    const userId = new Types.ObjectId(id);
+
+    const [totalReportsReceived, totalReportsMade] = await Promise.all([
+      // Số báo cáo mà user này BỊ người khác tố
+      ReportModel.countDocuments({ targetId: userId }),
+      // Số báo cáo mà user này ĐÃ TỐ người khác
+      ReportModel.countDocuments({ reporterId: userId }),
+    ]);
+
+    sendSuccess(res, {
+      totalPosts: user.postsCount ?? 0,
+      // Dùng followersCount làm "friends" — đổi thành FollowModel nếu có
+      totalFriends: user.followersCount ?? 0,
+      totalReportsReceived,
+      totalReportsMade,
+    });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+//  COMMENT MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+const COMMENT_ACTIONS = ["hide", "unhide", "approve", "reject", "delete"] as const;
+type CommentAdminAction = (typeof COMMENT_ACTIONS)[number];
+
+function isCommentAdminAction(v: string): v is CommentAdminAction {
+  return (COMMENT_ACTIONS as readonly string[]).includes(v);
+}
+
+function parseCommentModerationStatus(
+  raw: string | undefined
+): CommentModerationStatus | undefined {
+  if (!raw) return undefined;
+  if (
+    Object.values(CommentModerationStatus).includes(raw as CommentModerationStatus)
+  ) {
+    return raw as CommentModerationStatus;
+  }
+  return undefined;
+}
+
+/**
+ * @route   GET /api/admin/comments
+ * @query   page        - Trang hiện tại (default: 1)
+ * @query   limit       - Số bản ghi / trang (default: 10, max: 50)
+ * @query   keyword     - Tìm theo nội dung bình luận
+ * @query   status      - pending | approved | rejected | flagged
+ * @query   postId      - Lọc theo bài viết
+ * @query   isHidden    - true | false
+ * @query   replyOnly   - true = chỉ reply | false = chỉ top-level | bỏ qua = tất cả
+ */
+export const getAdminComments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const q = req.query as Record<string, string | undefined>;
+    const filter: Record<string, unknown> = {};
+
+    const status = parseCommentModerationStatus(q.status);
+    if (status) filter.moderationStatus = status;
+
+    const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
+    if (isHidden !== undefined) filter.isHidden = isHidden;
+
+    const postId = q.postId?.trim();
+    if (postId) {
+      validateObjectId(postId, "Post ID");
+      filter.postId = new Types.ObjectId(postId);
+    }
+
+    const replyOnly = parseQueryBoolean(q.replyOnly, "replyOnly");
+    if (replyOnly === true) filter.parentCommentId = { $ne: null };
+    else if (replyOnly === false) filter.parentCommentId = null;
+
+    const keyword = q.keyword?.trim();
+    if (keyword) {
+      const safe = escapeRegex(keyword);
+      filter.contentText = { $regex: safe, $options: "i" };
+    }
+
+    const [comments, total] = await Promise.all([
+      CommentModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: "userId", select: "_id name avatar email" })
+        .populate({ path: "postId", select: "_id contentText" })
+        .select(
+          "contentText moderationStatus isHidden isEdited " +
+            "likesCount repliesCount parentCommentId originalCommentId " +
+            "createdAt updatedAt userId postId"
+        )
+        .lean(),
+      CommentModel.countDocuments(filter),
+    ]);
+
+    const flaggedIds = comments
+      .filter((c) => c.moderationStatus === CommentModerationStatus.FLAGGED)
+      .map((c) => c._id);
+
+    const reportCounts =
+      flaggedIds.length > 0
+        ? await ReportModel.aggregate([
+            {
+              $match: {
+                targetType: ReportTargetType.COMMENT,
+                targetId: { $in: flaggedIds },
+              },
+            },
+            { $group: { _id: "$targetId", count: { $sum: 1 } } },
+          ])
+        : [];
+
+    const reportCountMap = new Map<string, number>(
+      reportCounts.map((r) => [r._id.toString(), r.count as number])
+    );
+
+    const result = comments.map((c) => ({
+      ...c,
+      reportsCount: reportCountMap.get(c._id.toString()) ?? 0,
+    }));
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    sendSuccess(res, { comments: result, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id
+ * @desc    Chi tiết bình luận — user, post gốc, comment cha (nếu reply),
+ *          tổng số báo cáo.
+ */
+export const getAdminCommentById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const comment = await CommentModel.findById(id)
+      .populate({
+        path: "userId",
+        select: "_id name avatar email phoneNumber isBlocked isActive",
+      })
+      .populate({
+        path: "postId",
+        select: "_id contentText moderationStatus isHidden",
+      })
+      .populate({
+        path: "parentCommentId",
+        select: "_id contentText userId createdAt",
+        populate: { path: "userId", select: "_id name avatar" },
+      })
+      .lean();
+
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const totalReports = await ReportModel.countDocuments({
+      targetType: ReportTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    });
+
+    sendSuccess(res, { ...comment, totalReports });
+  }
+);
+
+/**
+ * @route   PATCH /api/admin/comments/:id
+ * @body    { action: "hide"|"unhide"|"approve"|"reject"|"delete", reason?: string }
+ */
+export const patchAdminComment = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const body = req.body as { action?: string; reason?: string };
+    if (!body.action || !isCommentAdminAction(body.action)) {
+      throw new ValidationError(
+        `action không hợp lệ. Cho phép: ${COMMENT_ACTIONS.join(", ")}`,
+        "INVALID_COMMENT_ACTION"
+      );
+    }
+
+    const comment = await CommentModel.findById(id)
+      .select("_id userId moderationStatus isHidden hiddenReason")
+      .lean();
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const reason =
+      typeof body.reason === "string" ? body.reason.slice(0, 500) : undefined;
+
+    type UpdatePayload = {
+      moderationStatus: CommentModerationStatus;
+      isHidden: boolean;
+      hiddenReason?: string | undefined;
+    };
+
+    const payloadMap: Record<CommentAdminAction, UpdatePayload> = {
+      hide: {
+        isHidden: true,
+        moderationStatus: CommentModerationStatus.REJECTED,
+        ...(reason ? { hiddenReason: reason } : {}),
+      },
+      unhide: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.APPROVED,
+        hiddenReason: undefined,
+      },
+      approve: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.APPROVED,
+      },
+      reject: {
+        isHidden: false,
+        moderationStatus: CommentModerationStatus.REJECTED,
+      },
+      delete: {
+        isHidden: true,
+        moderationStatus: CommentModerationStatus.REJECTED,
+        hiddenReason: reason ?? "admin_deleted",
+      },
+    };
+
+    const updated = await CommentModel.findByIdAndUpdate(
+      id,
+      { $set: payloadMap[body.action] },
+      { new: true }
+    )
+      .select("_id moderationStatus isHidden hiddenReason updatedAt")
+      .lean();
+
+    if (!updated) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const logActionMap: Record<CommentAdminAction, LogAction> = {
+      hide: LogAction.ADMIN_COMMENT_HIDE,
+      unhide: LogAction.ADMIN_COMMENT_UNHIDE,
+      approve: LogAction.ADMIN_COMMENT_MOD_APPROVE,
+      reject: LogAction.ADMIN_COMMENT_MOD_REJECT,
+      delete: LogAction.ADMIN_COMMENT_DELETE,
+    };
+
+    fireAndForgetAdminLog(req, logActionMap[body.action], {
+      severity:
+        body.action === "delete" ? LogSeverity.CRITICAL : LogSeverity.WARNING,
+      targetType: LogTargetType.COMMENT,
+      targetId: id,
+      affectedUserId: comment.userId as Types.ObjectId,
+      before: {
+        isHidden: comment.isHidden,
+        moderationStatus: comment.moderationStatus,
+      },
+      after: {
+        isHidden: updated.isHidden,
+        moderationStatus: updated.moderationStatus,
+      },
+      note: reason,
+    });
+
+    const msgMap: Record<CommentAdminAction, string> = {
+      hide: "Đã ẩn bình luận",
+      unhide: "Đã hiển thị bình luận",
+      approve: "Đã duyệt bình luận",
+      reject: "Đã từ chối bình luận",
+      delete: "Đã xóa bình luận",
+    };
+
+    sendSuccess(res, updated, msgMap[body.action]);
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id/reports
+ * @query   page, limit
+ */
+export const getAdminCommentReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const exists = await CommentModel.exists({ _id: id });
+    if (!exists) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const filter = {
+      targetType: ReportTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    };
+
+    const [reports, total] = await Promise.all([
+      ReportModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "reporterId",
+          select: "_id name avatar phoneNumber",
+        })
+        .select(
+          "reason description status actionTaken " +
+            "reviewedAt resolutionNote createdAt reporterId"
+        )
+        .lean(),
+      ReportModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    sendSuccess(res, { reports, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/comments/:id/activity
+ * @desc    Lịch sử kiểm duyệt của bình luận, lấy từ LogModel.
+ */
+export const getAdminCommentActivity = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Comment ID");
+
+    const comment = await CommentModel.findById(id)
+      .select("createdAt moderationStatus isHidden userId")
+      .lean();
+
+    if (!comment) {
+      throw new NotFoundError(`Không tìm thấy bình luận với ID: ${id}`);
+    }
+
+    const logs = await LogModel.find({
+      targetType: LogTargetType.COMMENT,
+      targetId: new Types.ObjectId(id),
+    })
+      .sort({ createdAt: 1 })
+      .populate({ path: "actorId", select: "_id name avatar" })
+      .select("action actorId actorRole severity before after note createdAt")
+      .lean();
+
+    const actionLabelMap: Partial<Record<LogAction, string>> = {
+      [LogAction.ADMIN_COMMENT_HIDE]: "Đã ẩn bình luận",
+      [LogAction.ADMIN_COMMENT_UNHIDE]: "Đã hiển thị bình luận",
+      [LogAction.ADMIN_COMMENT_DELETE]: "Đã xóa bình luận",
+      [LogAction.ADMIN_COMMENT_MOD_APPROVE]: "Đã duyệt bình luận",
+      [LogAction.ADMIN_COMMENT_MOD_REJECT]: "Đã từ chối bình luận",
+      [LogAction.SYSTEM_COMMENT_AUTO_FLAGGED]: "Hệ thống tự động gắn cờ",
+    };
+
+    type ActivityItem = {
+      _id: string;
+      action: string;
+      adminName: string;
+      adminAvatar?: string;
+      actorRole: string;
+      severity?: string;
+      before?: Record<string, unknown>;
+      after?: Record<string, unknown>;
+      note?: string;
+      createdAt: Date;
+    };
+
+    const activity: ActivityItem[] = [];
+
+    activity.push({
+      _id: `${id}_created`,
+      action: "Bình luận được đăng",
+      adminName: "System",
+      actorRole: LogActorRole.USER,
+      createdAt: comment.createdAt,
+    });
+
+    for (const log of logs) {
+      const actor = log.actorId as
+        | { _id: unknown; name?: string; avatar?: string }
+        | null
+        | undefined;
+
+      activity.push({
+        _id: log._id.toString(),
+        action: actionLabelMap[log.action as LogAction] ?? log.action,
+        adminName:
+          log.actorRole === LogActorRole.SYSTEM
+            ? "Hệ thống"
+            : actor?.name ?? "Admin",
+        adminAvatar: actor?.avatar,
+        actorRole: log.actorRole,
+        severity: log.severity,
+        before: log.before as Record<string, unknown> | undefined,
+        after: log.after as Record<string, unknown> | undefined,
+        note: log.note,
+        createdAt: log.createdAt as Date,
+      });
+    }
+
+    sendSuccess(res, { activity, total: activity.length });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+//  POST MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+const POST_ACTIONS = ["hide", "unhide", "delete"] as const;
+type PostAdminAction = (typeof POST_ACTIONS)[number];
+
+function isPostAdminAction(v: string): v is PostAdminAction {
+  return (POST_ACTIONS as readonly string[]).includes(v);
+}
+
+function parseModerationStatus(
+  raw: string | undefined
+): ModerationStatus | undefined {
+  if (!raw) return undefined;
+  if (Object.values(ModerationStatus).includes(raw as ModerationStatus)) {
+    return raw as ModerationStatus;
+  }
+  return undefined;
+}
+
+/**
+ * @route   GET /api/admin/posts
+ * Query: page, limit, keyword, status (pending|approved|rejected|flagged), isHidden
+ */
+export const getAdminPosts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+    const q = req.query as Record<string, string | undefined>;
+
+    const filter: Record<string, unknown> = {};
+
+    // Lọc theo moderationStatus
+    const status = parseModerationStatus(q.status);
+    if (status) filter.moderationStatus = status;
+
+    // Lọc theo isHidden
+    const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
+    if (isHidden !== undefined) filter.isHidden = isHidden;
+
+    // Tìm kiếm theo nội dung hoặc userId
+    const keyword = q.keyword?.trim();
+    if (keyword) {
+      const safe = escapeRegex(keyword);
+      filter.$or = [{ contentText: { $regex: safe, $options: "i" } }];
+    }
+
+    const [posts, total] = await Promise.all([
+      PostModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "_id name avatar email phoneNumber",
+        })
+        .select(
+          "contentText moderationStatus isHidden isEdited likesCount commentsCount sharesCount aiOverallRisk aiToxicScore aiHateSpeechScore aiSpamScore visibility createdAt updatedAt userId"
+        )
+        .lean(),
+      PostModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { posts, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id
+ */
+export const getAdminPostById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const post = await PostModel.findById(id)
+      .populate({
+        path: "userId",
+        select: "_id name avatar email phoneNumber isBlocked isActive",
+      })
+      .lean();
+
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    // Lấy media của post nếu có PostMediaModel
+    let mediaUrls: string[] = [];
+    try {
+      const { PostMediaModel } = await import("../models/post-media.model");
+      const medias = await PostMediaModel.find({ postId: id })
+        .select("mediaUrl mediaType")
+        .lean();
+      mediaUrls = medias.map((m) => m.mediaUrl).filter(Boolean);
+    } catch {
+      // PostMediaModel không tồn tại hoặc lỗi — bỏ qua
+    }
+
+    // Đếm tổng báo cáo của post này
+    const totalReports = await ReportModel.countDocuments({
+      targetType: ReportTargetType.POST,
+      targetId: id,
+    });
+
+    sendSuccess(res, { ...post, mediaUrls, totalReports });
+  }
+);
+
+/**
+ * @route   PATCH /api/admin/posts/:id
+ * Body: { action: "hide" | "unhide" | "delete" }
+ */
+export const patchAdminPost = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const body = req.body as { action?: string; reason?: string };
+
+    if (!body.action || !isPostAdminAction(body.action)) {
+      throw new ValidationError(
+        `action không hợp lệ. Cho phép: ${POST_ACTIONS.join(", ")}`,
+        "INVALID_POST_ACTION"
+      );
+    }
+
+    const post = await PostModel.findById(id).lean();
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    const reason =
+      typeof body.reason === "string" ? body.reason.slice(0, 500) : undefined;
+
+    let updatePayload: Record<string, unknown> = {};
+
+    if (body.action === "hide") {
+      updatePayload = {
+        isHidden: true,
+        moderationStatus: ModerationStatus.REJECTED,
+        ...(reason ? { hiddenReason: reason } : {}),
+      };
+    } else if (body.action === "unhide") {
+      updatePayload = {
+        isHidden: false,
+        moderationStatus: ModerationStatus.APPROVED,
+        hiddenReason: undefined,
+      };
+    } else {
+      // "delete" → soft delete: ẩn + rejected
+      updatePayload = {
+        isHidden: true,
+        moderationStatus: ModerationStatus.REJECTED,
+        hiddenReason: reason ?? "admin_deleted",
+      };
+    }
+
+    const updated = await PostModel.findByIdAndUpdate(
+      id,
+      { $set: updatePayload },
+      { new: true }
+    )
+      .select("_id moderationStatus isHidden hiddenReason updatedAt")
+      .lean();
+
+    if (!updated) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    const msgMap: Record<PostAdminAction, string> = {
+      hide: "Đã ẩn bài viết",
+      unhide: "Đã hiển thị bài viết",
+      delete: "Đã xóa bài viết",
+    };
+
+    const actionMap: Record<PostAdminAction, LogAction> = {
+      hide: LogAction.ADMIN_POST_HIDE,
+      unhide: LogAction.ADMIN_POST_UNHIDE,
+      delete: LogAction.ADMIN_POST_DELETE,
+    };
+
+    fireAndForgetAdminLog(req, actionMap[body.action], {
+      severity:
+        body.action === "delete" ? LogSeverity.CRITICAL : LogSeverity.WARNING,
+      targetType: LogTargetType.POST,
+      targetId: id,
+      affectedUserId: post.userId,
+      before: {
+        isHidden: post.isHidden,
+        moderationStatus: post.moderationStatus,
+        hiddenReason: post.hiddenReason,
+      },
+      after: {
+        isHidden: updated.isHidden,
+        moderationStatus: updated.moderationStatus,
+        hiddenReason: updated.hiddenReason,
+      },
+      note: reason,
+    });
+
+    sendSuccess(res, updated, msgMap[body.action]);
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/comments
+ * Query: page, limit
+ */
+export const getAdminPostComments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    // Chỉ lấy top-level comments (parentCommentId = null)
+    const filter = { postId: id, parentCommentId: null };
+
+    const [comments, total] = await Promise.all([
+      CommentModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "_id name avatar",
+        })
+        .select(
+          "contentText isHidden moderationStatus likesCount repliesCount isEdited createdAt userId"
+        )
+        .lean(),
+      CommentModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { comments, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/reports
+ * Query: page, limit
+ */
+export const getAdminPostReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const { page, limit, skip } = parsePagination(req, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+
+    const filter = {
+      targetType: ReportTargetType.POST,
+      targetId: new Types.ObjectId(id),
+    };
+
+    const [reports, total] = await Promise.all([
+      ReportModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "reporterId",
+          select: "_id name avatar phoneNumber",
+        })
+        .select(
+          "reason description status actionTaken reviewedAt resolutionNote createdAt reporterId"
+        )
+        .lean(),
+      ReportModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sendSuccess(res, { reports, total, page, totalPages });
+  }
+);
+
+/**
+ * @route   GET /api/admin/posts/:id/activity
+ * Tổng hợp lịch sử hoạt động của bài viết từ ReportModel
+ * (Nếu sau này có AuditLogModel riêng thì thay thế)
+ */
+export const getAdminPostActivity = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    validateObjectId(id, "Post ID");
+
+    const post = await PostModel.findById(id)
+      .select(
+        "createdAt updatedAt moderationStatus isHidden hiddenReason userId"
+      )
+      .lean();
+
+    if (!post) {
+      throw new NotFoundError(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+
+    // Lấy tất cả reports đã được xử lý của post này
+    const resolvedReports = await ReportModel.find({
+      targetType: ReportTargetType.POST,
+      targetId: new Types.ObjectId(id),
+      status: { $ne: ReportStatus.PENDING },
+    })
+      .sort({ reviewedAt: -1 })
+      .populate({
+        path: "reviewedBy",
+        select: "_id name",
+      })
+      .select(
+        "actionTaken status resolutionNote reviewedAt createdAt reason reviewedBy"
+      )
+      .lean();
+
+    // Tổng hợp thành activity log
+    const logs: Array<{
+      _id: string;
+      action: string;
+      adminName: string;
+      createdAt: Date | string;
+      note?: string;
+    }> = [];
+
+    // Event 1: Bài viết được tạo
+    logs.push({
+      _id: `${id}_created`,
+      action: "Bài viết được đăng",
+      adminName: "System",
+      createdAt: post.createdAt,
+    });
+
+    // Events từ reports đã xử lý
+    for (const r of resolvedReports) {
+      const reviewer = r.reviewedBy as
+        | { _id: unknown; name?: string }
+        | null
+        | undefined;
+      const adminName = reviewer?.name ?? "Admin";
+
+      const actionLabel: Record<string, string> = {
+        approved_content: "Duyệt bài viết",
+        removed_content: "Ẩn bài viết",
+        warned_user: "Cảnh báo tác giả",
+        blocked_user: "Chặn tác giả",
+        hide: "Ẩn bài viết",
+        dismiss: "Bỏ qua báo cáo",
+      };
+
+      logs.push({
+        _id: r._id.toString(),
+        action:
+          actionLabel[r.actionTaken ?? ""] ??
+          `Xử lý báo cáo (${r.actionTaken ?? r.status})`,
+        adminName,
+        createdAt: r.reviewedAt ?? r.createdAt,
+        note: r.resolutionNote || undefined,
+      });
+    }
+
+    // Nếu bài đang bị ẩn mà không có resolved report nào → log thêm
+    if (post.isHidden && resolvedReports.length === 0 && post.hiddenReason) {
+      logs.push({
+        _id: `${id}_hidden`,
+        action: "Bài viết bị ẩn",
+        adminName: "Admin",
+        createdAt: post.updatedAt,
+        note: post.hiddenReason,
+      });
+    }
+
+    // Sắp xếp theo thời gian tăng dần
+    logs.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    sendSuccess(res, { logs, total: logs.length });
   }
 );
