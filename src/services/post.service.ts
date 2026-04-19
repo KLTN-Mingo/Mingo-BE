@@ -266,7 +266,6 @@ export const PostService = {
 
     await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } });
 
-    // Fire-and-forget: không block response
     if (dto.contentText?.trim()) {
       try {
         const user = await UserModel.findById(userId)
@@ -276,7 +275,9 @@ export const PostService = {
           ? (Date.now() - new Date(user.createdAt).getTime()) / 86400000
           : 999;
 
-        void ModerationService.moderateAndUpdate(
+        // Đổi 'void' thành 'await'
+        // Khi text sạch, hàm này sẽ trả về kết quả gần như tức thì
+        await ModerationService.moderateAndUpdate(
           "post",
           post._id.toString(),
           dto.contentText,
@@ -284,12 +285,13 @@ export const PostService = {
             isNewAccount: accountAgeDays < 7,
             reportCount: 0,
           }
-        ).catch((err) => console.error("[Moderation] Post error:", err));
+        );
       } catch (err) {
         console.error("[Moderation] Post error:", err);
       }
     }
 
+    // Giờ đây, khi gọi hàm này, nó sẽ lấy được status "APPROVED" từ DB
     return this.getPostById(post._id.toString(), userId);
   },
 
