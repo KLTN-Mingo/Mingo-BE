@@ -13,6 +13,7 @@ export enum ModerationStatus {
   APPROVED = "approved",
   REJECTED = "rejected",
   FLAGGED = "flagged",
+  VIOLATED = "violated",
 }
 
 export interface IAIScore {

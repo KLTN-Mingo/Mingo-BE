@@ -41,6 +41,13 @@ export interface IUser extends Document {
   postsCount: number;
 
   lastLogin?: Date;
+  violationCount: number;
+  violationLogs: {
+    reason: string;
+    adminId?: Types.ObjectId;
+    action: string;
+    timestamp: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 
@@ -147,6 +154,26 @@ const UserSchema = new Schema<IUser>(
 
     lastLogin: {
       type: Date,
+    },
+
+    violationCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    violationLogs: {
+      type: [
+        new Schema(
+          {
+            reason: { type: String, required: true },
+            adminId: { type: Schema.Types.ObjectId, ref: "User" },
+            action: { type: String, required: true },
+            timestamp: { type: Date, default: Date.now },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
     },
   },
   {

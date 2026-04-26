@@ -204,7 +204,7 @@ const REPORT_REASONS = [
   "misinformation",
   "other",
 ] as const;
-const REPORT_ACTIONS = ["review", "resolve", "dismiss"] as const;
+const REPORT_ACTIONS = ["resolve", "dismiss", "review"] as const;
 
 type AdminReportStatus = (typeof REPORT_STATUSES)[number];
 type AdminReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
@@ -294,7 +294,8 @@ async function buildAdminReportPayload(
     actionTaken?: string;
     createdAt: Date;
     updatedAt: Date;
-    priorityScore?: number;
+    reportCount?: number;
+    moderationSnapshot?: ModerationResult;
   }
 ) {
   const isReporterPopulated = (
@@ -334,17 +335,77 @@ async function buildAdminReportPayload(
     reviewedByName: reviewer?.name,
     reviewedAt: report.reviewedAt,
     actionTaken: report.actionTaken,
-    priorityScore: report.priorityScore ?? 0,
+    reportCount: 0,
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
     ...preview,
+    aiAnalysis: buildAiAnalysisFromSnapshot(
+      report.moderationSnapshot ?? undefined,
+      report.updatedAt
+    ),
   };
 }
 
 function mapReportActionToLogAction(action: AdminReportAction): LogAction {
-  if (action === "review") return LogAction.ADMIN_REPORT_START_REVIEW;
   if (action === "dismiss") return LogAction.ADMIN_REPORT_DISMISS;
   return LogAction.ADMIN_REPORT_RESOLVE;
+}
+
+/**
+ * Transform ModerationResult (moderationSnapshot) → aiAnalysis format cho frontend.
+ */
+function buildAiAnalysisFromSnapshot(
+  snap: ModerationResult | null | undefined,
+  calledAt?: Date
+): {
+  calledAt: string;
+  model: string;
+  toxicityScore: number;
+  confidenceScore: number;
+  categories: string[];
+  decision: string;
+  reasoning: string;
+  actionTaken: string;
+  scores?: { toxic: number; hateSpeech: number; spam: number; reason: string };
+} | undefined {
+  if (!snap?.scores) return undefined;
+  const { toxic, hateSpeech, spam, reason } = snap.scores;
+  const max = Math.max(toxic, hateSpeech, spam);
+  const decision =
+    max >= 0.8
+      ? "auto_hide"
+      : max >= 0.6 && (toxic >= 0.6 || hateSpeech >= 0.6)
+        ? "escalate"
+        : max <= 0.2
+          ? "auto_pass"
+          : "needs_human";
+  const actionTaken =
+    decision === "auto_hide"
+      ? "hidden"
+      : decision === "auto_pass"
+        ? "passed"
+        : decision === "escalate"
+          ? "flagged"
+          : "none";
+  const categories: string[] = [];
+  if (toxic > 0.5) categories.push("toxic");
+  if (hateSpeech > 0.5) categories.push("hate_speech");
+  if (spam > 0.5) categories.push("spam");
+  const confidenceScore = max > 0 ? Math.min(1, max + 0.15) : 0.5;
+  return {
+    calledAt: calledAt ? calledAt.toISOString() : new Date().toISOString(),
+    model: snap.method === "ai" ? "gemini-3-flash" : "rule-based",
+    toxicityScore: toxic,
+    confidenceScore,
+    categories,
+    decision,
+    reasoning:
+      reason && reason !== "ok"
+        ? reason
+        : `Phát hiện: toxic=${Math.round(toxic * 100)}%, hate=${Math.round(hateSpeech * 100)}%, spam=${Math.round(spam * 100)}%`,
+    actionTaken,
+    scores: { toxic, hateSpeech, spam, reason },
+  };
 }
 
 /**
@@ -368,37 +429,74 @@ export const getReports = asyncHandler(async (req: Request, res: Response) => {
     filter.$or = [
       { description: { $regex: safe, $options: "i" } },
       { actionTaken: { $regex: safe, $options: "i" } },
+      { "reporterId.name": { $regex: safe, $options: "i" } },
     ];
   }
 
-  const [rows, total] = await Promise.all([
-    ReportModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({ path: "reporterId", select: "_id name avatar" })
-      .populate({ path: "reviewedBy", select: "_id name" })
-      .lean(),
-    ReportModel.countDocuments(filter),
+  // reportCount là computed field không tồn tại trong DB — BE sort theo createdAt (report mới nhất)
+  // FE sẽ re-sort lại kết quả theo reportCount sau khi nhận data
+  const allowedSortKeys = ["createdAt", "updatedAt", "status"];
+  const sortKey = allowedSortKeys.includes(q.sortKey ?? "")
+    ? (q.sortKey as string)
+    : "createdAt";
+  const sortDir = q.sortDir === "asc" ? 1 : -1;
+
+  const [rows, pendingCount, reviewingCount, resolvedCount, dismissedCount] =
+    await Promise.all([
+      ReportModel.find(filter)
+        .sort({ [sortKey]: sortDir })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: "reporterId", select: "_id name avatar" })
+        .populate({ path: "reviewedBy", select: "_id name" })
+        .lean(),
+      ReportModel.countDocuments({ ...filter, status: "pending" }),
+      ReportModel.countDocuments({ ...filter, status: "reviewing" }),
+      ReportModel.countDocuments({ ...filter, status: "resolved" }),
+      ReportModel.countDocuments({ ...filter, status: "dismissed" }),
+    ]);
+
+  const targetIds = rows.map((r) => r.targetId);
+
+  const priorityCounts = await ReportModel.aggregate([
+    { $match: { targetId: { $in: targetIds } } },
+    { $group: { _id: "$targetId", count: { $sum: 1 } } },
   ]);
+
+  const priorityMap = new Map(
+    priorityCounts.map((p) => [p._id.toString(), p.count])
+  );
 
   const reports = (
     await Promise.all(rows.map((row) => buildAdminReportPayload(row as never)))
-  ).filter((report) => {
-    if (!keyword) return true;
-    const kw = keyword.toLowerCase();
-    return (
-      report.reporterName.toLowerCase().includes(kw) ||
-      report.targetPreview?.toLowerCase().includes(kw) ||
-      report.description.toLowerCase().includes(kw)
-    );
-  });
+  )
+    .map((report) => ({
+      ...report,
+      reportCount: priorityMap.get(report.targetId) ?? 1,
+    }))
+    .filter((report) => {
+      if (!keyword) return true;
+      const kw = keyword.toLowerCase();
+      return (
+        report.reporterName.toLowerCase().includes(kw) ||
+        report.targetPreview?.toLowerCase().includes(kw) ||
+        report.description.toLowerCase().includes(kw) ||
+        report.actionTaken?.toLowerCase().includes(kw)
+      );
+    });
+
+  // Tổng = tổng các status → đảm bảo total = pending + resolved + dismissed
+  const total = pendingCount + resolvedCount + dismissedCount;
 
   sendSuccess(res, {
     reports,
-    total: keyword ? reports.length : total,
+    total,
     page,
-    totalPages: Math.ceil((keyword ? reports.length : total) / limit) || 1,
+    totalPages: Math.ceil(total / limit) || 1,
+    pendingCount,
+    reviewingCount,
+    resolvedCount,
+    dismissedCount,
   });
 });
 
@@ -415,7 +513,7 @@ export const getAdminReportById = asyncHandler(
       throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
     }
 
-    const [detail, relatedRows, logs] = await Promise.all([
+    const [detail, relatedRows, logs, reportCount] = await Promise.all([
       buildAdminReportPayload(report as never),
       ReportModel.find({
         targetType: report.targetType,
@@ -435,6 +533,10 @@ export const getAdminReportById = asyncHandler(
         .populate({ path: "actorId", select: "_id name avatar" })
         .select("action actorId actorRole note createdAt")
         .lean(),
+      ReportModel.countDocuments({
+        targetType: report.targetType,
+        targetId: report.targetId,
+      }),
     ]);
 
     const activity = [
@@ -466,12 +568,13 @@ export const getAdminReportById = asyncHandler(
       }),
     ];
 
-    const relatedReports = await Promise.all(
-      relatedRows.map((row) => buildAdminReportPayload(row as never))
-    );
+    const relatedReports = (
+      await Promise.all(relatedRows.map((row) => buildAdminReportPayload(row as never)))
+    ).map((r) => ({ ...r, reportCount }));
 
     sendSuccess(res, {
       ...detail,
+      reportCount,
       activity,
       relatedReports,
     });
@@ -516,22 +619,116 @@ export const handleReport = asyncHandler(
         (req as Request & { user?: { _id?: string; userId?: string } }).user
           ?.userId) ||
       undefined;
+    const adminOid = adminId ? new Types.ObjectId(adminId) : undefined;
+    const now = new Date();
 
+    // ── RESOLVE: ẩn target + ghi nhận vi phạm + auto-resolve các report cùng target ──
+    if (body.action === "resolve") {
+      const resolvedNote = note ?? "Xác nhận vi phạm qua báo cáo";
+      const violationReason = actionTaken ?? resolvedNote;
+
+      // 1. Xử lý target theo loại
+      if (report.targetType === ReportTargetType.POST) {
+        await PostModel.findByIdAndUpdate(report.targetId, {
+          isHidden: true,
+          moderationStatus: ModerationStatus.VIOLATED,
+          hiddenReason: violationReason,
+        });
+        await LogService.create({
+          actorId: adminOid,
+          actorRole: LogActorRole.ADMIN,
+          action: LogAction.ADMIN_POST_MOD_VIOLATE,
+          severity: LogSeverity.WARNING,
+          targetType: LogTargetType.POST,
+          targetId: report.targetId,
+          affectedUserId: undefined,
+          note: violationReason,
+        });
+      } else if (report.targetType === ReportTargetType.COMMENT) {
+        await CommentModel.findByIdAndUpdate(report.targetId, {
+          isHidden: true,
+          moderationStatus: CommentModerationStatus.VIOLATED,
+          hiddenReason: violationReason,
+        });
+        await LogService.create({
+          actorId: adminOid,
+          actorRole: LogActorRole.ADMIN,
+          action: LogAction.ADMIN_COMMENT_MOD_VIOLATE,
+          severity: LogSeverity.WARNING,
+          targetType: LogTargetType.COMMENT,
+          targetId: report.targetId,
+          note: violationReason,
+        });
+      } else if (report.targetType === ReportTargetType.USER) {
+        await UserModel.findByIdAndUpdate(report.targetId, {
+          $inc: { violationCount: 1 },
+          $push: {
+            violationLogs: {
+              $each: [
+                {
+                  reason: violationReason,
+                  adminId: adminOid ?? undefined,
+                  action: actionTaken ?? "warn",
+                  timestamp: now,
+                },
+              ],
+              $position: 0,
+              $slice: 50,
+            },
+          },
+        });
+        await LogService.create({
+          actorId: adminOid,
+          actorRole: LogActorRole.ADMIN,
+          action: LogAction.ADMIN_USER_WARN,
+          severity: LogSeverity.WARNING,
+          targetType: LogTargetType.USER,
+          targetId: report.targetId,
+          note: violationReason,
+          metadata: { violationReason },
+        });
+      }
+
+      // 2. Auto-resolve các report khác cùng target đang ở trạng thái pending/reviewing
+      const related = await ReportModel.find({
+        _id: { $ne: report._id },
+        targetType: report.targetType,
+        targetId: report.targetId,
+        status: { $in: [ReportStatus.PENDING, ReportStatus.REVIEWING] },
+      }).select("_id").lean();
+
+      if (related.length > 0) {
+        await ReportModel.updateMany(
+          { _id: { $in: related.map((r) => r._id) } },
+          {
+            $set: {
+              status: ReportStatus.RESOLVED,
+              resolutionNote: "Tự động đóng do vi phạm đã được xác nhận",
+              actionTaken: actionTaken ?? "hidden",
+              reviewedBy: adminOid,
+              reviewedAt: now,
+            },
+          }
+        );
+      }
+    }
+
+    // ── Cập nhật report hiện tại ──
     const payloadMap: Record<AdminReportAction, Record<string, unknown>> = {
       review: { status: ReportStatus.REVIEWING },
       resolve: {
         status: ReportStatus.RESOLVED,
         resolutionNote: note,
         actionTaken,
-        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
-        reviewedAt: new Date(),
+        reviewedBy: adminOid,
+        reviewedAt: now,
       },
       dismiss: {
         status: ReportStatus.DISMISSED,
         resolutionNote: note,
         actionTaken,
-        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
-        reviewedAt: new Date(),
+        reviewedBy: adminOid,
+        reviewedAt: now,
       },
     };
 
@@ -561,11 +758,11 @@ export const handleReport = asyncHandler(
     sendSuccess(
       res,
       await buildAdminReportPayload(updated as never),
-      body.action === "review"
-        ? "Đã chuyển báo cáo sang đang xem xét"
-        : body.action === "resolve"
+      body.action === "resolve"
         ? "Đã xử lý và đóng báo cáo"
-        : "Đã bỏ qua báo cáo"
+        : body.action === "dismiss"
+          ? "Đã bỏ qua báo cáo"
+          : "Đã chuyển sang xem xét"
     );
   }
 );
@@ -592,7 +789,11 @@ export const getAdminDashboardStats = asyncHandler(
       UserModel.countDocuments({ createdAt: { $gte: startOfToday } }),
       PostModel.countDocuments({}),
       PostModel.countDocuments({ createdAt: { $gte: startOfToday } }),
-      PostModel.countDocuments({ moderationStatus: ModerationStatus.FLAGGED }),
+      // "reported" = posts có báo cáo đang mở (pending), bất kể moderationStatus
+      ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.POST,
+        status: ReportStatus.PENDING,
+      }).then((ids) => PostModel.countDocuments({ _id: { $in: ids } })),
       ReportModel.countDocuments({ status: ReportStatus.PENDING }),
       ReportModel.find({
         status: ReportStatus.PENDING,
@@ -1293,8 +1494,31 @@ export const getAdminComments = asyncHandler(
     const q = req.query as Record<string, string | undefined>;
     const filter: Record<string, unknown> = {};
 
-    const status = parseCommentModerationStatus(q.status);
-    if (status) filter.moderationStatus = status;
+    // Map FE status (hidden, reported) sang BE logic
+    if (q.status === "hidden") {
+      // FE "hidden" = rejected + violated
+      filter.moderationStatus = { $in: ["rejected", "violated"] };
+    } else if (q.status === "reported") {
+      // FE "reported" = comments có báo cáo đang mở (pending)
+      const openReportTargetIds = await ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.COMMENT,
+        status: ReportStatus.PENDING,
+      });
+      filter._id = { $in: openReportTargetIds };
+    } else {
+      const status = parseCommentModerationStatus(q.status);
+      if (status === "rejected") {
+        filter.moderationStatus = { $in: ["rejected", "violated"] };
+      } else if (status === "flagged") {
+        const openReportTargetIds = await ReportModel.distinct("targetId", {
+          targetType: ReportTargetType.COMMENT,
+          status: ReportStatus.PENDING,
+        });
+        filter._id = { $in: openReportTargetIds };
+      } else if (status) {
+        filter.moderationStatus = status;
+      }
+    }
 
     const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
     if (isHidden !== undefined) filter.isHidden = isHidden;
@@ -1677,7 +1901,19 @@ export const getAdminPosts = asyncHandler(
 
     // Lọc theo moderationStatus
     const status = parseModerationStatus(q.status);
-    if (status) filter.moderationStatus = status;
+    if (status === "rejected") {
+      // FE "hidden" = rejected + violated (cả từ báo cáo lẫn thao tác trực tiếp)
+      filter.moderationStatus = { $in: ["rejected", "violated"] };
+    } else if (status === "flagged") {
+      // FE "reported" = posts có báo cáo đang mở (pending), bất kể moderationStatus gì
+      const openReportTargetIds = await ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.POST,
+        status: ReportStatus.PENDING,
+      });
+      filter._id = { $in: openReportTargetIds };
+    } else if (status) {
+      filter.moderationStatus = status;
+    }
 
     // Lọc theo isHidden
     const isHidden = parseQueryBoolean(q.isHidden, "isHidden");

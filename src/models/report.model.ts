@@ -39,10 +39,8 @@ export interface IReport extends Document {
   resolutionNote?: string;
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
-  /** Hành động admin sau khi xử lý báo cáo */
   actionTaken?: string;
-  /** Snapshot kết quả moderation (rule + AI) tại thời điểm báo cáo */
-  moderationSnapshot?: ModerationResult;
+  moderationSnapshot?: ModerationResult; // AI/rule moderation result, set when report goes to "reviewing"
   createdAt: Date;
   updatedAt: Date;
 }

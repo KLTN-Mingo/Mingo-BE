@@ -6,6 +6,7 @@ export enum CommentModerationStatus {
   APPROVED = "approved",
   REJECTED = "rejected",
   FLAGGED = "flagged",
+  VIOLATED = "violated",
 }
 
 export interface IComment extends Document {
@@ -20,6 +21,10 @@ export interface IComment extends Document {
   // Moderation
   moderationStatus: CommentModerationStatus;
   isHidden: boolean;
+  aiToxicScore?: number;
+  aiHateSpeechScore?: number;
+  aiSpamScore?: number;
+  hiddenReason?: string;
 
   // Engagement
   likesCount: number;
@@ -83,6 +88,10 @@ const CommentSchema = new Schema<IComment>(
       type: Boolean,
       default: false,
     },
+    aiToxicScore: { type: Number },
+    aiHateSpeechScore: { type: Number },
+    aiSpamScore: { type: Number },
+    hiddenReason: { type: String, maxlength: 500 },
 
     // Engagement
     likesCount: {
