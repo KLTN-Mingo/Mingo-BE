@@ -12,6 +12,7 @@ import {
   getUsers,
   updateProfile,
 } from "../controllers/user.controller";
+import { reportUser } from "../controllers/report.controller";
 import { ForbiddenError } from "../errors";
 import { authMiddleware } from "../middleware/auth.middleware";
 
@@ -31,6 +32,9 @@ function adminMiddleware(req: Request, _res: Response, next: NextFunction) {
 router.get("/me", authMiddleware, getCurrentUser);
 router.put("/me", authMiddleware, updateProfile);
 router.get("/:userId/stats", authMiddleware, getUserStats);
+
+// ── Report user ──────────────────────────────────────────────────────────────
+router.post("/:userId/report", authMiddleware, reportUser);
 
 // ── Admin routes ─────────────────────────────────────────────────────────────
 router.get("/", authMiddleware, adminMiddleware, getUsers);

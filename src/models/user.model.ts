@@ -34,6 +34,8 @@ export interface IUser extends Document {
   role: UserRole;
   isActive: boolean;
   isBlocked: boolean;
+  isBanned: boolean;          // bị khóa tài khoản (tạm hoặc vĩnh viễn)
+  bannedUntil: Date | null;    // null = vĩnh viễn, có date = khóa đến ngày đó
   onlineStatus: boolean;
 
   followersCount: number;
@@ -41,6 +43,7 @@ export interface IUser extends Document {
   postsCount: number;
 
   lastLogin?: Date;
+  lastWarnedAt?: Date;         // thời điểm cảnh cáo gần nhất
   violationCount: number;
   violationLogs: {
     reason: string;
@@ -52,6 +55,39 @@ export interface IUser extends Document {
   updatedAt: Date;
 
   toJSON(): any;
+}
+
+/**
+ * Kiểm tra và tự động unban user nếu hết hạn khóa tạm.
+ * Gọi hàm này mỗi khi user login hoặc mỗi khi fetch thông tin user.
+ *
+ * Quy tắc:
+ * - isBlocked: true + bannedUntil: null  → khóa vĩnh viễn → không unban
+ * - isBlocked: true + bannedUntil <= now → hết hạn → tự unban
+ * - isBlocked: false                     → bình thường → không làm gì
+ */
+export async function checkAndUnbanUser(
+  userId: string | Types.ObjectId
+): Promise<boolean> {
+  const oid = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
+  const user = await UserModel.findById(oid).select(
+    "isBlocked bannedUntil"
+  ).lean();
+  if (!user) return false;
+
+  const now = new Date();
+  const isExpired =
+    user.isBlocked &&
+    user.bannedUntil !== null &&
+    (user.bannedUntil as Date) <= now;
+
+  if (!isExpired) return false;
+
+  await UserModel.findByIdAndUpdate(oid, {
+    isBlocked: false,
+    bannedUntil: null,
+  });
+  return true;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -131,6 +167,15 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    isBanned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    bannedUntil: {
+      type: Date,
+      default: null,
+    },
     onlineStatus: {
       type: Boolean,
       default: false,
@@ -156,6 +201,9 @@ const UserSchema = new Schema<IUser>(
       type: Date,
     },
 
+    lastWarnedAt: {
+      type: Date,
+    },
     violationCount: {
       type: Number,
       default: 0,
@@ -189,6 +237,8 @@ const UserSchema = new Schema<IUser>(
 
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ isActive: 1, createdAt: -1 });
+UserSchema.index({ isBanned: 1 });
+UserSchema.index({ bannedUntil: 1 });
 UserSchema.index({ name: "text" });
 
 export const UserModel = model<IUser>("User", UserSchema);

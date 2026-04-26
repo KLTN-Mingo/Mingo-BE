@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
 import { sendCreated, sendPaginated, sendSuccess } from "../utils/response";
-import { ValidationError, ForbiddenError, NotFoundError } from "../errors";
+import { ValidationError, ForbiddenError, NotFoundError, ConflictError } from "../errors";
 import {
   ReportModel,
   ReportTargetType,
@@ -13,6 +13,7 @@ import {
 } from "../models/report.model";
 import { PostModel } from "../models/post.model";
 import { CommentModel } from "../models/comment.model";
+import { UserModel } from "../models/user.model";
 import { ModerationService } from "../services/moderation/moderation.service";
 import type { ModerationResult, AIScoreResult } from "../services/moderation/moderation.service";
 import { PostMediaModel } from "../models/post-media.model"; // 👈 thêm
@@ -31,6 +32,19 @@ function getUserId(req: Request): string {
 
 function isReportEntityType(v: string): v is "post" | "comment" {
   return v === "post" || v === "comment";
+}
+
+const USER_REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "fake_account",
+  "inappropriate",
+  "other",
+] as const;
+type UserReportReason = (typeof USER_REPORT_REASONS)[number];
+
+function isUserReportReason(v: string): v is UserReportReason {
+  return USER_REPORT_REASONS.includes(v as UserReportReason);
 }
 
 function isReportReason(v: string): v is ReportReason {
@@ -292,5 +306,64 @@ export const getReportsByUser = asyncHandler(
     );
 
     sendPaginated(res, items, pagination);
+  }
+);
+
+/**
+ * @route   POST /api/users/:userId/report
+ * @desc    User báo cáo user khác
+ * @access  Private
+ */
+export const reportUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const reporterId = getUserId(req);
+    const { userId } = req.params as { userId: string };
+    const { reason, description } = req.body as {
+      reason?: string;
+      description?: string;
+    };
+
+    validateObjectId(userId, "User ID");
+
+    if (userId === reporterId) {
+      throw new ValidationError("Không thể tự báo cáo chính mình", "SELF_REPORT");
+    }
+
+    const targetUser = await UserModel.findById(userId).lean();
+    if (!targetUser) {
+      throw new NotFoundError("Không tìm thấy người dùng");
+    }
+
+    if (!reason || !isUserReportReason(reason)) {
+      throw new ValidationError(
+        `reason không hợp lệ. Cho phép: ${USER_REPORT_REASONS.join(", ")}`,
+        "INVALID_REASON"
+      );
+    }
+
+    if (description !== undefined && description.length > 500) {
+      throw new ValidationError("Mô tả không được vượt quá 500 ký tự", "DESCRIPTION_TOO_LONG");
+    }
+
+    const existing = await ReportModel.findOne({
+      reporterId,
+      targetId: new Types.ObjectId(userId),
+      targetType: ReportTargetType.USER,
+    }).lean();
+
+    if (existing) {
+      throw new ConflictError("Bạn đã báo cáo người dùng này rồi");
+    }
+
+    await ReportModel.create({
+      reporterId,
+      targetId: new Types.ObjectId(userId),
+      targetType: ReportTargetType.USER,
+      reason,
+      description: description ? String(description).slice(0, 500) : "",
+      status: ReportStatus.PENDING,
+    });
+
+    sendCreated(res, null, "Đã gửi báo cáo thành công");
   }
 );

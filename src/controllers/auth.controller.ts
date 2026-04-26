@@ -15,7 +15,7 @@ import {
   generateTwoFactorPendingToken,
   verifyTwoFactorPendingToken,
 } from "../lib/auth/jwt";
-import { UserModel } from "../models/user.model";
+import { UserModel, checkAndUnbanUser } from "../models/user.model";
 import bcrypt from "bcrypt";
 import { asyncHandler } from "../utils/async-handler";
 import {
@@ -122,6 +122,14 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   if (!user) {
     throw new UnauthorizedError("Sai số điện thoại/email hoặc mật khẩu");
+  }
+
+  // Tự động unban nếu hết hạn khóa tạm
+  const wasUnbanned = await checkAndUnbanUser(user._id);
+  // Reload để lấy trạng thái mới nhất sau unban
+  if (wasUnbanned) {
+    const refreshed = await UserModel.findById(user._id);
+    if (refreshed) Object.assign(user, refreshed.toObject());
   }
 
   if (user.isBlocked) {
@@ -231,6 +239,14 @@ export const googleLogin = asyncHandler(async (req: Request, res: Response) => {
       user.email = gEmail;
     }
     await user.save();
+  }
+
+  // Tự động unban nếu hết hạn khóa tạm
+  const wasUnbanned = await checkAndUnbanUser(user._id);
+  // Reload để lấy trạng thái mới nhất sau unban
+  if (wasUnbanned) {
+    const refreshed = await UserModel.findById(user._id);
+    if (refreshed) Object.assign(user, refreshed.toObject());
   }
 
   if (user.isBlocked) {
