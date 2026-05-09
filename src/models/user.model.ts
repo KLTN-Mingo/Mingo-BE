@@ -23,6 +23,11 @@ export interface IUser extends Document {
   bio?: string;
   avatar?: string;
   backgroundUrl?: string;
+  relationship?: string;
+  hobby?: string[];
+  work?: string;
+  currentAddress?: string;
+  hometown?: string;
   dateOfBirth?: Date;
   gender?: Gender;
 
@@ -83,6 +88,34 @@ const UserSchema = new Schema<IUser>(
     },
     backgroundUrl: {
       type: String,
+      default: "",
+    },
+    relationship: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
+    hobby: {
+      type: [String],
+      default: [],
+    },
+    work: {
+      type: String,
+      trim: true,
+      maxlength: 150,
+      default: "",
+    },
+    currentAddress: {
+      type: String,
+      trim: true,
+      maxlength: 255,
+      default: "",
+    },
+    hometown: {
+      type: String,
+      trim: true,
+      maxlength: 255,
       default: "",
     },
     dateOfBirth: {

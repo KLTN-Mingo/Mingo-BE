@@ -15,8 +15,9 @@ import {
   PaginatedNotificationsDto,
   NotificationCountDto,
   toNotificationResponse,
-  getNotificationMessage,
 } from "../dtos/notification.dto";
+import { getSocketIdsByUserId } from "../socket/presence";
+import { getIO } from "../socket/socket";
 
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
@@ -25,18 +26,44 @@ function assertObjectId(id: string, label: string) {
   }
 }
 
+function safeEmitToUser<T>(userId: string, event: string, payload: T): void {
+  const socketIds = getSocketIdsByUserId(userId);
+  if (!socketIds.length) return;
+
+  try {
+    const io = getIO();
+    for (const socketId of socketIds) {
+      io.to(socketId).emit(event, payload);
+    }
+  } catch {
+    // Socket server có thể chưa khởi tạo ở một số runtime đặc biệt.
+  }
+}
+
 export const NotificationService = {
+  async emitNotificationCount(userId: string): Promise<void> {
+    const count = await this.getNotificationCount(userId);
+    safeEmitToUser(userId, "notification:count", count);
+  },
+
   // ══════════════════════════════════════════════════════════════════════════════
   // CREATE NOTIFICATION
   // ══════════════════════════════════════════════════════════════════════════════
 
   async createNotification(
     dto: CreateNotificationDto
-  ): Promise<NotificationResponseDto> {
+  ): Promise<NotificationResponseDto | null> {
     // Don't create notification if actor is the same as user
     if (dto.userId === dto.actorId) {
-      return null as any;
+      return null;
     }
+
+    assertObjectId(dto.userId, "ID người nhận thông báo");
+    assertObjectId(dto.actorId, "ID người thực hiện");
+    if (dto.entityId) assertObjectId(dto.entityId, "Entity ID");
+    if (dto.postId) assertObjectId(dto.postId, "Post ID");
+    if (dto.mediaId) assertObjectId(dto.mediaId, "Media ID");
+    if (dto.commentId) assertObjectId(dto.commentId, "Comment ID");
 
     const notification = await NotificationModel.create({
       userId: new Types.ObjectId(dto.userId),
@@ -52,8 +79,14 @@ export const NotificationService = {
     });
 
     const actor = await UserModel.findById(dto.actorId).lean();
+    const responseDto = toNotificationResponse(notification, actor);
 
-    return toNotificationResponse(notification, actor);
+    // Giữ tương thích ngược với FE cũ (notification) và FE mới (notification:new)
+    safeEmitToUser(dto.userId, "notification", responseDto);
+    safeEmitToUser(dto.userId, "notification:new", responseDto);
+    await this.emitNotificationCount(dto.userId);
+
+    return responseDto;
   },
 
   // Helper methods for specific notification types
@@ -347,6 +380,7 @@ export const NotificationService = {
   // Đánh dấu notification đã đọc
   async markAsRead(notificationId: string, userId: string): Promise<void> {
     assertObjectId(notificationId, "ID thông báo");
+    assertObjectId(userId, "ID người dùng");
 
     const notification = await NotificationModel.findOne({
       _id: new Types.ObjectId(notificationId),
@@ -360,6 +394,39 @@ export const NotificationService = {
     notification.isRead = true;
     notification.isSeen = true;
     await notification.save();
+
+    safeEmitToUser(userId, "notification:updated", {
+      type: "markAsRead",
+      notificationId,
+      isRead: true,
+      isSeen: true,
+    });
+    await this.emitNotificationCount(userId);
+  },
+
+  // Đánh dấu một notification đã xem (seen)
+  async markAsSeen(notificationId: string, userId: string): Promise<void> {
+    assertObjectId(notificationId, "ID thông báo");
+    assertObjectId(userId, "ID người dùng");
+
+    const notification = await NotificationModel.findOne({
+      _id: new Types.ObjectId(notificationId),
+      userId: new Types.ObjectId(userId),
+    });
+
+    if (!notification) {
+      throw new NotFoundError("Không tìm thấy thông báo");
+    }
+
+    notification.isSeen = true;
+    await notification.save();
+
+    safeEmitToUser(userId, "notification:updated", {
+      type: "markAsSeen",
+      notificationId,
+      isSeen: true,
+    });
+    await this.emitNotificationCount(userId);
   },
 
   // Đánh dấu tất cả đã đọc
@@ -370,6 +437,12 @@ export const NotificationService = {
       { userId: new Types.ObjectId(userId), isRead: false },
       { $set: { isRead: true, isSeen: true } }
     );
+
+    safeEmitToUser(userId, "notification:updated", {
+      type: "markAllAsRead",
+      count: result.modifiedCount,
+    });
+    await this.emitNotificationCount(userId);
 
     return result.modifiedCount;
   },
@@ -383,6 +456,12 @@ export const NotificationService = {
       { $set: { isSeen: true } }
     );
 
+    safeEmitToUser(userId, "notification:updated", {
+      type: "markAllAsSeen",
+      count: result.modifiedCount,
+    });
+    await this.emitNotificationCount(userId);
+
     return result.modifiedCount;
   },
 
@@ -393,6 +472,7 @@ export const NotificationService = {
   // Xóa một notification
   async deleteNotification(notificationId: string, userId: string): Promise<void> {
     assertObjectId(notificationId, "ID thông báo");
+    assertObjectId(userId, "ID người dùng");
 
     const notification = await NotificationModel.findOne({
       _id: new Types.ObjectId(notificationId),
@@ -404,6 +484,12 @@ export const NotificationService = {
     }
 
     await notification.deleteOne();
+
+    safeEmitToUser(userId, "notification:updated", {
+      type: "deleteOne",
+      notificationId,
+    });
+    await this.emitNotificationCount(userId);
   },
 
   // Xóa tất cả notifications đã đọc
@@ -415,6 +501,12 @@ export const NotificationService = {
       isRead: true,
     });
 
+    safeEmitToUser(userId, "notification:updated", {
+      type: "deleteAllRead",
+      count: result.deletedCount,
+    });
+    await this.emitNotificationCount(userId);
+
     return result.deletedCount;
   },
 
@@ -425,6 +517,12 @@ export const NotificationService = {
     const result = await NotificationModel.deleteMany({
       userId: new Types.ObjectId(userId),
     });
+
+    safeEmitToUser(userId, "notification:updated", {
+      type: "deleteAll",
+      count: result.deletedCount,
+    });
+    await this.emitNotificationCount(userId);
 
     return result.deletedCount;
   },

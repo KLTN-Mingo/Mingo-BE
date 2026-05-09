@@ -5,6 +5,8 @@ import { asyncHandler } from "../utils/async-handler";
 import { sendSuccess, sendCreated } from "../utils/response";
 import { ValidationError } from "../errors";
 import { MediaService } from "../services/media.service";
+import { cloudinaryService } from "../services/cloudinary.service";
+import { MediaType } from "../models/post-media.model";
 
 // Helper to get userId from request
 function getUserId(req: Request): string {
@@ -38,9 +40,53 @@ function getParam(param: string | string[] | undefined): string {
 export const createMedia = asyncHandler(async (req: Request, res: Response) => {
   const postId = getParam(req.params.postId);
   const userId = getUserId(req);
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
 
-  const result = await MediaService.createMedia(postId, userId, req.body);
-  sendCreated(res, result, "Thêm media thành công");
+  // Backward-compatible: vẫn cho phép FE gửi trực tiếp mediaUrl/mediaType như cũ.
+  if (files.length === 0) {
+    const result = await MediaService.createMedia(postId, userId, req.body);
+    sendCreated(res, result, "Thêm media thành công");
+    return;
+  }
+
+  const baseOrderIndex = Number(req.body.orderIndex ?? 0) || 0;
+  const caption =
+    typeof req.body.caption === "string" ? req.body.caption : undefined;
+
+  const uploadedMedia = await Promise.all(
+    files.map(async (file, index) => {
+      const isVideo = file.mimetype.startsWith("video/");
+      const uploadResult = isVideo
+        ? await cloudinaryService.uploadVideo(
+            file,
+            "social-network/posts/videos"
+          )
+        : await cloudinaryService.uploadImage(
+            file,
+            "social-network/posts/images"
+          );
+
+      return MediaService.createMedia(postId, userId, {
+        mediaType: isVideo ? MediaType.VIDEO : MediaType.IMAGE,
+        mediaUrl: uploadResult.url,
+        thumbnailUrl: isVideo
+          ? cloudinaryService.generateVideoThumbnail(uploadResult.publicId)
+          : undefined,
+        caption,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        duration: uploadResult.duration,
+        fileSize: uploadResult.bytes,
+        orderIndex: baseOrderIndex + index,
+      });
+    })
+  );
+
+  sendCreated(
+    res,
+    uploadedMedia.length === 1 ? uploadedMedia[0] : uploadedMedia,
+    "Upload và thêm media thành công"
+  );
 });
 
 /**

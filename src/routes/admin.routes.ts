@@ -21,6 +21,7 @@ import {
   getAdminUserPosts,
   getAdminUserReports,
 } from "../controllers/admin.controller";
+import { getAuditLogs } from "../controllers/audit.controller";
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.patch("/users/:id/toggle-active", patchAdminUserToggleActive);
 router.delete("/users/:id", deleteAdminUser);
 
 router.get("/dashboard/stats", getAdminDashboardStats);
+router.get("/audit-logs", getAuditLogs);
 router.get("/violations/daily", getViolationsDaily);
 router.get("/ai/performance", getAiPerformance);
 
