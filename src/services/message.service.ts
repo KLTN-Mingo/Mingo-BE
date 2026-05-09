@@ -32,6 +32,12 @@ import {
   PusherRevokeDto,
   PusherDeleteDto,
   toMessageResponse,
+  AddMemberDto,
+  RemoveMemberDto,
+  UpdateGroupInfoDto,
+  UpdateGroupCategoryDto,
+  PromoteMemberDto,
+  DemoteMemberDto,
 } from "../dtos/message.dto";
 
 cloudinary.config({
@@ -354,7 +360,7 @@ export const MessageService = {
   },
 
   async createGroup(leaderId: string, dto: CreateGroupDto) {
-    const { membersIds, groupName, groupAva = "" } = dto;
+    const { membersIds, groupName, groupAva = "", description = "", category = "other" } = dto;
 
     if (!Array.isArray(membersIds) || membersIds.length === 0) {
       throw new ValidationError(
@@ -391,9 +397,12 @@ export const MessageService = {
     const box = await MessageBoxModel.create({
       senderId: leaderId,
       receiverIds: allIds,
+      adminIds: [new Types.ObjectId(leaderId)],
       messageIds: [],
       groupName,
       groupAva,
+      description,
+      category,
       flag: true,
       pin: false,
       createBy: new Types.ObjectId(leaderId),
@@ -503,11 +512,13 @@ export const MessageService = {
         if (!lastId)
           return { ...box.toObject(), lastMessage: null, readStatus: false };
 
-        const lastMsg = await MessageModel.findById(lastId).populate({
-          path: "contentId",
-          model: "File",
-          options: { strictPopulate: false },
-        });
+        const lastMsg = await MessageModel.findById(lastId)
+          .populate({
+            path: "contentId",
+            model: "File",
+            options: { strictPopulate: false },
+          })
+          .populate("createBy", "name avatar");
         if (!lastMsg)
           return { ...box.toObject(), lastMessage: null, readStatus: false };
 
@@ -584,11 +595,13 @@ export const MessageService = {
         if (!lastId)
           return { ...box.toObject(), lastMessage: null, readStatus: false };
 
-        const lastMsg = await MessageModel.findById(lastId).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-        });
+        const lastMsg = await MessageModel.findById(lastId)
+          .populate({
+            path: "contentId",
+            model: "File",
+            select: "",
+          })
+          .populate("createBy", "name avatar");
         if (!lastMsg)
           return { ...box.toObject(), lastMessage: null, readStatus: false };
 
@@ -873,6 +886,242 @@ export const MessageService = {
     await group.save();
 
     return { success: true, message: "Group avatar updated" };
+  },
+
+  // ── Group Member Management ────────────────────────────────────────────────────
+
+  async addMember(boxId: string, dto: AddMemberDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can add members", "NOT_ADMIN");
+
+    const existingIds = box.receiverIds.map((id: any) => id.toString());
+    const newIds = dto.memberIds.filter((id) => !existingIds.includes(id));
+    if (newIds.length === 0) throw new ConflictError("All users are already members", "ALREADY_MEMBERS");
+
+    const found = await UserModel.countDocuments({ _id: { $in: newIds } });
+    if (found !== newIds.length) throw new NotFoundError("One or more users not found", "USER_NOT_FOUND");
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $addToSet: { receiverIds: { $each: newIds.map((id) => new Types.ObjectId(id)) } },
+    });
+
+    return { success: true, message: `Added ${newIds.length} member(s) to group` };
+  },
+
+  async removeMember(boxId: string, dto: RemoveMemberDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can remove members", "NOT_ADMIN");
+
+    if (dto.memberId === requesterId) throw new ValidationError("Use leaveGroup to remove yourself", "CANNOT_REMOVE_SELF");
+
+    const isMember = box.receiverIds.some((id: any) => id.toString() === dto.memberId);
+    if (!isMember) throw new NotFoundError("User is not a member of this group", "NOT_MEMBER");
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $pull: {
+        receiverIds: new Types.ObjectId(dto.memberId),
+        adminIds: new Types.ObjectId(dto.memberId),
+      },
+    });
+
+    return { success: true, message: "Member removed from group" };
+  },
+
+  async leaveGroup(boxId: string, userId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isMember = box.receiverIds.some((id: any) => id.toString() === userId);
+    if (!isMember) throw new ForbiddenError("User is not a member of this group", "NOT_MEMBER");
+
+    const remainingAdmins = box.adminIds.filter((id: any) => id.toString() !== userId);
+    const remainingMembers = box.receiverIds.filter((id: any) => id.toString() !== userId);
+
+    let newAdminIds = remainingAdmins;
+    if (remainingAdmins.length === 0 && remainingMembers.length > 0) {
+      newAdminIds = [remainingMembers[0]];
+    }
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $pull: { receiverIds: new Types.ObjectId(userId) },
+      $set: { adminIds: newAdminIds },
+    });
+
+    if (remainingMembers.length === 0) {
+      await MessageBoxModel.findByIdAndDelete(boxId);
+      return { success: true, message: "Group deleted as last member left" };
+    }
+
+    return { success: true, message: "Left group successfully" };
+  },
+
+  async promoteMember(boxId: string, dto: PromoteMemberDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can promote members", "NOT_ADMIN");
+
+    const isMember = box.receiverIds.some((id: any) => id.toString() === dto.memberId);
+    if (!isMember) throw new NotFoundError("User is not a member of this group", "NOT_MEMBER");
+
+    const alreadyAdmin = box.adminIds.some((id: any) => id.toString() === dto.memberId);
+    if (alreadyAdmin) throw new ConflictError("User is already an admin", "ALREADY_ADMIN");
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $addToSet: { adminIds: new Types.ObjectId(dto.memberId) },
+    });
+
+    return { success: true, message: "Member promoted to admin" };
+  },
+
+  async demoteMember(boxId: string, dto: DemoteMemberDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can demote members", "NOT_ADMIN");
+
+    if (dto.memberId === requesterId) throw new ValidationError("Cannot demote yourself", "CANNOT_DEMOTE_SELF");
+
+    const isTargetAdmin = box.adminIds.some((id: any) => id.toString() === dto.memberId);
+    if (!isTargetAdmin) throw new ValidationError("User is not an admin", "NOT_ADMIN_TARGET");
+
+    const remainingAdmins = box.adminIds.filter((id: any) => id.toString() !== dto.memberId);
+    if (remainingAdmins.length === 0) throw new ValidationError("Group must have at least one admin", "LAST_ADMIN");
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $pull: { adminIds: new Types.ObjectId(dto.memberId) },
+    });
+
+    return { success: true, message: "Admin demoted to member" };
+  },
+
+  async updateGroupInfo(boxId: string, dto: UpdateGroupInfoDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can update group info", "NOT_ADMIN");
+
+    const updateFields: Record<string, any> = {};
+    if (dto.groupName?.trim()) updateFields.groupName = dto.groupName.trim();
+    if (dto.description !== undefined) updateFields.description = dto.description;
+
+    if (Object.keys(updateFields).length === 0) {
+      throw new ValidationError("No valid fields to update", "NO_UPDATE_FIELDS");
+    }
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, { $set: updateFields });
+    return { success: true, message: "Group info updated" };
+  },
+
+  async updateGroupCategory(boxId: string, dto: UpdateGroupCategoryDto, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId);
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
+    if (!isAdmin) throw new ForbiddenError("Only admins can update group category", "NOT_ADMIN");
+
+    const validCategories = ["friends", "family", "work", "other"];
+    if (!validCategories.includes(dto.category)) {
+      throw new ValidationError("category must be one of: friends, family, work, other", "INVALID_CATEGORY");
+    }
+
+    await MessageBoxModel.findByIdAndUpdate(boxId, { $set: { category: dto.category } });
+    return { success: true, message: "Group category updated" };
+  },
+
+  async getGroupsByCategory(userId: string, category: string) {
+    const validCategories = ["friends", "family", "work", "other"];
+    if (!validCategories.includes(category)) {
+      throw new ValidationError("Invalid category", "INVALID_CATEGORY");
+    }
+
+    const boxes = await MessageBoxModel.find({
+      receiverIds: { $in: [userId] },
+      $expr: { $gt: [{ $size: "$receiverIds" }, 2] },
+      category,
+    })
+      .populate("receiverIds", "name avatar phoneNumber onlineStatus")
+      .populate("senderId", "name avatar phoneNumber");
+
+    if (!boxes.length) return { success: true, category, box: [] };
+
+    const withDetails = await Promise.all(
+      boxes.map(async (box) => {
+        const lastId = box.messageIds[box.messageIds.length - 1];
+        if (!lastId) return { ...box.toObject(), lastMessage: null, readStatus: false };
+
+        const lastMsg = await MessageModel.findById(lastId)
+          .populate({
+            path: "contentId",
+            model: "File",
+            options: { strictPopulate: false },
+          })
+          .populate("createBy", "name avatar");
+        if (!lastMsg) return { ...box.toObject(), lastMessage: null, readStatus: false };
+
+        const readStatus = lastMsg.readedId.some((id: any) => id.toString() === userId);
+        return { ...box.toObject(), lastMessage: toMessageResponse(lastMsg), readStatus };
+      })
+    );
+
+    return { success: true, category, box: withDetails };
+  },
+
+  async getGroupDetail(boxId: string, requesterId: string) {
+    const box = await MessageBoxModel.findById(boxId)
+      .populate("adminIds", "name avatar")
+      .populate("createBy", "name avatar");
+
+    if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
+
+    const memberIds = (box.receiverIds as Types.ObjectId[]).map((id) => id.toString());
+
+    const isMember = memberIds.includes(requesterId);
+    if (!isMember) throw new ForbiddenError("User is not a member of this group", "NOT_MEMBER");
+
+    const userDocs = await UserModel.find({ _id: { $in: memberIds } }).select("name avatar phoneNumber onlineStatus");
+    const userMap = new Map(userDocs.map((u) => [u._id.toString(), u]));
+
+    const members = memberIds.map((id) => {
+      const u = userMap.get(id);
+      return {
+        _id: id,
+        name: u?.name ?? "",
+        avatar: u?.avatar ?? "",
+        phoneNumber: u?.phoneNumber ?? "",
+        onlineStatus: u?.onlineStatus ?? false,
+      };
+    });
+
+    return {
+      success: true,
+      group: {
+        _id: box._id.toString(),
+        groupName: box.groupName,
+        groupAva: box.groupAva,
+        description: (box as any).description ?? "",
+        category: (box as any).category ?? "other",
+        adminIds: (box.adminIds as any[]).map((a: any) => ({
+          _id: a._id?.toString() ?? a.toString(),
+          name: a.name,
+          avatar: a.avatar,
+        })),
+        members,
+        totalMembers: members.length,
+        messageCount: box.messageIds.length,
+        createAt: box.createAt,
+        createBy: box.createBy,
+      },
+    };
   },
 
   async deleteBox(boxId: string) {

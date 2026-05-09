@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../lib/auth/jwt";
 import { UnauthorizedError } from "../errors";
-import { UserModel } from "../models/user.model";
+import { UserModel, checkAndUnbanUser } from "../models/user.model";
 
 export async function authMiddleware(
   req: Request,
@@ -40,4 +40,29 @@ export async function authMiddleware(
   } catch (error) {
     next(error);
   }
+}
+
+/**
+ * Middleware kiểm tra tài khoản bị khóa (ban).
+ * Gọi checkAndUnbanUser trước khi check isBlocked để tự động unban khi hết hạn.
+ * Dùng sau authMiddleware.
+ */
+export async function banCheckMiddleware(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) {
+  const userId = (req as any).user?.userId;
+  if (!userId) return next();
+
+  // Tự động unban nếu hết hạn
+  await checkAndUnbanUser(userId);
+
+  // Sau khi unban (nếu có), check lại
+  const user = await UserModel.findById(userId).select("isBlocked").lean();
+  if (user?.isBlocked) {
+    throw new UnauthorizedError("Tài khoản đã bị khóa");
+  }
+
+  next();
 }

@@ -16,6 +16,7 @@ import {
   uploadBackground,
   updateProfile,
 } from "../controllers/user.controller";
+import { reportUser } from "../controllers/report.controller";
 import { ForbiddenError } from "../errors";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { upload, handleUploadError } from "../middleware/upload.middleware";
@@ -63,6 +64,9 @@ router.put(
   uploadBackgroundMiddleware,
   uploadBackground
 );
+
+// ── Report user ──────────────────────────────────────────────────────────────
+router.post("/:userId/report", authMiddleware, reportUser);
 
 // ── Admin routes ─────────────────────────────────────────────────────────────
 router.get("/", authMiddleware, adminMiddleware, getUsers);

@@ -1,7 +1,7 @@
 // src/services/comment.service.ts
 
 import { Types } from "mongoose";
-import { CommentModel } from "../models/comment.model";
+import { CommentModel, CommentModerationStatus } from "../models/comment.model";
 import { PostModel } from "../models/post.model";
 import { UserModel } from "../models/user.model";
 import { LikeModel } from "../models/like.model";
@@ -207,24 +207,42 @@ export const CommentService = {
     if (!post)
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
 
+    // 1. Tạo bản ghi comment tạm thời (mặc định sẽ là PENDING)
     const comment = await CommentModel.create({
       postId: new Types.ObjectId(postId),
       userId: new Types.ObjectId(userId),
       contentText: dto.contentText,
+      moderationStatus: CommentModerationStatus.PENDING, // Đảm bảo trạng thái ban đầu
     });
 
-    // Tăng commentsCount của post
+    // 2. Tăng commentsCount của post
     await PostModel.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
+    // 3. Thực hiện kiểm duyệt (Moderation)
     if (dto.contentText?.trim()) {
-      void ModerationService.moderateAndUpdate(
-        "comment",
-        comment._id.toString(),
-        dto.contentText,
-        {
-          reportCount: 0,
-        }
-      ).catch((err) => console.error("[Moderation] Comment error:", err));
+      try {
+        // Lấy thông tin user để kiểm tra account age (giống bên Post)
+        const user = await UserModel.findById(userId)
+          .select("createdAt")
+          .lean();
+        const accountAgeDays = user
+          ? (Date.now() - new Date(user.createdAt).getTime()) / 86400000
+          : 999;
+
+        // THAY ĐỔI QUAN TRỌNG: Dùng 'await' thay vì 'void' để đợi kết quả kiểm duyệt
+        await ModerationService.moderateAndUpdate(
+          "comment",
+          comment._id.toString(),
+          dto.contentText,
+          {
+            isNewAccount: accountAgeDays < 7,
+            reportCount: 0,
+          }
+        );
+      } catch (err) {
+        // Log lỗi nhưng có thể cho qua để không chặn người dùng nếu AI service gặp sự cố
+        console.error("[Moderation] Comment error:", err);
+      }
     }
 
     void NotificationService.notifyPostComment(
@@ -236,6 +254,9 @@ export const CommentService = {
     ).catch((err) => {
       console.error("[CommentService] notify post comment error:", err);
     });
+
+
+    // 4. Lấy dữ liệu mới nhất từ DB (lúc này status đã là APPROVED/REJECTED/FLAGGED)
 
     return this.getCommentById(comment._id.toString(), userId);
   },

@@ -10,6 +10,16 @@ import {
   getBoxById,
   deleteBox,
   updateGroupAvatar,
+  // Group management
+  getGroupsByCategory,
+  getGroupDetail,
+  updateGroupInfo,
+  updateGroupCategory,
+  addMember,
+  removeMember,
+  leaveGroup,
+  promoteMember,
+  demoteMember,
   // Messages
   sendMessage,
   getMessages,
@@ -68,14 +78,28 @@ router.patch("/calls/:callId", authMiddleware, updateCallStatus);
 // ─── Boxes ────────────────────────────────────────────────────────────────────
 router.post("/boxes", authMiddleware, createGroup);
 router.get("/boxes", authMiddleware, getDirectBoxes);
-// Alias: /conversations → same as /boxes (list direct chats), so "conversations" is not treated as boxId
 router.get("/conversations", authMiddleware, getDirectBoxes);
 router.get("/boxes/groups", authMiddleware, getGroupBoxes);
 router.get("/boxes/read-status", authMiddleware, checkReadStatus);
+// Group detail & category filtering — MUST be before /boxes/:boxId
+router.get("/boxes/groups/category/:category", authMiddleware, getGroupsByCategory);
+router.get("/boxes/:boxId/detail", authMiddleware, getGroupDetail);
+// Box CRUD with :boxId param
 router.get("/boxes/:boxId", authMiddleware, getBoxById);
 router.delete("/boxes/:boxId", authMiddleware, deleteBox);
 router.patch("/boxes/:boxId/avatar", authMiddleware, updateGroupAvatar);
 router.post("/boxes/:boxId/read", authMiddleware, markAsRead);
+// Group info management (admin only)
+router.patch("/boxes/:boxId/info", authMiddleware, updateGroupInfo);
+router.patch("/boxes/:boxId/category", authMiddleware, updateGroupCategory);
+// Member management (admin only)
+router.post("/boxes/:boxId/members", authMiddleware, addMember);
+router.delete("/boxes/:boxId/members/:memberId", authMiddleware, removeMember);
+// Self-leave
+router.post("/boxes/:boxId/leave", authMiddleware, leaveGroup);
+// Admin role management
+router.patch("/boxes/:boxId/admins/promote", authMiddleware, promoteMember);
+router.patch("/boxes/:boxId/admins/demote", authMiddleware, demoteMember);
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
