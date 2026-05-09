@@ -67,7 +67,6 @@ const UserProfileSchema = new Schema<IUserProfile>(
   }
 );
 
-UserProfileSchema.index({ userId: 1 });
 UserProfileSchema.index({ lastCalculatedAt: 1 });
 
 export const UserProfileModel = model<IUserProfile>(

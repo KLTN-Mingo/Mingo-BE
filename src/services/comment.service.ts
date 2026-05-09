@@ -18,6 +18,7 @@ import {
   toCommentDetail,
 } from "../dtos/comment.dto";
 import { ModerationService } from "./moderation/moderation.service";
+import { NotificationService } from "./notification.service";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,19 @@ export const CommentService = {
       }
     }
 
+    void NotificationService.notifyPostComment(
+      post.userId.toString(),
+      userId,
+      postId,
+      comment._id.toString(),
+      dto.contentText?.slice(0, 200)
+    ).catch((err) => {
+      console.error("[CommentService] notify post comment error:", err);
+    });
+
+
     // 4. Lấy dữ liệu mới nhất từ DB (lúc này status đã là APPROVED/REJECTED/FLAGGED)
+
     return this.getCommentById(comment._id.toString(), userId);
   },
 
@@ -300,6 +313,17 @@ export const CommentService = {
         }
       ).catch((err) => console.error("[Moderation] Reply error:", err));
     }
+
+    void NotificationService.notifyCommentReply(
+      parentComment.userId.toString(),
+      userId,
+      parentComment._id.toString(),
+      reply._id.toString(),
+      dto.contentText?.slice(0, 200),
+      postId
+    ).catch((err) => {
+      console.error("[CommentService] notify reply error:", err);
+    });
 
     const { user, isLiked } = await populateCommentUser(reply, userId);
     return toCommentResponse(reply, { user, isLiked });
@@ -400,6 +424,15 @@ export const CommentService = {
     });
     await CommentModel.findByIdAndUpdate(commentId, {
       $inc: { likesCount: 1 },
+    });
+
+    void NotificationService.notifyCommentLike(
+      comment.userId.toString(),
+      userId,
+      commentId,
+      comment.postId?.toString()
+    ).catch((err) => {
+      console.error("[CommentService] notify comment like error:", err);
     });
   },
 

@@ -91,6 +91,7 @@ import {
   getAdminCommentReports,
   getAdminCommentActivity,
 } from "../controllers/admin.controller";
+import { getAuditLogs } from "../controllers/audit.controller";
 
 const router = Router();
 
@@ -120,6 +121,12 @@ router.patch("/users/:id/block", patchAdminUserBlock);
 router.patch("/users/:id/unblock", patchAdminUserUnblock);
 router.patch("/users/:id/toggle-active", patchAdminUserToggleActive);
 router.delete("/users/:id", deleteAdminUser);
+
+
+router.get("/dashboard/stats", getAdminDashboardStats);
+router.get("/audit-logs", getAuditLogs);
+router.get("/violations/daily", getViolationsDaily);
+router.get("/ai/performance", getAiPerformance);
 
 // ─────────────────────────────────────────────────────────────
 //  POSTS  ← TOÀN BỘ MỚI

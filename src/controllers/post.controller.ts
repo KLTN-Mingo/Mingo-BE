@@ -456,6 +456,7 @@ export const sharePost = asyncHandler(async (req: Request, res: Response) => {
 export const getPostsByUser = asyncHandler(
   async (req: Request, res: Response) => {
     const { userId } = req.params as { userId: string };
+    const currentUserId = (req as any).user?.userId as string | undefined;
     const { page: pageStr, limit: limitStr } = req.query as Record<
       string,
       string
@@ -471,7 +472,12 @@ export const getPostsByUser = asyncHandler(
       throw new ValidationError("Limit phải từ 1 đến 20");
     }
 
-    const result = await PostService.getPostsByUser(userId, page, limit);
+    const result = await PostService.getPostsByUser(
+      userId,
+      page,
+      limit,
+      currentUserId
+    );
     sendPaginated(res, result.posts, result.pagination);
   }
 );
