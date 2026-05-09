@@ -18,6 +18,8 @@ export interface CreateGroupDto {
   membersIds: string[];
   groupName: string;
   groupAva?: string;
+  description?: string;
+  category?: "friends" | "family" | "work" | "other";
 }
 
 export interface EditMessageDto {
@@ -52,6 +54,33 @@ export interface UpdateCallStatusDto {
   endTime?: Date;
 }
 
+// ─── Group Chat DTOs ────────────────────────────────────────────────────────────
+
+export interface AddMemberDto {
+  memberIds: string[];
+}
+
+export interface RemoveMemberDto {
+  memberId: string;
+}
+
+export interface UpdateGroupInfoDto {
+  groupName?: string;
+  description?: string;
+}
+
+export interface UpdateGroupCategoryDto {
+  category: "friends" | "family" | "work" | "other";
+}
+
+export interface PromoteMemberDto {
+  memberId: string;
+}
+
+export interface DemoteMemberDto {
+  memberId: string;
+}
+
 // ─── Response DTOs ────────────────────────────────────────────────────────────
 
 export interface FileResponseDto {
@@ -84,6 +113,11 @@ export interface MessageResponseDto {
   boxId: string;
   createAt: Date | string;
   createBy: string;
+  sender?: {
+    id: string;
+    name?: string;
+    avatar?: string;
+  };
 }
 
 export interface GroupMessageResponseDto extends MessageResponseDto {
@@ -120,6 +154,20 @@ export interface GroupBoxResponseDto {
   createBy: string;
   lastMessage: MessageResponseDto | null;
   readStatus: boolean;
+}
+
+export interface GroupDetailResponseDto {
+  _id: string;
+  groupName: string;
+  groupAva: string;
+  description: string;
+  category: string;
+  adminIds: Array<{ _id: string; name?: string; avatar?: string }>;
+  members: UserInfoDto[];
+  totalMembers: number;
+  messageCount: number;
+  createAt: string;
+  createBy: string;
 }
 
 export interface OnlineStatusResponseDto {
@@ -184,6 +232,14 @@ export function toMessageResponse(msg: any): MessageResponseDto {
     boxId: msg.boxId?.toString(),
     createAt: msg.createAt,
     createBy: msg.createBy?._id?.toString() ?? msg.createBy?.toString(),
+    sender:
+      msg.createBy && typeof msg.createBy === "object"
+        ? {
+            id: msg.createBy._id?.toString() ?? msg.createBy.id?.toString() ?? "",
+            name: msg.createBy.name,
+            avatar: msg.createBy.avatar,
+          }
+        : undefined,
   };
 }
 

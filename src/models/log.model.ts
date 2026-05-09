@@ -31,6 +31,7 @@ export enum LogAction {
   ADMIN_USER_VERIFY = "admin_user_verify",
   ADMIN_USER_DELETE = "admin_user_delete",
   ADMIN_USER_PROFILE_UPDATE = "admin_user_profile_update",
+  ADMIN_USER_WARN = "admin_user_warn",
 
   // ── Admin › Post management ─────────────────
   ADMIN_POST_HIDE = "admin_post_hide",
@@ -39,6 +40,7 @@ export enum LogAction {
   ADMIN_POST_MOD_APPROVE = "admin_post_mod_approve",
   ADMIN_POST_MOD_REJECT = "admin_post_mod_reject",
   ADMIN_POST_MOD_FLAG = "admin_post_mod_flag",
+  ADMIN_POST_MOD_VIOLATE = "admin_post_mod_violate",
 
   // ── Admin › Comment management ──────────────
   ADMIN_COMMENT_HIDE = "admin_comment_hide",
@@ -46,6 +48,7 @@ export enum LogAction {
   ADMIN_COMMENT_DELETE = "admin_comment_delete",
   ADMIN_COMMENT_MOD_APPROVE = "admin_comment_mod_approve",
   ADMIN_COMMENT_MOD_REJECT = "admin_comment_mod_reject",
+  ADMIN_COMMENT_MOD_VIOLATE = "admin_comment_mod_violate",
 
   // ── Admin › Report management ───────────────
   ADMIN_REPORT_START_REVIEW = "admin_report_start_review",

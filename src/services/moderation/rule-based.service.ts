@@ -159,7 +159,8 @@ const HATE_PATTERNS: readonly RegExp[] = [
 // ---------------------------------------------------------------------------
 
 /** Không dùng flag /g để tránh lỗi lastIndex khi tái sử dụng .test() */
-const REPEAT_CHAR_RE = /(.)\1{8,}/;
+/** Yêu cầu 6+ ký tự lặp liên tiếp (trước đây 8+) để dễ kích hoạt vùng xám */
+const REPEAT_CHAR_RE = /(.)\1{5,}/;
 
 /** Regex link — tạo mới mỗi lần gọi để tránh lastIndex của /g */
 function matchLinks(text: string): RegExpMatchArray | null {
@@ -242,10 +243,10 @@ export const RuleBasedService = {
       const spamReasons: string[] = [];
 
       // 3a. Ký tự lặp 8+ lần liên tiếp
-      // if (REPEAT_CHAR_RE.test(slice)) {
-      //   spamScore = Math.max(spamScore, 0.55);
-      //   spamReasons.push("ky_tu_lap_8+");
-      // }
+      if (REPEAT_CHAR_RE.test(slice)) {
+        spamScore = Math.max(spamScore, 0.55);
+        spamReasons.push("ky_tu_lap_8+");
+      }
 
       // 3b. Nhiều link trong cùng một bài
       const links = matchLinks(slice);
@@ -255,14 +256,14 @@ export const RuleBasedService = {
       }
 
       // 3c. Toàn chữ hoa (ALLCAPS) trên đoạn văn dài
-      // const lettersOnly = slice.replace(/[^a-zA-Z]/g, "");
-      // if (lettersOnly.length > 40) {
-      //   const upperCount = lettersOnly.replace(/[^A-Z]/g, "").length;
-      //   if (upperCount / lettersOnly.length > 0.85) {
-      //     spamScore = Math.max(spamScore, 0.45);
-      //     spamReasons.push("allcaps_dai");
-      //   }
-      // }
+      const lettersOnly = slice.replace(/[^a-zA-Z]/g, "");
+      if (lettersOnly.length > 40) {
+        const upperCount = lettersOnly.replace(/[^A-Z]/g, "").length;
+        if (upperCount / lettersOnly.length > 0.85) {
+          spamScore = Math.max(spamScore, 0.45);
+          spamReasons.push("allcaps_dai");
+        }
+      }
 
       // 3d. Kết hợp nhiều signal → score cộng dồn (có giới hạn)
       const signalCount = spamReasons.length;

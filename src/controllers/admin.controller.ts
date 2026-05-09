@@ -11,6 +11,8 @@ import {
   ReportTargetType,
   ReportStatus,
   ReportReason,
+  ModerationAction,
+  type BanPreset,
 } from "../models/report.model";
 import { PostModel, ModerationStatus } from "../models/post.model";
 import { CommentModel, CommentModerationStatus } from "../models/comment.model";
@@ -26,6 +28,11 @@ import {
 import { LogService } from "../services/log.service";
 import { validateObjectId } from "../utils/validators";
 import type { ModerationResult } from "../services/moderation/moderation.service";
+import {
+  suggestBanPreset,
+  presetToMs,
+  VALID_BAN_PRESETS,
+} from "../utils/suggest-ban.util";
 
 const AI_CALL_COST_USD = 0.0006;
 const VIOLATION_SCORE_THRESHOLD = 0.35;
@@ -204,7 +211,7 @@ const REPORT_REASONS = [
   "misinformation",
   "other",
 ] as const;
-const REPORT_ACTIONS = ["review", "resolve", "dismiss"] as const;
+const REPORT_ACTIONS = ["resolve", "dismiss", "review"] as const;
 
 type AdminReportStatus = (typeof REPORT_STATUSES)[number];
 type AdminReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
@@ -294,7 +301,8 @@ async function buildAdminReportPayload(
     actionTaken?: string;
     createdAt: Date;
     updatedAt: Date;
-    priorityScore?: number;
+    reportCount?: number;
+    moderationSnapshot?: ModerationResult;
   }
 ) {
   const isReporterPopulated = (
@@ -334,17 +342,425 @@ async function buildAdminReportPayload(
     reviewedByName: reviewer?.name,
     reviewedAt: report.reviewedAt,
     actionTaken: report.actionTaken,
-    priorityScore: report.priorityScore ?? 0,
+    reportCount: 0,
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
     ...preview,
+    aiAnalysis: buildAiAnalysisFromSnapshot(
+      report.moderationSnapshot ?? undefined,
+      report.updatedAt
+    ),
   };
 }
 
 function mapReportActionToLogAction(action: AdminReportAction): LogAction {
-  if (action === "review") return LogAction.ADMIN_REPORT_START_REVIEW;
   if (action === "dismiss") return LogAction.ADMIN_REPORT_DISMISS;
   return LogAction.ADMIN_REPORT_RESOLVE;
+}
+
+// ─── Moderation action helpers ───────────────────────────────────────────────
+
+/**
+ * Thực hiện hành động xử lý vi phạm trên target.
+ *
+ * Quy tắc:
+ * - post / comment:
+ *     hide         → isHidden: true, moderationStatus: VIOLATED
+ *     delete       → xóa khỏi DB
+ *     dismiss      → không làm gì với target
+ *     warn_author  → coi như hide + cảnh cáo author
+ *     ban_*        → không áp dụng cho post/comment (log warning)
+ * - user:
+ *     warn_author  → violationCount += 1, lastWarnedAt = now
+ *     ban_temp     → isBanned: true, bannedUntil = now + days
+ *     ban_permanent→ isBanned: true, bannedUntil = null
+ *     hide         → coi như warn_author
+ *     delete       → coi như ban_permanent
+ *     dismiss      → không làm gì
+ *
+ * Nếu warnAuthor = true (với bất kỳ action nào trừ dismiss/dismiss):
+ *     → tăng violationCount của author +1, set lastWarnedAt = now
+ *
+ * Trả về { suggestBan: true } nếu violationCount sau khi tăng >= 5.
+ */
+interface ApplyModResult {
+  suggestBan: boolean;
+  bannedUntil: Date | null;
+  banPreset: string | null;
+  suggestion: {
+    preset: string | null;
+    reason: string;
+    autoEscalate: boolean;
+  } | null;
+}
+
+/**
+ * Thực hiện hành động xử lý vi phạm trên target.
+ *
+ * Quy tắc:
+ * - post / comment:
+ *     hide         → isHidden: true, moderationStatus: VIOLATED
+ *     delete       → xóa khỏi DB
+ *     dismiss      → không làm gì với target
+ *     warn_author  → coi như hide + cảnh cáo author
+ *     ban_*        → không áp dụng cho post/comment
+ * - user:
+ *     warn_author  → violationCount += 1, lastWarnedAt = now
+ *     ban_temp     → isBlocked: true, bannedUntil = now + preset
+ *     ban_permanent→ isBlocked: true, bannedUntil = null
+ *     hide         → coi như warn_author
+ *     delete       → coi như ban_permanent
+ *     dismiss      → không làm gì
+ *
+ * Nếu warnAuthor = true (với bất kỳ action nào trừ dismiss):
+ *     → tăng violationCount của author +1, set lastWarnedAt = now
+ *
+ * Trả về banPreset, bannedUntil, suggestBan, suggestion (từ suggestBanPreset).
+ */
+async function applyModerationAction(
+  report: {
+    targetType: string;
+    targetId: Types.ObjectId;
+    moderationSnapshot?: ModerationResult;
+  },
+  modAction: ModerationAction,
+  warnAuthor: boolean,
+  banPreset: BanPreset | undefined,
+  adminOid: Types.ObjectId,
+  now: Date,
+  note?: string
+): Promise<ApplyModResult> {
+  const { targetType, targetId, moderationSnapshot } = report;
+  const violationReason = note ?? "Xác nhận vi phạm qua báo cáo";
+  const logNote = `[${modAction}] ${violationReason}`;
+  let bannedUntil: Date | null = null;
+  let banPresetResult: string | null = null;
+  let suggestBan = false;
+  let suggestion: ApplyModResult["suggestion"] = null;
+
+  // ── post / comment ──────────────────────────────────────────────────────
+  if (targetType === ReportTargetType.POST) {
+    if (modAction === ModerationAction.HIDE || modAction === ModerationAction.WARN_AUTHOR) {
+      await PostModel.findByIdAndUpdate(targetId, {
+        isHidden: true,
+        moderationStatus: ModerationStatus.VIOLATED,
+        hiddenReason: logNote,
+      });
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_POST_MOD_VIOLATE,
+        severity: LogSeverity.WARNING,
+        targetType: LogTargetType.POST,
+        targetId,
+        note: logNote,
+      });
+      if (warnAuthor) {
+        const result = await warnPostAuthor(targetId, logNote, adminOid, now);
+        suggestBan = suggestBan || result.suggestBan;
+        if (result.suggestBan) {
+          suggestion = {
+            preset: "permanent",
+            reason: "Số lần vi phạm đã đạt ngưỡng cảnh báo",
+            autoEscalate: true,
+          };
+        }
+      }
+    } else if (modAction === ModerationAction.DELETE) {
+      await PostModel.findByIdAndDelete(targetId);
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_POST_MOD_VIOLATE,
+        severity: LogSeverity.ERROR,
+        targetType: LogTargetType.POST,
+        targetId,
+        note: `[DELETE] ${logNote}`,
+      });
+      if (warnAuthor) {
+        const result = await warnPostAuthor(targetId, logNote, adminOid, now);
+        suggestBan = suggestBan || result.suggestBan;
+      }
+    }
+    // dismiss → không làm gì
+
+  } else if (targetType === ReportTargetType.COMMENT) {
+    if (modAction === ModerationAction.HIDE || modAction === ModerationAction.WARN_AUTHOR) {
+      await CommentModel.findByIdAndUpdate(targetId, {
+        isHidden: true,
+        moderationStatus: CommentModerationStatus.VIOLATED,
+        hiddenReason: logNote,
+      });
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_COMMENT_MOD_VIOLATE,
+        severity: LogSeverity.WARNING,
+        targetType: LogTargetType.COMMENT,
+        targetId,
+        note: logNote,
+      });
+      if (warnAuthor) {
+        await warnCommentAuthor(targetId, logNote, adminOid, now);
+      }
+    } else if (modAction === ModerationAction.DELETE) {
+      await CommentModel.findByIdAndDelete(targetId);
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_COMMENT_MOD_VIOLATE,
+        severity: LogSeverity.ERROR,
+        targetType: LogTargetType.COMMENT,
+        targetId,
+        note: `[DELETE] ${logNote}`,
+      });
+      if (warnAuthor) {
+        await warnCommentAuthor(targetId, logNote, adminOid, now);
+      }
+    }
+    // dismiss → không làm gì
+
+  // ── user ────────────────────────────────────────────────────────────────
+  } else if (targetType === ReportTargetType.USER) {
+    if (
+      modAction === ModerationAction.WARN_AUTHOR ||
+      modAction === ModerationAction.HIDE
+    ) {
+      const result = await addUserViolation(targetId, logNote, "warn_author", adminOid, now);
+      suggestBan = result.suggestBan;
+      // Gọi suggestBanPreset với violationCount thực tế + AI scores
+      const aiScores = moderationSnapshot?.scores;
+      const sug = suggestBanPreset(result.violationCount, aiScores);
+      if (sug.preset) {
+        suggestion = {
+          preset: sug.preset,
+          reason: sug.reason,
+          autoEscalate: sug.autoEscalate,
+        };
+      }
+    } else if (modAction === ModerationAction.BAN_TEMP) {
+      // Lấy violationCount hiện tại trước khi tăng
+      const userBefore = await UserModel.findById(targetId).select("violationCount").lean();
+      const vcBefore = userBefore?.violationCount ?? 0;
+
+      // Tính bannedUntil từ preset
+      const ms = presetToMs(banPreset ?? "7d");
+      const days = ms !== null ? ms / (24 * 60 * 60 * 1000) : 7;
+      bannedUntil = new Date(now);
+      bannedUntil.setDate(bannedUntil.getDate() + days);
+      banPresetResult = banPreset ?? "7d";
+
+      await UserModel.findByIdAndUpdate(targetId, {
+        isBlocked: true,
+        isBanned: true,
+        bannedUntil,
+        $inc: { violationCount: 1 },
+        $push: {
+          violationLogs: {
+            $each: [
+              {
+                reason: logNote,
+                adminId: adminOid,
+                action: ModerationAction.BAN_TEMP,
+                timestamp: now,
+              },
+            ],
+            $position: 0,
+            $slice: 50,
+          },
+        },
+      });
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_USER_WARN,
+        severity: LogSeverity.WARNING,
+        targetType: LogTargetType.USER,
+        targetId,
+        note: `[BAN_TEMP ${banPreset ?? "7d"}] ${logNote}`,
+        metadata: { banUntil: bannedUntil.toISOString(), banPreset: banPresetResult },
+      });
+      // Gợi ý preset tiếp theo dựa trên violationCount sau khi tăng
+      const aiScores = moderationSnapshot?.scores;
+      const sug = suggestBanPreset(vcBefore + 1, aiScores);
+      if (sug.preset) {
+        suggestion = {
+          preset: sug.preset,
+          reason: sug.reason,
+          autoEscalate: sug.autoEscalate,
+        };
+      }
+    } else if (modAction === ModerationAction.BAN_PERMANENT) {
+      bannedUntil = null;
+      banPresetResult = "permanent";
+      await UserModel.findByIdAndUpdate(targetId, {
+        isBlocked: true,
+        isBanned: true,
+        bannedUntil: null,
+        $inc: { violationCount: 1 },
+        $push: {
+          violationLogs: {
+            $each: [
+              {
+                reason: logNote,
+                adminId: adminOid,
+                action: ModerationAction.BAN_PERMANENT,
+                timestamp: now,
+              },
+            ],
+            $position: 0,
+            $slice: 50,
+          },
+        },
+      });
+      await LogService.create({
+        actorId: adminOid,
+        actorRole: LogActorRole.ADMIN,
+        action: LogAction.ADMIN_USER_WARN,
+        severity: LogSeverity.ERROR,
+        targetType: LogTargetType.USER,
+        targetId,
+        note: `[BAN_PERMANENT] ${logNote}`,
+      });
+    }
+    // dismiss → không làm gì
+  }
+
+  return { suggestBan, bannedUntil, banPreset: banPresetResult, suggestion };
+}
+
+/** Tăng violationCount + lastWarnedAt của author bài viết */
+async function warnPostAuthor(
+  postId: Types.ObjectId,
+  reason: string,
+  adminOid: Types.ObjectId,
+  now: Date
+): Promise<{ suggestBan: boolean }> {
+  const post = await PostModel.findById(postId).select("userId").lean();
+  if (!post?.userId) return { suggestBan: false };
+  return await addUserViolation(post.userId as Types.ObjectId, reason, "warn_author", adminOid, now);
+}
+
+/** Tăng violationCount + lastWarnedAt của author bình luận */
+async function warnCommentAuthor(
+  commentId: Types.ObjectId,
+  reason: string,
+  adminOid: Types.ObjectId,
+  now: Date
+) {
+  const comment = await CommentModel.findById(commentId).select("userId").lean();
+  if (!comment?.userId) return;
+  await addUserViolation(
+    (comment.userId as Types.ObjectId),
+    reason,
+    "warn_author",
+    adminOid,
+    now
+  );
+}
+
+/**
+ * Tăng violationCount, set lastWarnedAt, ghi violationLog của user.
+ * Trả về { suggestBan, violationCount }.
+ */
+async function addUserViolation(
+  userId: Types.ObjectId,
+  reason: string,
+  action: string,
+  adminOid: Types.ObjectId,
+  now: Date
+): Promise<{ suggestBan: boolean; violationCount: number }> {
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      $inc: { violationCount: 1 },
+      $set: { lastWarnedAt: now },
+      $push: {
+        violationLogs: {
+          $each: [
+            {
+              reason,
+              adminId: adminOid,
+              action,
+              timestamp: now,
+            },
+          ],
+          $position: 0,
+          $slice: 50,
+        },
+      },
+    },
+    { new: true }
+  );
+  const violationCount = user?.violationCount ?? 0;
+  await LogService.create({
+    actorId: adminOid,
+    actorRole: LogActorRole.ADMIN,
+    action: LogAction.ADMIN_USER_WARN,
+    severity: LogSeverity.WARNING,
+    targetType: LogTargetType.USER,
+    targetId: userId,
+    note: reason,
+    metadata: { violationCount },
+  });
+  return { suggestBan: violationCount >= 5, violationCount };
+}
+
+/**
+ * Transform ModerationResult (moderationSnapshot) → aiAnalysis format cho frontend.
+ */
+function buildAiAnalysisFromSnapshot(
+  snap: ModerationResult | null | undefined,
+  calledAt?: Date
+): {
+  calledAt: string;
+  model: string;
+  toxicityScore: number;
+  confidenceScore: number;
+  categories: string[];
+  decision: string;
+  reasoning: string;
+  actionTaken: string;
+  scores?: { toxic: number; hateSpeech: number; spam: number; reason: string };
+} | undefined {
+  if (!snap?.scores) return undefined;
+  const { toxic, hateSpeech, spam, reason } = snap.scores;
+  const max = Math.max(toxic, hateSpeech, spam);
+  const decision =
+    max >= 0.8
+      ? "auto_hide"
+      : max >= 0.6 && (toxic >= 0.6 || hateSpeech >= 0.6)
+        ? "escalate"
+        : max <= 0.2
+          ? "auto_pass"
+          : "needs_human";
+  const actionTaken =
+    decision === "auto_hide"
+      ? "hidden"
+      : decision === "auto_pass"
+        ? "passed"
+        : decision === "escalate"
+          ? "flagged"
+          : "none";
+  const categories: string[] = [];
+  if (toxic > 0.5) categories.push("toxic");
+  if (hateSpeech > 0.5) categories.push("hate_speech");
+  if (spam > 0.5) categories.push("spam");
+  const confidenceScore = max > 0 ? Math.min(1, max + 0.15) : 0.5;
+  return {
+    calledAt: calledAt ? calledAt.toISOString() : new Date().toISOString(),
+    model: snap.method === "ai" ? "gemini-3-flash" : "rule-based",
+    toxicityScore: toxic,
+    confidenceScore,
+    categories,
+    decision,
+    reasoning:
+      reason && reason !== "ok"
+        ? reason
+        : `Phát hiện: toxic=${Math.round(toxic * 100)}%, hate=${Math.round(hateSpeech * 100)}%, spam=${Math.round(spam * 100)}%`,
+    actionTaken,
+    scores: { toxic, hateSpeech, spam, reason },
+  };
 }
 
 /**
@@ -368,37 +784,74 @@ export const getReports = asyncHandler(async (req: Request, res: Response) => {
     filter.$or = [
       { description: { $regex: safe, $options: "i" } },
       { actionTaken: { $regex: safe, $options: "i" } },
+      { "reporterId.name": { $regex: safe, $options: "i" } },
     ];
   }
 
-  const [rows, total] = await Promise.all([
-    ReportModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({ path: "reporterId", select: "_id name avatar" })
-      .populate({ path: "reviewedBy", select: "_id name" })
-      .lean(),
-    ReportModel.countDocuments(filter),
+  // reportCount là computed field không tồn tại trong DB — BE sort theo createdAt (report mới nhất)
+  // FE sẽ re-sort lại kết quả theo reportCount sau khi nhận data
+  const allowedSortKeys = ["createdAt", "updatedAt", "status"];
+  const sortKey = allowedSortKeys.includes(q.sortKey ?? "")
+    ? (q.sortKey as string)
+    : "createdAt";
+  const sortDir = q.sortDir === "asc" ? 1 : -1;
+
+  const [rows, pendingCount, reviewingCount, resolvedCount, dismissedCount] =
+    await Promise.all([
+      ReportModel.find(filter)
+        .sort({ [sortKey]: sortDir })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: "reporterId", select: "_id name avatar" })
+        .populate({ path: "reviewedBy", select: "_id name" })
+        .lean(),
+      ReportModel.countDocuments({ ...filter, status: "pending" }),
+      ReportModel.countDocuments({ ...filter, status: "reviewing" }),
+      ReportModel.countDocuments({ ...filter, status: "resolved" }),
+      ReportModel.countDocuments({ ...filter, status: "dismissed" }),
+    ]);
+
+  const targetIds = rows.map((r) => r.targetId);
+
+  const priorityCounts = await ReportModel.aggregate([
+    { $match: { targetId: { $in: targetIds } } },
+    { $group: { _id: "$targetId", count: { $sum: 1 } } },
   ]);
+
+  const priorityMap = new Map(
+    priorityCounts.map((p) => [p._id.toString(), p.count])
+  );
 
   const reports = (
     await Promise.all(rows.map((row) => buildAdminReportPayload(row as never)))
-  ).filter((report) => {
-    if (!keyword) return true;
-    const kw = keyword.toLowerCase();
-    return (
-      report.reporterName.toLowerCase().includes(kw) ||
-      report.targetPreview?.toLowerCase().includes(kw) ||
-      report.description.toLowerCase().includes(kw)
-    );
-  });
+  )
+    .map((report) => ({
+      ...report,
+      reportCount: priorityMap.get(report.targetId) ?? 1,
+    }))
+    .filter((report) => {
+      if (!keyword) return true;
+      const kw = keyword.toLowerCase();
+      return (
+        report.reporterName.toLowerCase().includes(kw) ||
+        report.targetPreview?.toLowerCase().includes(kw) ||
+        report.description.toLowerCase().includes(kw) ||
+        report.actionTaken?.toLowerCase().includes(kw)
+      );
+    });
+
+  // Tổng = tổng các status → đảm bảo total = pending + resolved + dismissed
+  const total = pendingCount + resolvedCount + dismissedCount;
 
   sendSuccess(res, {
     reports,
-    total: keyword ? reports.length : total,
+    total,
     page,
-    totalPages: Math.ceil((keyword ? reports.length : total) / limit) || 1,
+    totalPages: Math.ceil(total / limit) || 1,
+    pendingCount,
+    reviewingCount,
+    resolvedCount,
+    dismissedCount,
   });
 });
 
@@ -415,7 +868,7 @@ export const getAdminReportById = asyncHandler(
       throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
     }
 
-    const [detail, relatedRows, logs] = await Promise.all([
+    const [detail, relatedRows, logs, reportCount] = await Promise.all([
       buildAdminReportPayload(report as never),
       ReportModel.find({
         targetType: report.targetType,
@@ -435,6 +888,10 @@ export const getAdminReportById = asyncHandler(
         .populate({ path: "actorId", select: "_id name avatar" })
         .select("action actorId actorRole note createdAt")
         .lean(),
+      ReportModel.countDocuments({
+        targetType: report.targetType,
+        targetId: report.targetId,
+      }),
     ]);
 
     const activity = [
@@ -466,12 +923,13 @@ export const getAdminReportById = asyncHandler(
       }),
     ];
 
-    const relatedReports = await Promise.all(
-      relatedRows.map((row) => buildAdminReportPayload(row as never))
-    );
+    const relatedReports = (
+      await Promise.all(relatedRows.map((row) => buildAdminReportPayload(row as never)))
+    ).map((r) => ({ ...r, reportCount }));
 
     sendSuccess(res, {
       ...detail,
+      reportCount,
       activity,
       relatedReports,
     });
@@ -480,6 +938,16 @@ export const getAdminReportById = asyncHandler(
 
 /**
  * @route   PATCH /api/admin/reports/:reportId
+ *
+ * Body:
+ * {
+ *   "action":  "resolve" | "dismiss" | "review",
+ *   "note":    string,
+ *   // — chỉ khi action = "resolve" — //
+ *   "modAction":  "hide" | "delete" | "warn_author" | "ban_temp" | "ban_permanent" | "dismiss",
+ *   "warnAuthor": boolean,
+ *   "banPreset": "1d" | "3d" | "7d" | "30d" (bắt buộc khi modAction = "ban_temp"),
+ * }
  */
 export const handleReport = asyncHandler(
   async (req: Request, res: Response) => {
@@ -489,8 +957,12 @@ export const handleReport = asyncHandler(
     const body = req.body as {
       action?: string;
       note?: string;
-      actionTaken?: string;
+      modAction?: string;
+      warnAuthor?: boolean;
+      banPreset?: string;
     };
+
+    // ── Validate admin action (resolve / dismiss / review) ──────────────
     if (!isReportAction(body.action)) {
       throw new ValidationError(
         `action không hợp lệ. Cho phép: ${REPORT_ACTIONS.join(", ")}`,
@@ -499,7 +971,7 @@ export const handleReport = asyncHandler(
     }
 
     const report = await ReportModel.findById(reportId)
-      .select("_id status reporterId targetType targetId actionTaken")
+      .select("_id status reporterId targetType targetId moderationSnapshot")
       .lean();
     if (!report) {
       throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${reportId}`);
@@ -507,31 +979,90 @@ export const handleReport = asyncHandler(
 
     const note =
       typeof body.note === "string" ? body.note.slice(0, 500) : undefined;
-    const actionTaken =
-      typeof body.actionTaken === "string"
-        ? body.actionTaken.slice(0, 200)
-        : undefined;
-    const adminId =
-      ((req as Request & { user?: { _id?: string; userId?: string } }).user?._id ??
-        (req as Request & { user?: { _id?: string; userId?: string } }).user
-          ?.userId) ||
-      undefined;
+    const warnAuthor = body.warnAuthor === true;
 
-    const payloadMap: Record<AdminReportAction, Record<string, unknown>> = {
+    // ── banPreset validation ─────────────────────────────────────────────
+    // Bắt buộc khi action = "resolve" && modAction = "ban_temp"
+    let banPreset: BanPreset | undefined;
+    if (body.action === "resolve" && body.modAction === ModerationAction.BAN_TEMP) {
+      if (!body.banPreset || !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)) {
+        throw new ValidationError(
+          `banPreset không hợp lệ. Cho phép: ${VALID_BAN_PRESETS.join(", ")}`,
+          "INVALID_BAN_PRESET"
+        );
+      }
+      banPreset = body.banPreset as BanPreset;
+    }
+
+    const adminId = getAdminActorId(req);
+    const adminOid = new Types.ObjectId(adminId);
+    const now = new Date();
+
+    // ── MODERATION ACTION validation ───────────────────────────────────
+    const VALID_MOD_ACTIONS: string[] = Object.values(ModerationAction);
+    const modAction = (body.modAction ?? ModerationAction.DISMISS) as ModerationAction;
+
+    if (!VALID_MOD_ACTIONS.includes(modAction)) {
+      throw new ValidationError(
+        `modAction không hợp lệ. Cho phép: ${VALID_MOD_ACTIONS.join(", ")}`,
+        "INVALID_MODERATION_ACTION"
+      );
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // RESOLVE: xử lý target theo modAction + auto-resolve cùng target
+    // ──────────────────────────────────────────────────────────────────
+    let modResult: ApplyModResult = {
+      suggestBan: false,
+      bannedUntil: null,
+      banPreset: null,
+      suggestion: null,
+    };
+    if (body.action === "resolve") {
+      modResult = await applyModerationAction(report, modAction, warnAuthor, banPreset, adminOid, now, note);
+
+      // Auto-resolve các report khác cùng target đang pending/reviewing
+      const related = await ReportModel.find({
+        _id: { $ne: report._id },
+        targetType: report.targetType,
+        targetId: report.targetId,
+        status: { $in: [ReportStatus.PENDING, ReportStatus.REVIEWING] },
+      }).select("_id").lean();
+
+      if (related.length > 0) {
+        await ReportModel.updateMany(
+          { _id: { $in: related.map((r) => r._id) } },
+          {
+            $set: {
+              status: ReportStatus.RESOLVED,
+              resolutionNote: "Tự động đóng do vi phạm đã được xác nhận",
+              actionTaken: ModerationAction.AUTO_RESOLVED,
+              reviewedBy: adminOid,
+              reviewedAt: now,
+            },
+          }
+        );
+      }
+    }
+
+    // ── Cập nhật report hiện tại ─────────────────────────────────────
+    const payloadMap: Record<string, Record<string, unknown>> = {
       review: { status: ReportStatus.REVIEWING },
       resolve: {
         status: ReportStatus.RESOLVED,
         resolutionNote: note,
-        actionTaken,
-        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
-        reviewedAt: new Date(),
+        actionTaken: modAction,
+        warnAuthor,
+        banPreset: banPreset ?? null,
+        reviewedBy: adminOid,
+        reviewedAt: now,
       },
       dismiss: {
         status: ReportStatus.DISMISSED,
         resolutionNote: note,
-        actionTaken,
-        reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
-        reviewedAt: new Date(),
+        actionTaken: ModerationAction.DISMISS,
+        reviewedBy: adminOid,
+        reviewedAt: now,
       },
     };
 
@@ -558,14 +1089,21 @@ export const handleReport = asyncHandler(
       note,
     });
 
+    const payload = await buildAdminReportPayload(updated as never);
     sendSuccess(
       res,
-      await buildAdminReportPayload(updated as never),
-      body.action === "review"
-        ? "Đã chuyển báo cáo sang đang xem xét"
-        : body.action === "resolve"
+      {
+        ...payload,
+        suggestBan: modResult.suggestBan,
+        bannedUntil: modResult.bannedUntil,
+        banPreset: modResult.banPreset,
+        suggestion: modResult.suggestion,
+      },
+      body.action === "resolve"
         ? "Đã xử lý và đóng báo cáo"
-        : "Đã bỏ qua báo cáo"
+        : body.action === "dismiss"
+          ? "Đã bỏ qua báo cáo"
+          : "Đã chuyển sang xem xét"
     );
   }
 );
@@ -584,15 +1122,25 @@ export const getAdminDashboardStats = asyncHandler(
       newUsersToday,
       totalPosts,
       newPostsToday,
+      totalComments,
+      newCommentsToday,
       flaggedPosts,
       pendingReports,
       pendingLast24h,
+      activeUsers,
+      blockedUsers,
     ] = await Promise.all([
-      UserModel.countDocuments({ isActive: true }),
+      UserModel.countDocuments({}),
       UserModel.countDocuments({ createdAt: { $gte: startOfToday } }),
       PostModel.countDocuments({}),
       PostModel.countDocuments({ createdAt: { $gte: startOfToday } }),
-      PostModel.countDocuments({ moderationStatus: ModerationStatus.FLAGGED }),
+      CommentModel.countDocuments({}),
+      CommentModel.countDocuments({ createdAt: { $gte: startOfToday } }),
+      // "reported" = posts có báo cáo đang mở (pending)
+      ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.POST,
+        status: ReportStatus.PENDING,
+      }).then((ids) => PostModel.countDocuments({ _id: { $in: ids } })),
       ReportModel.countDocuments({ status: ReportStatus.PENDING }),
       ReportModel.find({
         status: ReportStatus.PENDING,
@@ -600,6 +1148,8 @@ export const getAdminDashboardStats = asyncHandler(
       })
         .select("reason moderationSnapshot")
         .lean(),
+      UserModel.countDocuments({ isActive: true, isBlocked: false }),
+      UserModel.countDocuments({ isBlocked: true }),
     ]);
 
     const urgentReports = pendingLast24h.filter(
@@ -615,9 +1165,12 @@ export const getAdminDashboardStats = asyncHandler(
       newUsersToday,
       totalPosts,
       newPostsToday,
+      totalComments,
+      newCommentsToday,
       flaggedPosts,
       pendingReports,
       urgentReports,
+      usersStats: { totalUsers, activeUsers, blockedUsers, newUsersToday },
     });
   }
 );
@@ -647,8 +1200,47 @@ export const getPendingReportsAdmin = asyncHandler(
       ReportModel.countDocuments(filter),
     ]);
 
+    // Compute reportCount per targetId + gather targetIds for aiScore lookup
+    const targetIds = rows.map((r) => r.targetId);
+
+    const [priorityCounts, aiScoreRows] = await Promise.all([
+      ReportModel.aggregate([
+        { $match: { targetId: { $in: targetIds } } },
+        { $group: { _id: "$targetId", count: { $sum: 1 } } },
+      ]),
+      ReportModel.aggregate([
+        { $match: { _id: { $in: rows.map((r) => r._id) } } },
+        {
+          $project: {
+            _id: 1,
+            aiScore: {
+              $max: [
+                { $ifNull: ["$moderationSnapshot.scores.toxic", 0] },
+                { $ifNull: ["$moderationSnapshot.scores.hateSpeech", 0] },
+                { $ifNull: ["$moderationSnapshot.scores.spam", 0] },
+              ],
+            },
+          },
+        },
+      ]),
+    ]);
+
+    const countMap = new Map(
+      priorityCounts.map((p) => [p._id.toString(), p.count])
+    );
+    const scoreMap = new Map(
+      aiScoreRows.map((s) => [s._id.toString(), s.aiScore])
+    );
+
     const reports = await Promise.all(
-      rows.map((row) => buildAdminReportPayload(row as never))
+      rows.map(async (row) => {
+        const payload = await buildAdminReportPayload(row as never);
+        return {
+          ...payload,
+          reportCount: countMap.get(row.targetId.toString()) ?? 1,
+          aiScore: scoreMap.get(row._id.toString()) ?? 0,
+        };
+      })
     );
 
     sendSuccess(res, {
@@ -852,30 +1444,86 @@ export const getAiPerformance = asyncHandler(
 
 /**
  * @route PUT /api/admin/reports/:id/resolve
+ *
+ * Body:
+ * {
+ *   "note":       string,
+ *   "modAction":  "hide" | "delete" | "warn_author" | "ban_temp" | "ban_permanent" | "dismiss",
+ *   "warnAuthor": boolean,
+ *   "banPreset":  "1d" | "3d" | "7d" | "30d" (bắt buộc khi modAction = "ban_temp"),
+ * }
  */
 export const resolveAdminReport = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     validateObjectId(id, "Report ID");
 
-    const body = req.body as { note?: string; actionTaken?: string };
+    const body = req.body as {
+      note?: string;
+      modAction?: string;
+      warnAuthor?: boolean;
+      banPreset?: string;
+    };
     const note =
       typeof body.note === "string" ? body.note.slice(0, 500) : undefined;
-    const actionTaken =
-      typeof body.actionTaken === "string"
-        ? body.actionTaken.slice(0, 200)
-        : undefined;
-    const adminId =
-      ((req as Request & { user?: { _id?: string; userId?: string } }).user?._id ??
-        (req as Request & { user?: { _id?: string; userId?: string } }).user
-          ?.userId) ||
-      undefined;
+    const warnAuthor = body.warnAuthor === true;
+
+    // ── banPreset validation (bắt buộc khi ban_temp) ──────────────────
+    let banPreset: BanPreset | undefined;
+    if (body.modAction === ModerationAction.BAN_TEMP) {
+      if (!body.banPreset || !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)) {
+        throw new ValidationError(
+          `banPreset không hợp lệ. Cho phép: ${VALID_BAN_PRESETS.join(", ")}`,
+          "INVALID_BAN_PRESET"
+        );
+      }
+      banPreset = body.banPreset as BanPreset;
+    }
+
+    const adminId = getAdminActorId(req);
+    const adminOid = new Types.ObjectId(adminId);
+    const now = new Date();
+
+    const VALID_MOD_ACTIONS: string[] = Object.values(ModerationAction);
+    const modAction = (body.modAction ?? ModerationAction.DISMISS) as ModerationAction;
+    if (!VALID_MOD_ACTIONS.includes(modAction)) {
+      throw new ValidationError(
+        `modAction không hợp lệ. Cho phép: ${VALID_MOD_ACTIONS.join(", ")}`,
+        "INVALID_MODERATION_ACTION"
+      );
+    }
 
     const report = await ReportModel.findById(id)
-      .select("_id status reporterId")
+      .select("_id status reporterId targetType targetId moderationSnapshot")
       .lean();
     if (!report) {
       throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
+    }
+
+    // Áp dụng hành động xử lý lên target
+    const modResult = await applyModerationAction(report, modAction, warnAuthor, banPreset, adminOid, now, note);
+
+    // Auto-resolve các report cùng target
+    const related = await ReportModel.find({
+      _id: { $ne: report._id },
+      targetType: report.targetType,
+      targetId: report.targetId,
+      status: { $in: [ReportStatus.PENDING, ReportStatus.REVIEWING] },
+    }).select("_id").lean();
+
+    if (related.length > 0) {
+      await ReportModel.updateMany(
+        { _id: { $in: related.map((r) => r._id) } },
+        {
+          $set: {
+            status: ReportStatus.RESOLVED,
+            resolutionNote: "Tự động đóng do vi phạm đã được xác nhận",
+            actionTaken: ModerationAction.AUTO_RESOLVED,
+            reviewedBy: adminOid,
+            reviewedAt: now,
+          },
+        }
+      );
     }
 
     const updated = await ReportModel.findByIdAndUpdate(
@@ -884,9 +1532,11 @@ export const resolveAdminReport = asyncHandler(
         $set: {
           status: ReportStatus.RESOLVED,
           resolutionNote: note,
-          actionTaken,
-          reviewedBy: adminId ? new Types.ObjectId(adminId) : undefined,
-          reviewedAt: new Date(),
+          actionTaken: modAction,
+          warnAuthor,
+          banPreset: banPreset ?? null,
+          reviewedBy: adminOid,
+          reviewedAt: now,
         },
       },
       { new: true }
@@ -905,13 +1555,20 @@ export const resolveAdminReport = asyncHandler(
       targetId: id,
       affectedUserId: report.reporterId,
       before: { status: report.status },
-      after: { status: ReportStatus.RESOLVED },
+      after: { status: ReportStatus.RESOLVED, actionTaken: modAction },
       note,
     });
 
+    const payload = await buildAdminReportPayload(updated as never);
     sendSuccess(
       res,
-      await buildAdminReportPayload(updated as never),
+      {
+        ...payload,
+        suggestBan: modResult.suggestBan,
+        bannedUntil: modResult.bannedUntil,
+        banPreset: modResult.banPreset,
+        suggestion: modResult.suggestion,
+      },
       "Đã xử lý và đóng báo cáo"
     );
   }
@@ -981,18 +1638,63 @@ export const getAdminUserById = asyncHandler(
 export const patchAdminUserBlock = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
+    const body = req.body as { banPreset?: string; reason?: string };
     validateObjectId(id, "User ID");
 
     const before = await UserModel.findById(id)
-      .select("isBlocked isActive role")
+      .select("isBlocked isActive isBanned bannedUntil role")
       .lean();
     if (!before) {
       throw new NotFoundError(`Không tìm thấy user với ID: ${id}`);
     }
 
+    const VALID_PRESETS = ["1d", "3d", "7d", "30d", "permanent"];
+    const banPreset = body.banPreset ?? "permanent";
+    if (!VALID_PRESETS.includes(banPreset)) {
+      throw new ValidationError(
+        `banPreset không hợp lệ. Cho phép: ${VALID_PRESETS.join(", ")}`,
+        "INVALID_BAN_PRESET"
+      );
+    }
+
+    const reason = body.reason !== undefined
+      ? (typeof body.reason === "string" ? body.reason.slice(0, 500) : "")
+      : undefined;
+
+    const now = new Date();
+    const PRESET_DAYS: Record<string, number> = { "1d": 1, "3d": 3, "7d": 7, "30d": 30 };
+    const bannedUntil =
+      banPreset === "permanent"
+        ? null
+        : new Date(Date.now() + (PRESET_DAYS[banPreset] ?? 7) * 24 * 60 * 60 * 1000);
+
+    const adminOid = getAdminActorId(req);
+    const logAction = banPreset === "permanent" ? "ban_permanent" : "ban_temp";
+
     const user = await UserModel.findByIdAndUpdate(
       id,
-      { $set: { isBlocked: true } },
+      {
+        $set: {
+          isBlocked: true,
+          isBanned: true,
+          bannedUntil,
+        },
+        $inc: { violationCount: 1 },
+        $push: {
+          violationLogs: {
+            $each: [
+              {
+                reason: reason ?? "[MANUAL_BLOCK] Bị chặn bởi admin",
+                adminId: adminOid,
+                action: logAction,
+                timestamp: now,
+              },
+            ],
+            $position: 0,
+            $slice: 50,
+          },
+        },
+      },
       { new: true }
     )
       .select(ADMIN_USER_PROJECTION)
@@ -1007,8 +1709,10 @@ export const patchAdminUserBlock = asyncHandler(
       targetType: LogTargetType.USER,
       targetId: id,
       affectedUserId: id,
-      before: { isBlocked: before.isBlocked, isActive: before.isActive },
-      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+      before: { isBlocked: before.isBlocked, isBanned: before.isBanned },
+      after: { isBlocked: user.isBlocked, isBanned: user.isBanned, bannedUntil: user.bannedUntil },
+      note: reason,
+      metadata: { banPreset, bannedUntil: bannedUntil?.toISOString() ?? null, reason },
     });
 
     sendSuccess(res, user, "Đã chặn người dùng");
@@ -1029,7 +1733,7 @@ export const patchAdminUserUnblock = asyncHandler(
 
     const user = await UserModel.findByIdAndUpdate(
       id,
-      { $set: { isBlocked: false } },
+      { $set: { isBlocked: false, isBanned: false, bannedUntil: null } },
       { new: true }
     )
       .select(ADMIN_USER_PROJECTION)
@@ -1044,8 +1748,8 @@ export const patchAdminUserUnblock = asyncHandler(
       targetType: LogTargetType.USER,
       targetId: id,
       affectedUserId: id,
-      before: { isBlocked: before.isBlocked, isActive: before.isActive },
-      after: { isBlocked: user.isBlocked, isActive: user.isActive },
+      before: { isBlocked: before.isBlocked, isBanned: before.isBanned, bannedUntil: before.bannedUntil },
+      after: { isBlocked: user.isBlocked, isBanned: user.isBanned, bannedUntil: user.bannedUntil },
     });
 
     sendSuccess(res, user, "Đã bỏ chặn người dùng");
@@ -1293,8 +1997,31 @@ export const getAdminComments = asyncHandler(
     const q = req.query as Record<string, string | undefined>;
     const filter: Record<string, unknown> = {};
 
-    const status = parseCommentModerationStatus(q.status);
-    if (status) filter.moderationStatus = status;
+    // Map FE status (hidden, reported) sang BE logic
+    if (q.status === "hidden") {
+      // FE "hidden" = rejected + violated
+      filter.moderationStatus = { $in: ["rejected", "violated"] };
+    } else if (q.status === "reported") {
+      // FE "reported" = comments có báo cáo đang mở (pending)
+      const openReportTargetIds = await ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.COMMENT,
+        status: ReportStatus.PENDING,
+      });
+      filter._id = { $in: openReportTargetIds };
+    } else {
+      const status = parseCommentModerationStatus(q.status);
+      if (status === "rejected") {
+        filter.moderationStatus = { $in: ["rejected", "violated"] };
+      } else if (status === "flagged") {
+        const openReportTargetIds = await ReportModel.distinct("targetId", {
+          targetType: ReportTargetType.COMMENT,
+          status: ReportStatus.PENDING,
+        });
+        filter._id = { $in: openReportTargetIds };
+      } else if (status) {
+        filter.moderationStatus = status;
+      }
+    }
 
     const isHidden = parseQueryBoolean(q.isHidden, "isHidden");
     if (isHidden !== undefined) filter.isHidden = isHidden;
@@ -1677,7 +2404,19 @@ export const getAdminPosts = asyncHandler(
 
     // Lọc theo moderationStatus
     const status = parseModerationStatus(q.status);
-    if (status) filter.moderationStatus = status;
+    if (status === "rejected") {
+      // FE "hidden" = rejected + violated (cả từ báo cáo lẫn thao tác trực tiếp)
+      filter.moderationStatus = { $in: ["rejected", "violated"] };
+    } else if (status === "flagged") {
+      // FE "reported" = posts có báo cáo đang mở (pending), bất kể moderationStatus gì
+      const openReportTargetIds = await ReportModel.distinct("targetId", {
+        targetType: ReportTargetType.POST,
+        status: ReportStatus.PENDING,
+      });
+      filter._id = { $in: openReportTargetIds };
+    } else if (status) {
+      filter.moderationStatus = status;
+    }
 
     // Lọc theo isHidden
     const isHidden = parseQueryBoolean(q.isHidden, "isHidden");

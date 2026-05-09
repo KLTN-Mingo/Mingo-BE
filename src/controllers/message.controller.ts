@@ -12,6 +12,12 @@ import {
   DeleteOrRevokeMessageDto,
   CreateCallDto,
   UpdateCallStatusDto,
+  AddMemberDto,
+  RemoveMemberDto,
+  UpdateGroupInfoDto,
+  UpdateGroupCategoryDto,
+  PromoteMemberDto,
+  DemoteMemberDto,
 } from "../dtos/message.dto";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -328,6 +334,123 @@ export const adminSearchMessages = asyncHandler(async (req: Request, res: Respon
 
   const result = await MessageService.adminSearchMessages(id, q);
   sendSuccess(res, result, "Admin search results");
+});
+
+// ─── Group Management Controllers ──────────────────────────────────────────────
+
+/** GET /api/messages/boxes/groups/category/:category */
+export const getGroupsByCategory = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const category = param(req, "category");
+  if (!category) throw new ValidationError("category is required");
+
+  const result = await MessageService.getGroupsByCategory(userId, category);
+  sendSuccess(res, result, `Fetched ${category} groups`);
+});
+
+/** GET /api/messages/boxes/:boxId/detail */
+export const getGroupDetail = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
+
+  const result = await MessageService.getGroupDetail(boxId, userId);
+  sendSuccess(res, result, "Fetched group detail");
+});
+
+/** PATCH /api/messages/boxes/:boxId/info */
+export const updateGroupInfo = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const dto = req.body as UpdateGroupInfoDto;
+  if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
+
+  const result = await MessageService.updateGroupInfo(boxId, dto, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** PATCH /api/messages/boxes/:boxId/category */
+export const updateGroupCategory = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const { category } = req.body as UpdateGroupCategoryDto;
+  if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
+  if (!category) throw new ValidationError("category is required");
+
+  const result = await MessageService.updateGroupCategory(boxId, { category }, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** POST /api/messages/boxes/:boxId/members */
+export const addMember = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const { memberIds } = req.body as AddMemberDto;
+  if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
+  if (!Array.isArray(memberIds) || memberIds.length === 0) {
+    throw new ValidationError("memberIds must be a non-empty array");
+  }
+  memberIds.forEach((id) => validateObjectId(id, "memberId"));
+
+  const result = await MessageService.addMember(boxId, { memberIds }, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** DELETE /api/messages/boxes/:boxId/members/:memberId */
+export const removeMember = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const memberId = param(req, "memberId");
+  if (!boxId) throw new ValidationError("boxId is required");
+  if (!memberId) throw new ValidationError("memberId is required");
+  validateObjectId(boxId, "boxId");
+  validateObjectId(memberId, "memberId");
+
+  const result = await MessageService.removeMember(boxId, { memberId }, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** POST /api/messages/boxes/:boxId/leave */
+export const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  if (!boxId) throw new ValidationError("boxId is required");
+  validateObjectId(boxId, "boxId");
+
+  const result = await MessageService.leaveGroup(boxId, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** PATCH /api/messages/boxes/:boxId/admins/promote */
+export const promoteMember = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const { memberId } = req.body as PromoteMemberDto;
+  if (!boxId) throw new ValidationError("boxId is required");
+  if (!memberId) throw new ValidationError("memberId is required");
+  validateObjectId(boxId, "boxId");
+  validateObjectId(memberId, "memberId");
+
+  const result = await MessageService.promoteMember(boxId, { memberId }, userId);
+  sendSuccess(res, result, result.message);
+});
+
+/** PATCH /api/messages/boxes/:boxId/admins/demote */
+export const demoteMember = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const boxId = param(req, "boxId");
+  const { memberId } = req.body as DemoteMemberDto;
+  if (!boxId) throw new ValidationError("boxId is required");
+  if (!memberId) throw new ValidationError("memberId is required");
+  validateObjectId(boxId, "boxId");
+  validateObjectId(memberId, "memberId");
+
+  const result = await MessageService.demoteMember(boxId, { memberId }, userId);
+  sendSuccess(res, result, result.message);
 });
 
 // ─── Call Controllers ─────────────────────────────────────────────────────────

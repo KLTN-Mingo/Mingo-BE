@@ -28,6 +28,7 @@ export interface ModerationResult {
 
 export const AUTO_HIDE = 0.8;
 export const REVIEW = 0.5;
+export { AUTO_HIDE, REVIEW };
 
 /** Tính điểm rủi ro cao nhất từ kết quả AI */
 function maxScore(s: AIScoreResult): number {
@@ -104,6 +105,7 @@ function toCommentModerationStatus(
     [ModerationStatus.APPROVED]: CommentModerationStatus.APPROVED,
     [ModerationStatus.REJECTED]: CommentModerationStatus.REJECTED,
     [ModerationStatus.FLAGGED]: CommentModerationStatus.FLAGGED,
+    [ModerationStatus.VIOLATED]: CommentModerationStatus.VIOLATED,
   };
   return map[s];
 }
@@ -181,8 +183,18 @@ export const ModerationService = {
     // TẦNG 2: Nếu rơi vào vùng nghi vấn hoặc acc mới -> Mới gọi AI (Chậm)
     if (shouldCallAI(rule, ctx)) {
       const aiScores = await AIApiService.analyzeContent(text);
-      const decided = decideFromAiScores(aiScores);
-      return { ...decided, scores: aiScores, method: "ai" };
+
+      // Kết hợp rule-based score với AI score: lấy MAX mỗi dimension
+      // Để rule-based không bị AI "clean" che mất
+      const combinedScores: AIScoreResult = {
+        toxic: Math.max(aiScores.toxic, rule.score * 0.35),
+        hateSpeech: Math.max(aiScores.hateSpeech, rule.score > 0 ? rule.score * 0.3 : 0),
+        spam: Math.max(aiScores.spam, rule.score),
+        reason: aiScores.reason || rule.reason || "combined",
+      };
+
+      const decided = decideFromAiScores(combinedScores);
+      return { ...decided, scores: combinedScores, method: "ai" };
     }
 
     // TẦNG 3: Rule-based thấy sạch và không cần AI (Duyệt ngay - Cực nhanh)
@@ -240,14 +252,21 @@ export const ModerationService = {
     }
 
     // Xử lý cho Comment
-    const updated = await CommentModel.findByIdAndUpdate(
-      entityId,
-      {
+      const baseUpdate: Record<string, unknown> = {
         moderationStatus: toCommentModerationStatus(result.status),
         isHidden: result.isHidden,
-      },
-      { returnDocument: "after" }
-    ).lean();
+        aiToxicScore: result.scores.toxic,
+        aiHateSpeechScore: result.scores.hateSpeech,
+        aiSpamScore: result.scores.spam,
+      };
+      if (result.isHidden || result.status === ModerationStatus.REJECTED) {
+        baseUpdate.hiddenReason = result.scores.reason.slice(0, 500);
+      }
+      const updated = await CommentModel.findByIdAndUpdate(
+        entityId,
+        baseUpdate,
+        { returnDocument: "after" }
+      ).lean();
 
     if (!updated) throw new NotFoundError("Không tìm thấy bình luận");
     return updated;
