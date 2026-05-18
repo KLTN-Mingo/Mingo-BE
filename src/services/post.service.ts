@@ -32,6 +32,7 @@ import { SavedPostModel } from "../models/saved-post.model";
 import { ShareModel } from "../models/share.model";
 import { topicExtractorService } from "./topic-extractor.service";
 import { ModerationService } from "./moderation/moderation.service";
+import { NotificationService } from "./notification.service";
 import { CultureTranslationService } from "./culture-translation/culture-translation.service";
 
 // ─── Helper: load related data cho một post ───────────────────────────────────
@@ -235,17 +236,22 @@ export const PostService = {
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
-        [post] = await PostModel.create([{
-          userId: new Types.ObjectId(userId),
-          contentText: dto.contentText,
-          contentRichText: dto.contentRichText,
-          visibility: dto.visibility ?? PostVisibility.PUBLIC,
-          moderationStatus: ModerationStatus.PENDING,
-          locationName: dto.locationName,
-          locationLatitude: dto.locationLatitude,
-          locationLongitude: dto.locationLongitude,
-          topics,
-        }], { session });
+        [post] = await PostModel.create(
+          [
+            {
+              userId: new Types.ObjectId(userId),
+              contentText: dto.contentText,
+              contentRichText: dto.contentRichText,
+              visibility: dto.visibility ?? PostVisibility.PUBLIC,
+              moderationStatus: ModerationStatus.PENDING,
+              locationName: dto.locationName,
+              locationLatitude: dto.locationLatitude,
+              locationLongitude: dto.locationLongitude,
+              topics,
+            },
+          ],
+          { session }
+        );
 
         if (dto.mediaFiles?.length) {
           await PostMediaModel.insertMany(
@@ -280,9 +286,28 @@ export const PostService = {
             })),
             { session }
           );
+
+          // Gửi thông báo mention bất đồng bộ, không block response tạo bài.
+          for (const mentionedId of dto.mentions) {
+            void NotificationService.notifyMention(
+              mentionedId,
+              userId,
+              "post",
+              post._id.toString(),
+              post._id.toString(),
+              undefined,
+              dto.contentText?.slice(0, 200)
+            ).catch((err) => {
+              console.error("[PostService] notify mention error:", err);
+            });
+          }
         }
 
-        await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } }, { session });
+        await UserModel.findByIdAndUpdate(
+          userId,
+          { $inc: { postsCount: 1 } },
+          { session }
+        );
       });
     } finally {
       await session.endSession();
@@ -291,18 +316,14 @@ export const PostService = {
     const postId = post!._id.toString();
 
     if (dto.contentText?.trim()) {
-      ModerationService.moderateAndUpdate(
-        "post",
-        postId,
-        dto.contentText,
-        {
-          isNewAccount: accountAgeDays < 7,
-          reportCount: 0,
-        }
-      ).catch((err) => console.error("[Moderation] background error:", err));
+      ModerationService.moderateAndUpdate("post", postId, dto.contentText, {
+        isNewAccount: accountAgeDays < 7,
+        reportCount: 0,
+      }).catch((err) => console.error("[Moderation] background error:", err));
 
-      CultureTranslationService.analyzePost(postId)
-        .catch((err) => console.error("[CultureTranslation] background error:", err));
+      CultureTranslationService.analyzePost(postId).catch((err) =>
+        console.error("[CultureTranslation] background error:", err)
+      );
     }
 
     return this.getPostById(postId, userId);
@@ -407,6 +428,14 @@ export const PostService = {
       userId: new Types.ObjectId(userId),
     });
     await PostModel.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
+
+    void NotificationService.notifyPostLike(
+      post.userId.toString(),
+      userId,
+      postId
+    ).catch((err) => {
+      console.error("[PostService] notify post like error:", err);
+    });
   },
 
   // ── Unlike post ────────────────────────────────────────────────────────────
@@ -566,22 +595,22 @@ export const PostService = {
       caption: caption?.slice(0, 2000),
     });
     await PostModel.findByIdAndUpdate(postId, { $inc: { sharesCount: 1 } });
+
+    void NotificationService.notifyPostShare(
+      post.userId.toString(),
+      userId,
+      postId
+    ).catch((err) => {
+      console.error("[PostService] notify post share error:", err);
+    });
   },
 
   async getPostsByUser(
     userId: string,
     page: number,
-    limit: number
-  ): Promise<{
-    posts: Array<{
-      id: string;
-      contentText?: string;
-      createdAt: Date;
-      likesCount: number;
-      commentsCount: number;
-    }>;
-    pagination: { page: number; limit: number; total: number };
-  }> {
+    limit: number,
+    currentUserId?: string
+  ): Promise<PaginatedPostsDto> {
     const oid = new Types.ObjectId(userId);
 
     const userExists = await UserModel.exists({ _id: oid });
@@ -592,26 +621,32 @@ export const PostService = {
     const skip = (page - 1) * limit;
 
     const [total, rows] = await Promise.all([
-      PostModel.countDocuments({ userId: oid }),
-      PostModel.find({ userId: oid })
-        .select("contentText createdAt likesCount commentsCount")
+      PostModel.countDocuments({ userId: oid, isHidden: false }),
+      PostModel.find({ userId: oid, isHidden: false })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
     ]);
 
-    const posts = rows.map((p) => ({
-      id: p._id.toString(),
-      contentText: p.contentText,
-      createdAt: p.createdAt,
-      likesCount: p.likesCount,
-      commentsCount: p.commentsCount,
-    }));
+    const posts = await Promise.all(
+      rows.map(async (post) => {
+        const relations = await loadPostRelations(post._id, currentUserId);
+        return toPostResponse(post as any, relations);
+      })
+    );
+
+    const totalPages = Math.ceil(total / limit) || 0;
 
     return {
       posts,
-      pagination: { page, limit, total },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
     };
   },
 };

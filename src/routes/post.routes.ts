@@ -1,6 +1,6 @@
 // src/routes/post.routes.ts
 
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import {
   getAllPosts,
   getTrendingPosts,
@@ -27,8 +27,18 @@ import {
 } from "../controllers/comment.controller";
 import { createMedia, getPostMedia } from "../controllers/media.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { upload, handleUploadError } from "../middleware/upload.middleware";
 
 const router = Router();
+
+const uploadPostMedia = (req: Request, res: Response, next: NextFunction) => {
+  upload.array("files", 10)(req, res, (err: any) => {
+    if (err) {
+      return handleUploadError(err, req, res, next);
+    }
+    next();
+  });
+};
 
 // ── Special routes (trước :id để tránh conflict) ──────────────────────────────
 router.get("/trending", getTrendingPosts);
@@ -64,6 +74,6 @@ router.post(
 
 // ── Media của post ────────────────────────────────────────────────────────────
 router.get("/:postId/media", authMiddleware, getPostMedia);
-router.post("/:postId/media", authMiddleware, createMedia);
+router.post("/:postId/media", authMiddleware, uploadPostMedia, createMedia);
 
 export default router;

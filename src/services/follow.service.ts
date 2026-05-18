@@ -33,6 +33,7 @@ import {
   RelationshipType,
   determineRelationshipType,
 } from "../dtos/follow.dto";
+import { NotificationService } from "./notification.service";
 
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
@@ -95,6 +96,12 @@ export const FollowService = {
       closeFriendStatus: CloseFriendStatus.NONE,
     });
 
+    void NotificationService.notifyFollowRequest(followingId, followerId).catch(
+      (err) => {
+        console.error("[FollowService] notify follow request error:", err);
+      }
+    );
+
     return this.toFollowResponse(follow);
   },
 
@@ -133,6 +140,13 @@ export const FollowService = {
           $inc: { followersCount: 1 },
         }),
       ]);
+
+      void NotificationService.notifyFollowAccepted(
+        follow.followerId.toString(),
+        userId
+      ).catch((err) => {
+        console.error("[FollowService] notify follow accepted error:", err);
+      });
     }
 
     return this.toFollowResponse(follow);
@@ -273,6 +287,12 @@ export const FollowService = {
       }),
     ]);
 
+    void NotificationService.notifyCloseFriendRequest(targetId, requesterId).catch(
+      (err) => {
+        console.error("[FollowService] notify close-friend request error:", err);
+      }
+    );
+
     const updated = await FollowModel.findById(followToTarget._id);
     return this.toFollowResponse(updated!);
   },
@@ -310,6 +330,8 @@ export const FollowService = {
       ? CloseFriendStatus.ACCEPTED
       : CloseFriendStatus.REJECTED;
 
+    const requesterId = follow.closeFriendRequestedBy?.toString();
+
     // Update both follow records
     const otherUserId = isFollower
       ? follow.followingId
@@ -329,6 +351,15 @@ export const FollowService = {
         }
       ),
     ]);
+
+    if (accept && requesterId) {
+      void NotificationService.notifyCloseFriendAccepted(
+        requesterId,
+        userId
+      ).catch((err) => {
+        console.error("[FollowService] notify close-friend accepted error:", err);
+      });
+    }
 
     const updated = await FollowModel.findById(follow._id);
     return this.toFollowResponse(updated!);

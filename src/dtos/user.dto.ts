@@ -9,6 +9,11 @@ export interface UpdateProfileDto {
   bio?: string;
   avatar?: string;
   backgroundUrl?: string;
+  relationship?: string;
+  hobby?: string[];
+  work?: string;
+  currentAddress?: string;
+  hometown?: string;
   dateOfBirth?: string; // ISO string từ client, parse thành Date trong controller
   gender?: Gender;
 }
@@ -42,6 +47,11 @@ export interface PublicUserDto {
   bio?: string;
   avatar?: string;
   backgroundUrl?: string;
+  relationship?: string;
+  hobby?: string[];
+  work?: string;
+  currentAddress?: string;
+  hometown?: string;
   gender?: Gender;
   verified: boolean;
   onlineStatus: boolean;
@@ -60,6 +70,11 @@ export interface UserProfileDto {
   bio?: string;
   avatar?: string;
   backgroundUrl?: string;
+  relationship?: string;
+  hobby?: string[];
+  work?: string;
+  currentAddress?: string;
+  hometown?: string;
   dateOfBirth?: Date;
   gender?: Gender;
   role: UserRole;
@@ -113,6 +128,11 @@ export function toPublicUser(user: IUser): PublicUserDto {
     bio: user.bio,
     avatar: user.avatar,
     backgroundUrl: user.backgroundUrl,
+    relationship: user.relationship,
+    hobby: user.hobby,
+    work: user.work,
+    currentAddress: user.currentAddress,
+    hometown: user.hometown,
     gender: user.gender,
     verified: user.verified,
     onlineStatus: user.onlineStatus,
@@ -132,6 +152,11 @@ export function toUserProfile(user: IUser): UserProfileDto {
     bio: user.bio,
     avatar: user.avatar,
     backgroundUrl: user.backgroundUrl,
+    relationship: user.relationship,
+    hobby: user.hobby,
+    work: user.work,
+    currentAddress: user.currentAddress,
+    hometown: user.hometown,
     dateOfBirth: user.dateOfBirth,
     gender: user.gender,
     role: user.role,

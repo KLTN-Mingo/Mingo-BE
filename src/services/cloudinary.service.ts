@@ -24,6 +24,45 @@ export interface UploadResult {
 
 class CloudinaryService {
   /**
+   * Extract Cloudinary public_id from secure_url.
+   * Example: .../image/upload/v123/folder/file.jpg => folder/file
+   */
+  extractPublicIdFromUrl(url: string): string | null {
+    try {
+      const parsed = new URL(url);
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      const uploadIndex = segments.findIndex((segment) => segment === "upload");
+
+      if (uploadIndex === -1 || uploadIndex + 1 >= segments.length) {
+        return null;
+      }
+
+      let publicIdSegments = segments.slice(uploadIndex + 1);
+      const versionIndex = publicIdSegments.findIndex((segment) =>
+        /^v\d+$/.test(segment)
+      );
+
+      if (versionIndex >= 0) {
+        publicIdSegments = publicIdSegments.slice(versionIndex + 1);
+      }
+
+      if (publicIdSegments.length === 0) {
+        return null;
+      }
+
+      const last = publicIdSegments[publicIdSegments.length - 1];
+      const dotIndex = last.lastIndexOf(".");
+      if (dotIndex > 0) {
+        publicIdSegments[publicIdSegments.length - 1] = last.slice(0, dotIndex);
+      }
+
+      return publicIdSegments.join("/");
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Upload image to Cloudinary
    */
   async uploadImage(

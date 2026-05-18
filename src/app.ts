@@ -13,6 +13,9 @@ import messageRoutes from "./routes/message.routes";
 import reportRoutes from "./routes/report.routes";
 import adminRoutes from "./routes/admin.routes";
 import cultureRoutes from "./routes/culture.routes";
+import searchRoutes from "./routes/search.routes";
+import shareRoutes from "./routes/share.routes";
+import { auditMiddleware } from "./middleware/audit.middleware";
 import {
   errorHandler,
   notFoundHandler,
@@ -28,6 +31,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(auditMiddleware);
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
@@ -40,6 +44,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/culture", cultureRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/shares", shareRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
