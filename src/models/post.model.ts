@@ -1,5 +1,6 @@
 // src/models/post.model.ts
 import { Schema, model, Document, Types } from "mongoose";
+import { CultureTermSchema, ICultureTerm } from "./culture-translation.model";
 
 export enum PostVisibility {
   PUBLIC = "public",
@@ -59,6 +60,9 @@ export interface IPost extends Document {
   locationName?: string;
   locationLatitude?: number;
   locationLongitude?: number;
+
+  culturalTerms: ICultureTerm[];
+  cultureAnalyzed: boolean;
 }
 
 const PostSchema = new Schema<IPost>(
@@ -106,6 +110,9 @@ const PostSchema = new Schema<IPost>(
     locationName: { type: String, maxlength: 255 },
     locationLatitude: { type: Number, min: -90, max: 90 },
     locationLongitude: { type: Number, min: -180, max: 180 },
+
+    culturalTerms:   { type: [CultureTermSchema], default: [] },
+    cultureAnalyzed:  { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );
