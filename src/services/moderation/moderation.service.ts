@@ -28,7 +28,6 @@ export interface ModerationResult {
 
 export const AUTO_HIDE = 0.8;
 export const REVIEW = 0.5;
-export { AUTO_HIDE, REVIEW };
 
 /** Tính điểm rủi ro cao nhất từ kết quả AI */
 function maxScore(s: AIScoreResult): number {

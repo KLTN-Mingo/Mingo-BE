@@ -1,100 +1,59 @@
-// src/models/user-interaction.model.ts
+// src/models/culture-translation.model.ts
 import { Schema, model, Document, Types } from "mongoose";
 
-export enum InteractionSource {
-  FEED = "feed",
-  EXPLORE = "explore",
-  PROFILE = "profile",
-  SEARCH = "search",
-  NOTIFICATION = "notification",
+// Sub-schema embedded in Post (no separate _id)
+export interface ICultureTerm {
+  term: string;
+  startIndex: number;   // char offset in contentText
+  endIndex: number;
+  meaning: string;
+  origin: string;
+  tone: "tích cực" | "trung tính" | "hài hước" | "tiêu cực";
+  contextNote: string;
 }
 
-export interface IUserInteraction extends Document {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  postId: Types.ObjectId;
-
-  // Interaction Types
-  viewed: boolean;
-  viewDuration?: number; // seconds
-  liked: boolean;
-  commented: boolean;
-  shared: boolean;
-  saved: boolean;
-
-  source: InteractionSource;
-  deviceType?: string;
-
-  createdAt: Date;
-}
-
-const UserInteractionSchema = new Schema<IUserInteraction>(
+export const CultureTermSchema = new Schema<ICultureTerm>(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-    postId: {
-      type: Schema.Types.ObjectId,
-      ref: "Post",
-      required: true,
-      index: true,
-    },
-
-    // Interaction Types
-    viewed: {
-      type: Boolean,
-      default: false,
-    },
-    viewDuration: {
-      type: Number,
-      min: 0,
-    },
-    liked: {
-      type: Boolean,
-      default: false,
-    },
-    commented: {
-      type: Boolean,
-      default: false,
-    },
-    shared: {
-      type: Boolean,
-      default: false,
-    },
-    saved: {
-      type: Boolean,
-      default: false,
-    },
-
-    source: {
+    term:        { type: String, required: true },
+    startIndex:  { type: Number, required: true },
+    endIndex:    { type: Number, required: true },
+    meaning:     { type: String, default: "" },
+    origin:      { type: String, default: "" },
+    tone: {
       type: String,
-      enum: Object.values(InteractionSource),
-      required: true,
+      enum: ["tích cực", "trung tính", "hài hước", "tiêu cực"],
+      default: "trung tính",
     },
-    deviceType: {
-      type: String,
-    },
+    contextNote: { type: String, default: "" },
   },
+  { _id: false }
+);
+
+// Slang dictionary collection — Admin manages
+export interface ISlangEntry extends Document {
+  _id: Types.ObjectId;
+  term: string;          // canonical lowercase: "noob", "ib4l", "flex"
+  aliases: string[];    // variants: ["ib4ll", "ib4l..."]
+  regexPattern: string;  // "\\bib4l{1,}\\b"
+  category: string;      // "Gen Z" | "Gaming" | "Crypto" | "Chung"
+  isActive: boolean;
+  reportCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const SlangEntrySchema = new Schema<ISlangEntry>(
   {
-    timestamps: { createdAt: true, updatedAt: false },
-  }
+    term:         { type: String, required: true, unique: true, lowercase: true, trim: true },
+    aliases:      { type: [String], default: [] },
+    regexPattern: { type: String, required: true },
+    category:     { type: String, default: "Chung" },
+    isActive:     { type: Boolean, default: true, index: true },
+    reportCount:  { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true }
 );
 
-// Indexes
-UserInteractionSchema.index({ userId: 1, createdAt: -1 });
-UserInteractionSchema.index({ userId: 1, liked: 1 });
-UserInteractionSchema.index({ userId: 1, source: 1, createdAt: -1 });
+SlangEntrySchema.index({ term: 1 });
 
-// TTL index - delete interactions older than 90 days
-UserInteractionSchema.index(
-  { createdAt: 1 },
-  { expireAfterSeconds: 90 * 24 * 60 * 60 }
-);
-
-export const UserInteractionModel = model<IUserInteraction>(
-  "UserInteraction",
-  UserInteractionSchema
-);
+export const SlangEntryModel = model<ISlangEntry>("SlangEntry", SlangEntrySchema);

@@ -1,6 +1,7 @@
 // src/services/post.service.ts
 
 import { differenceInHours } from "date-fns";
+import mongoose from "mongoose";
 import { Types } from "mongoose";
 import {
   PostModel,
@@ -31,6 +32,7 @@ import { SavedPostModel } from "../models/saved-post.model";
 import { ShareModel } from "../models/share.model";
 import { topicExtractorService } from "./topic-extractor.service";
 import { ModerationService } from "./moderation/moderation.service";
+import { CultureTranslationService } from "./culture-translation/culture-translation.service";
 
 // ─── Helper: load related data cho một post ───────────────────────────────────
 
@@ -214,85 +216,96 @@ export const PostService = {
 
   // ── Create post ────────────────────────────────────────────────────────────
   async createPost(userId: string, dto: CreatePostDto): Promise<PostDetailDto> {
+    const user = await UserModel.findById(userId).select("createdAt").lean();
+    if (!user) {
+      throw new NotFoundError(`Không tìm thấy user với ID: ${userId}`);
+    }
+    const accountAgeDays =
+      (Date.now() - new Date(user.createdAt).getTime()) / 86400000;
+
     const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
     const topics = topicExtractorService.extract({
       contentText: dto.contentText,
       hashtags: dto.hashtags ?? [],
       mediaTypes,
     });
-    const post = await PostModel.create({
-      userId: new Types.ObjectId(userId),
-      contentText: dto.contentText,
-      contentRichText: dto.contentRichText,
-      visibility: dto.visibility ?? PostVisibility.PUBLIC,
-      moderationStatus: ModerationStatus.PENDING,
-      locationName: dto.locationName,
-      locationLatitude: dto.locationLatitude,
-      locationLongitude: dto.locationLongitude,
-      topics,
-    });
 
-    if (dto.mediaFiles?.length) {
-      await PostMediaModel.insertMany(
-        dto.mediaFiles.map((m, i) => ({
-          postId: post._id,
+    let post: InstanceType<typeof PostModel>;
+
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        [post] = await PostModel.create([{
           userId: new Types.ObjectId(userId),
-          mediaType: m.mediaType,
-          mediaUrl: m.mediaUrl,
-          thumbnailUrl: m.thumbnailUrl,
-          width: m.width,
-          height: m.height,
-          duration: m.duration,
-          fileSize: m.fileSize,
-          orderIndex: m.orderIndex ?? i,
-        }))
-      );
+          contentText: dto.contentText,
+          contentRichText: dto.contentRichText,
+          visibility: dto.visibility ?? PostVisibility.PUBLIC,
+          moderationStatus: ModerationStatus.PENDING,
+          locationName: dto.locationName,
+          locationLatitude: dto.locationLatitude,
+          locationLongitude: dto.locationLongitude,
+          topics,
+        }], { session });
+
+        if (dto.mediaFiles?.length) {
+          await PostMediaModel.insertMany(
+            dto.mediaFiles.map((m, i) => ({
+              postId: post._id,
+              userId: new Types.ObjectId(userId),
+              mediaType: m.mediaType,
+              mediaUrl: m.mediaUrl,
+              thumbnailUrl: m.thumbnailUrl,
+              width: m.width,
+              height: m.height,
+              duration: m.duration,
+              fileSize: m.fileSize,
+              orderIndex: m.orderIndex ?? i,
+            })),
+            { session }
+          );
+        }
+
+        if (dto.hashtags?.length) {
+          await PostHashtagModel.insertMany(
+            dto.hashtags.map((tag) => ({ postId: post._id, hashtag: tag })),
+            { session }
+          );
+        }
+
+        if (dto.mentions?.length) {
+          await PostMentionModel.insertMany(
+            dto.mentions.map((mentionedId) => ({
+              postId: post._id,
+              mentionedUserId: new Types.ObjectId(mentionedId),
+            })),
+            { session }
+          );
+        }
+
+        await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } }, { session });
+      });
+    } finally {
+      await session.endSession();
     }
 
-    if (dto.hashtags?.length) {
-      await PostHashtagModel.insertMany(
-        dto.hashtags.map((tag) => ({ postId: post._id, hashtag: tag }))
-      );
-    }
-
-    if (dto.mentions?.length) {
-      await PostMentionModel.insertMany(
-        dto.mentions.map((mentionedId) => ({
-          postId: post._id,
-          mentionedUserId: new Types.ObjectId(mentionedId),
-        }))
-      );
-    }
-
-    await UserModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } });
+    const postId = post!._id.toString();
 
     if (dto.contentText?.trim()) {
-      try {
-        const user = await UserModel.findById(userId)
-          .select("createdAt")
-          .lean();
-        const accountAgeDays = user
-          ? (Date.now() - new Date(user.createdAt).getTime()) / 86400000
-          : 999;
+      ModerationService.moderateAndUpdate(
+        "post",
+        postId,
+        dto.contentText,
+        {
+          isNewAccount: accountAgeDays < 7,
+          reportCount: 0,
+        }
+      ).catch((err) => console.error("[Moderation] background error:", err));
 
-        // Đổi 'void' thành 'await'
-        // Khi text sạch, hàm này sẽ trả về kết quả gần như tức thì
-        await ModerationService.moderateAndUpdate(
-          "post",
-          post._id.toString(),
-          dto.contentText,
-          {
-            isNewAccount: accountAgeDays < 7,
-            reportCount: 0,
-          }
-        );
-      } catch (err) {
-        console.error("[Moderation] Post error:", err);
-      }
+      CultureTranslationService.analyzePost(postId)
+        .catch((err) => console.error("[CultureTranslation] background error:", err));
     }
 
-    // Giờ đây, khi gọi hàm này, nó sẽ lấy được status "APPROVED" từ DB
-    return this.getPostById(post._id.toString(), userId);
+    return this.getPostById(postId, userId);
   },
 
   // ── Update post ────────────────────────────────────────────────────────────
