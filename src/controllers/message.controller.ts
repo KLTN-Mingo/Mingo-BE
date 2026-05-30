@@ -53,23 +53,31 @@ export const createGroup = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError("groupName is required");
   }
 
-  const result = await MessageService.createGroup(userId, { membersIds, groupName, groupAva });
+  const result = await MessageService.createGroup(userId, {
+    membersIds,
+    groupName,
+    groupAva,
+  });
   sendCreated(res, result, result.message);
 });
 
 /** GET /api/messages/boxes — Get all direct (1-1) boxes for current user */
-export const getDirectBoxes = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const result = await MessageService.getDirectBoxes(userId);
-  sendSuccess(res, result, "Fetched direct boxes");
-});
+export const getDirectBoxes = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const result = await MessageService.getDirectBoxes(userId);
+    sendSuccess(res, result, "Fetched direct boxes");
+  }
+);
 
 /** GET /api/messages/boxes/groups — Get all group boxes for current user */
-export const getGroupBoxes = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const result = await MessageService.getGroupBoxes(userId);
-  sendSuccess(res, result, "Fetched group boxes");
-});
+export const getGroupBoxes = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const result = await MessageService.getGroupBoxes(userId);
+    sendSuccess(res, result, "Fetched group boxes");
+  }
+);
 
 /** GET /api/messages/boxes/:boxId — Get a single box by ID */
 export const getBoxById = asyncHandler(async (req: Request, res: Response) => {
@@ -92,17 +100,20 @@ export const deleteBox = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** PATCH /api/messages/boxes/:boxId/avatar — Upload group avatar */
-export const updateGroupAvatar = asyncHandler(async (req: Request, res: Response) => {
-  const boxId = param(req, "boxId");
-  const { url, publicId } = req.body;
+export const updateGroupAvatar = asyncHandler(
+  async (req: Request, res: Response) => {
+    const boxId = param(req, "boxId");
+    const { url, publicId } = req.body;
 
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
-  if (!url || !publicId) throw new ValidationError("url and publicId are required");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
+    if (!url || !publicId)
+      throw new ValidationError("url and publicId are required");
 
-  const result = await MessageService.updateGroupAvatar(boxId, url, publicId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.updateGroupAvatar(boxId, url, publicId);
+    sendSuccess(res, result, result.message);
+  }
+);
 
 // ─── Message Controllers ──────────────────────────────────────────────────────
 
@@ -144,15 +155,17 @@ export const getMessages = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** GET /api/messages/:boxId/group — Get group messages in a box */
-export const getGroupMessages = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getGroupMessages = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const result = await MessageService.getGroupMessages(boxId, userId);
-  sendSuccess(res, result, "Fetched group messages");
-});
+    const result = await MessageService.getGroupMessages(boxId, userId);
+    sendSuccess(res, result, "Fetched group messages");
+  }
+);
 
 /** PATCH /api/messages/:messageId/edit — Edit a text message */
 export const editMessage = asyncHandler(async (req: Request, res: Response) => {
@@ -164,25 +177,37 @@ export const editMessage = asyncHandler(async (req: Request, res: Response) => {
   validateObjectId(messageId, "messageId");
   if (!newContent?.trim()) throw new ValidationError("newContent is required");
 
-  const result = await MessageService.editMessage(messageId, { newContent }, userId);
+  const result = await MessageService.editMessage(
+    messageId,
+    { newContent },
+    userId
+  );
   sendSuccess(res, result, "Message edited");
 });
 
 /** DELETE /api/messages/:messageId — Revoke, delete, or unsend a message */
-export const deleteOrRevokeMessage = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const messageId = param(req, "messageId");
-  const { action } = (req.body ?? {}) as DeleteOrRevokeMessageDto;
+export const deleteOrRevokeMessage = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const messageId = param(req, "messageId");
+    const { action } = (req.body ?? {}) as DeleteOrRevokeMessageDto;
 
-  if (!messageId) throw new ValidationError("messageId is required");
-  validateObjectId(messageId, "messageId");
-  if (!action || !["revoke", "delete", "unsend"].includes(action)) {
-    throw new ValidationError("action must be one of: revoke, delete, unsend");
+    if (!messageId) throw new ValidationError("messageId is required");
+    validateObjectId(messageId, "messageId");
+    if (!action || !["revoke", "delete", "unsend"].includes(action)) {
+      throw new ValidationError(
+        "action must be one of: revoke, delete, unsend"
+      );
+    }
+
+    const result = await MessageService.deleteOrRevokeMessage(
+      messageId,
+      { action },
+      userId
+    );
+    sendSuccess(res, result, result.message);
   }
-
-  const result = await MessageService.deleteOrRevokeMessage(messageId, { action }, userId);
-  sendSuccess(res, result, result.message);
-});
+);
 
 // ─── Read Status Controllers ──────────────────────────────────────────────────
 
@@ -194,88 +219,108 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
   validateObjectId(boxId, "boxId");
 
   const result = await MessageService.markAsRead(boxId, userId);
-  sendSuccess(res, result ?? { message: "No messages to mark" }, "Read status updated");
+  sendSuccess(
+    res,
+    result ?? { message: "No messages to mark" },
+    "Read status updated"
+  );
 });
 
 /** GET /api/messages/boxes/read-status — Check read status for multiple boxes */
-export const checkReadStatus = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const raw = req.query["boxIds"];
+export const checkReadStatus = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const raw = req.query["boxIds"];
 
-  let boxIds: string[] = [];
-  if (typeof raw === "string") {
-    boxIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  } else if (Array.isArray(raw)) {
-    boxIds = (raw as string[]).map((s) => s.trim()).filter(Boolean);
+    let boxIds: string[] = [];
+    if (typeof raw === "string") {
+      boxIds = raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (Array.isArray(raw)) {
+      boxIds = (raw as string[]).map((s) => s.trim()).filter(Boolean);
+    }
+
+    if (boxIds.length === 0)
+      throw new ValidationError("boxIds query param is required");
+    boxIds.forEach((id) => validateObjectId(id, "boxId"));
+
+    const result = await MessageService.checkReadStatus(boxIds, userId);
+    sendSuccess(res, result, "Read status fetched");
   }
-
-  if (boxIds.length === 0) throw new ValidationError("boxIds query param is required");
-  boxIds.forEach((id) => validateObjectId(id, "boxId"));
-
-  const result = await MessageService.checkReadStatus(boxIds, userId);
-  sendSuccess(res, result, "Read status fetched");
-});
+);
 
 // ─── Media List Controllers ───────────────────────────────────────────────────
 
 /** GET /api/messages/:boxId/media/images */
-export const getImageList = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getImageList = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const files = await MessageService.getImageList(boxId, userId);
-  sendSuccess(res, files, "Fetched image list");
-});
+    const files = await MessageService.getImageList(boxId, userId);
+    sendSuccess(res, files, "Fetched image list");
+  }
+);
 
 /** GET /api/messages/:boxId/media/videos */
-export const getVideoList = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getVideoList = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const files = await MessageService.getVideoList(boxId, userId);
-  sendSuccess(res, files, "Fetched video list");
-});
+    const files = await MessageService.getVideoList(boxId, userId);
+    sendSuccess(res, files, "Fetched video list");
+  }
+);
 
 /** GET /api/messages/:boxId/media/audio */
-export const getAudioList = asyncHandler(async (req: Request, res: Response) => {
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getAudioList = asyncHandler(
+  async (req: Request, res: Response) => {
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const files = await MessageService.getAudioList(boxId);
-  sendSuccess(res, files, "Fetched audio list");
-});
+    const files = await MessageService.getAudioList(boxId);
+    sendSuccess(res, files, "Fetched audio list");
+  }
+);
 
 /** GET /api/messages/:boxId/media/files */
-export const getOtherFileList = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getOtherFileList = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const files = await MessageService.getOtherFileList(boxId, userId);
-  sendSuccess(res, files, "Fetched file list");
-});
+    const files = await MessageService.getOtherFileList(boxId, userId);
+    sendSuccess(res, files, "Fetched file list");
+  }
+);
 
 // ─── Search Controllers ───────────────────────────────────────────────────────
 
 /** GET /api/messages/:boxId/search?q=query — Search messages in a box */
-export const searchMessages = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const q = query(req, "q");
+export const searchMessages = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const q = query(req, "q");
 
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
-  if (!q?.trim()) throw new ValidationError("q query param is required");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
+    if (!q?.trim()) throw new ValidationError("q query param is required");
 
-  const result = await MessageService.searchMessagesInBox(boxId, q, userId);
-  sendSuccess(res, result, "Search results");
-});
+    const result = await MessageService.searchMessagesInBox(boxId, q, userId);
+    sendSuccess(res, result, "Search results");
+  }
+);
 
 // ─── Online Status Controllers ────────────────────────────────────────────────
 
@@ -296,93 +341,115 @@ export const setOffline = asyncHandler(async (req: Request, res: Response) => {
 // ─── Admin Controllers ────────────────────────────────────────────────────────
 
 /** GET /api/messages/admin/messages */
-export const adminGetAllMessages = asyncHandler(async (req: Request, res: Response) => {
-  const result = await MessageService.getAllMessages();
-  sendSuccess(res, result, "All messages fetched");
-});
+export const adminGetAllMessages = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await MessageService.getAllMessages();
+    sendSuccess(res, result, "All messages fetched");
+  }
+);
 
 /** GET /api/messages/admin/boxes */
-export const adminGetAllBoxes = asyncHandler(async (req: Request, res: Response) => {
-  const result = await MessageService.getAllBoxes();
-  sendSuccess(res, result, "All boxes fetched");
-});
+export const adminGetAllBoxes = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await MessageService.getAllBoxes();
+    sendSuccess(res, result, "All boxes fetched");
+  }
+);
 
 /** GET /api/messages/admin/boxes/:boxId/messages */
-export const adminGetBoxMessages = asyncHandler(async (req: Request, res: Response) => {
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const adminGetBoxMessages = asyncHandler(
+  async (req: Request, res: Response) => {
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const result = await MessageService.getBoxMessages(boxId);
-  sendSuccess(res, result, "Box messages fetched");
-});
+    const result = await MessageService.getBoxMessages(boxId);
+    sendSuccess(res, result, "Box messages fetched");
+  }
+);
 
 /** DELETE /api/messages/admin/messages/:messageId */
-export const adminDeleteMessage = asyncHandler(async (req: Request, res: Response) => {
-  const messageId = param(req, "messageId");
-  if (!messageId) throw new ValidationError("messageId is required");
-  validateObjectId(messageId, "messageId");
+export const adminDeleteMessage = asyncHandler(
+  async (req: Request, res: Response) => {
+    const messageId = param(req, "messageId");
+    if (!messageId) throw new ValidationError("messageId is required");
+    validateObjectId(messageId, "messageId");
 
-  const result = await MessageService.deleteMessage(messageId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.deleteMessage(messageId);
+    sendSuccess(res, result, result.message);
+  }
+);
 
 /** GET /api/messages/admin/search?id=...&q=... */
-export const adminSearchMessages = asyncHandler(async (req: Request, res: Response) => {
-  const id = query(req, "id");
-  const q = query(req, "q");
+export const adminSearchMessages = asyncHandler(
+  async (req: Request, res: Response) => {
+    const id = query(req, "id");
+    const q = query(req, "q");
 
-  const result = await MessageService.adminSearchMessages(id, q);
-  sendSuccess(res, result, "Admin search results");
-});
+    const result = await MessageService.adminSearchMessages(id, q);
+    sendSuccess(res, result, "Admin search results");
+  }
+);
 
 // ─── Group Management Controllers ──────────────────────────────────────────────
 
 /** GET /api/messages/boxes/groups/category/:category */
-export const getGroupsByCategory = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const category = param(req, "category");
-  if (!category) throw new ValidationError("category is required");
+export const getGroupsByCategory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const category = param(req, "category");
+    if (!category) throw new ValidationError("category is required");
 
-  const result = await MessageService.getGroupsByCategory(userId, category);
-  sendSuccess(res, result, `Fetched ${category} groups`);
-});
+    const result = await MessageService.getGroupsByCategory(userId, category);
+    sendSuccess(res, result, `Fetched ${category} groups`);
+  }
+);
 
 /** GET /api/messages/boxes/:boxId/detail */
-export const getGroupDetail = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const getGroupDetail = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const result = await MessageService.getGroupDetail(boxId, userId);
-  sendSuccess(res, result, "Fetched group detail");
-});
+    const result = await MessageService.getGroupDetail(boxId, userId);
+    sendSuccess(res, result, "Fetched group detail");
+  }
+);
 
 /** PATCH /api/messages/boxes/:boxId/info */
-export const updateGroupInfo = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const dto = req.body as UpdateGroupInfoDto;
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
+export const updateGroupInfo = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const dto = req.body as UpdateGroupInfoDto;
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
 
-  const result = await MessageService.updateGroupInfo(boxId, dto, userId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.updateGroupInfo(boxId, dto, userId);
+    sendSuccess(res, result, result.message);
+  }
+);
 
 /** PATCH /api/messages/boxes/:boxId/category */
-export const updateGroupCategory = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const { category } = req.body as UpdateGroupCategoryDto;
-  if (!boxId) throw new ValidationError("boxId is required");
-  validateObjectId(boxId, "boxId");
-  if (!category) throw new ValidationError("category is required");
+export const updateGroupCategory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const { category } = req.body as UpdateGroupCategoryDto;
+    if (!boxId) throw new ValidationError("boxId is required");
+    validateObjectId(boxId, "boxId");
+    if (!category) throw new ValidationError("category is required");
 
-  const result = await MessageService.updateGroupCategory(boxId, { category }, userId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.updateGroupCategory(
+      boxId,
+      { category },
+      userId
+    );
+    sendSuccess(res, result, result.message);
+  }
+);
 
 /** POST /api/messages/boxes/:boxId/members */
 export const addMember = asyncHandler(async (req: Request, res: Response) => {
@@ -401,18 +468,24 @@ export const addMember = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** DELETE /api/messages/boxes/:boxId/members/:memberId */
-export const removeMember = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const memberId = param(req, "memberId");
-  if (!boxId) throw new ValidationError("boxId is required");
-  if (!memberId) throw new ValidationError("memberId is required");
-  validateObjectId(boxId, "boxId");
-  validateObjectId(memberId, "memberId");
+export const removeMember = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const memberId = param(req, "memberId");
+    if (!boxId) throw new ValidationError("boxId is required");
+    if (!memberId) throw new ValidationError("memberId is required");
+    validateObjectId(boxId, "boxId");
+    validateObjectId(memberId, "memberId");
 
-  const result = await MessageService.removeMember(boxId, { memberId }, userId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.removeMember(
+      boxId,
+      { memberId },
+      userId
+    );
+    sendSuccess(res, result, result.message);
+  }
+);
 
 /** POST /api/messages/boxes/:boxId/leave */
 export const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
@@ -426,52 +499,63 @@ export const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** PATCH /api/messages/boxes/:boxId/admins/promote */
-export const promoteMember = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const { memberId } = req.body as PromoteMemberDto;
-  if (!boxId) throw new ValidationError("boxId is required");
-  if (!memberId) throw new ValidationError("memberId is required");
-  validateObjectId(boxId, "boxId");
-  validateObjectId(memberId, "memberId");
+export const promoteMember = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const { memberId } = req.body as PromoteMemberDto;
+    if (!boxId) throw new ValidationError("boxId is required");
+    if (!memberId) throw new ValidationError("memberId is required");
+    validateObjectId(boxId, "boxId");
+    validateObjectId(memberId, "memberId");
 
-  const result = await MessageService.promoteMember(boxId, { memberId }, userId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.promoteMember(
+      boxId,
+      { memberId },
+      userId
+    );
+    sendSuccess(res, result, result.message);
+  }
+);
 
 /** PATCH /api/messages/boxes/:boxId/admins/demote */
-export const demoteMember = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const boxId = param(req, "boxId");
-  const { memberId } = req.body as DemoteMemberDto;
-  if (!boxId) throw new ValidationError("boxId is required");
-  if (!memberId) throw new ValidationError("memberId is required");
-  validateObjectId(boxId, "boxId");
-  validateObjectId(memberId, "memberId");
+export const demoteMember = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const boxId = param(req, "boxId");
+    const { memberId } = req.body as DemoteMemberDto;
+    if (!boxId) throw new ValidationError("boxId is required");
+    if (!memberId) throw new ValidationError("memberId is required");
+    validateObjectId(boxId, "boxId");
+    validateObjectId(memberId, "memberId");
 
-  const result = await MessageService.demoteMember(boxId, { memberId }, userId);
-  sendSuccess(res, result, result.message);
-});
+    const result = await MessageService.demoteMember(
+      boxId,
+      { memberId },
+      userId
+    );
+    sendSuccess(res, result, result.message);
+  }
+);
 
 // ─── Call Controllers ─────────────────────────────────────────────────────────
 
 /** GET /api/messages/calls/history */
-export const getCallHistory = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const result = await CallService.getCallHistory(userId);
-  sendSuccess(res, result, "Call history fetched");
-});
+export const getCallHistory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const result = await CallService.getCallHistory(userId);
+    sendSuccess(res, result, "Call history fetched");
+  }
+);
 
 /** POST /api/messages/calls */
 export const createCall = asyncHandler(async (req: Request, res: Response) => {
   const userId = getUserId(req);
-  const {
-    receiverId,
-    callType,
-    startTime,
-    status,
-    endTime,
-  } = req.body as Omit<CreateCallDto, "callerId">;
+  const { receiverId, callType, startTime, status, endTime } = req.body as Omit<
+    CreateCallDto,
+    "callerId"
+  >;
 
   if (!receiverId) throw new ValidationError("receiverId is required");
   if (!callType || !["video", "voice"].includes(callType)) {
@@ -495,18 +579,38 @@ export const createCall = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** PATCH /api/messages/calls/:callId */
-export const updateCallStatus = asyncHandler(async (req: Request, res: Response) => {
-  const callId = param(req, "callId");
-  const dto = req.body as UpdateCallStatusDto;
+export const updateCallStatus = asyncHandler(
+  async (req: Request, res: Response) => {
+    const callId = param(req, "callId");
+    const dto = req.body as UpdateCallStatusDto;
 
-  if (!callId) throw new ValidationError("callId is required");
-  validateObjectId(callId, "callId");
+    if (!callId) throw new ValidationError("callId is required");
+    validateObjectId(callId, "callId");
 
-  const updated = await CallService.updateCallStatus(callId, {
-    ...dto,
-    endTime: dto.endTime ? new Date(dto.endTime) : undefined,
-  });
+    const updated = await CallService.updateCallStatus(callId, {
+      ...dto,
+      endTime: dto.endTime ? new Date(dto.endTime) : undefined,
+    });
 
-  if (!updated) throw new NotFoundError("Call not found");
-  sendSuccess(res, updated, "Call status updated");
-});
+    if (!updated) throw new NotFoundError("Call not found");
+    sendSuccess(res, updated, "Call status updated");
+  }
+);
+
+// ─── Friends Online Status ────────────────────────────────────────────────────
+
+/** GET /api/messages/friends/online-status — Lấy danh sách bạn bè kèm online status */
+export const getFriendsOnlineStatus = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const page = parseInt(query(req, "page") ?? "1") || 1;
+    const limit = parseInt(query(req, "limit") ?? "50") || 50;
+
+    const result = await MessageService.getFriendsWithOnlineStatus(
+      userId,
+      page,
+      limit
+    );
+    sendSuccess(res, result, "Friends with online status fetched");
+  }
+);

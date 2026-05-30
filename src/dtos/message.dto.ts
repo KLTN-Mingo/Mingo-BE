@@ -103,6 +103,14 @@ export interface UserInfoDto {
   onlineStatus?: boolean;
 }
 
+export interface FriendOnlineDto {
+  id: string;
+  name: string;
+  avatar: string;
+  verified: boolean;
+  onlineStatus: boolean;
+}
+
 export interface MessageResponseDto {
   id: string;
   flag: boolean;
@@ -224,18 +232,17 @@ export function toMessageResponse(msg: any): MessageResponseDto {
     isReact: msg.isReact,
     readedId: (msg.readedId ?? []).map((id: any) => id.toString()),
     contentId: msg.flag
-      ? msg.contentId?.[msg.contentId.length - 1] ?? undefined
+      ? (msg.contentId?.[msg.contentId.length - 1] ?? undefined)
       : undefined,
-    text: msg.flag
-      ? (msg.text?.[msg.text.length - 1] ?? "")
-      : "Message unsent",
+    text: msg.flag ? (msg.text?.[msg.text.length - 1] ?? "") : "Message unsent",
     boxId: msg.boxId?.toString(),
     createAt: msg.createAt,
     createBy: msg.createBy?._id?.toString() ?? msg.createBy?.toString(),
     sender:
       msg.createBy && typeof msg.createBy === "object"
         ? {
-            id: msg.createBy._id?.toString() ?? msg.createBy.id?.toString() ?? "",
+            id:
+              msg.createBy._id?.toString() ?? msg.createBy.id?.toString() ?? "",
             name: msg.createBy.name,
             avatar: msg.createBy.avatar,
           }

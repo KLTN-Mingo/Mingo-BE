@@ -38,11 +38,12 @@ import {
   UpdateGroupCategoryDto,
   PromoteMemberDto,
   DemoteMemberDto,
+  FriendOnlineDto,
 } from "../dtos/message.dto";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
@@ -130,7 +131,8 @@ async function uploadFileToCloudinary(
     height: String(uploadResult.height ?? 0),
     format: uploadResult.format ?? mimetype.split("/")[1] ?? "unknown",
     type,
-    duration: type === "Audio" ? (duration ?? uploadResult.duration ?? 0) : undefined,
+    duration:
+      type === "Audio" ? (duration ?? uploadResult.duration ?? 0) : undefined,
     createBy: new Types.ObjectId(userId),
     createAt: new Date(),
   });
@@ -355,12 +357,23 @@ export const MessageService = {
         .trigger(`private-${userId}`, "new-message", pusherPayload)
         .catch((err) => console.error("Pusher error:", err));
 
-      return { success: true, message: "New box created and message sent" };
+      return {
+        success: true,
+        message: "New box created and message sent",
+        boxId: newBox._id.toString(),
+        isNew: true,
+      };
     }
   },
 
   async createGroup(leaderId: string, dto: CreateGroupDto) {
-    const { membersIds, groupName, groupAva = "", description = "", category = "other" } = dto;
+    const {
+      membersIds,
+      groupName,
+      groupAva = "",
+      description = "",
+      category = "other",
+    } = dto;
 
     if (!Array.isArray(membersIds) || membersIds.length === 0) {
       throw new ValidationError(
@@ -894,34 +907,60 @@ export const MessageService = {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can add members", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError("Only admins can add members", "NOT_ADMIN");
 
     const existingIds = box.receiverIds.map((id: any) => id.toString());
     const newIds = dto.memberIds.filter((id) => !existingIds.includes(id));
-    if (newIds.length === 0) throw new ConflictError("All users are already members", "ALREADY_MEMBERS");
+    if (newIds.length === 0)
+      throw new ConflictError(
+        "All users are already members",
+        "ALREADY_MEMBERS"
+      );
 
     const found = await UserModel.countDocuments({ _id: { $in: newIds } });
-    if (found !== newIds.length) throw new NotFoundError("One or more users not found", "USER_NOT_FOUND");
+    if (found !== newIds.length)
+      throw new NotFoundError("One or more users not found", "USER_NOT_FOUND");
 
     await MessageBoxModel.findByIdAndUpdate(boxId, {
-      $addToSet: { receiverIds: { $each: newIds.map((id) => new Types.ObjectId(id)) } },
+      $addToSet: {
+        receiverIds: { $each: newIds.map((id) => new Types.ObjectId(id)) },
+      },
     });
 
-    return { success: true, message: `Added ${newIds.length} member(s) to group` };
+    return {
+      success: true,
+      message: `Added ${newIds.length} member(s) to group`,
+    };
   },
 
   async removeMember(boxId: string, dto: RemoveMemberDto, requesterId: string) {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can remove members", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError("Only admins can remove members", "NOT_ADMIN");
 
-    if (dto.memberId === requesterId) throw new ValidationError("Use leaveGroup to remove yourself", "CANNOT_REMOVE_SELF");
+    if (dto.memberId === requesterId)
+      throw new ValidationError(
+        "Use leaveGroup to remove yourself",
+        "CANNOT_REMOVE_SELF"
+      );
 
-    const isMember = box.receiverIds.some((id: any) => id.toString() === dto.memberId);
-    if (!isMember) throw new NotFoundError("User is not a member of this group", "NOT_MEMBER");
+    const isMember = box.receiverIds.some(
+      (id: any) => id.toString() === dto.memberId
+    );
+    if (!isMember)
+      throw new NotFoundError(
+        "User is not a member of this group",
+        "NOT_MEMBER"
+      );
 
     await MessageBoxModel.findByIdAndUpdate(boxId, {
       $pull: {
@@ -937,11 +976,21 @@ export const MessageService = {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isMember = box.receiverIds.some((id: any) => id.toString() === userId);
-    if (!isMember) throw new ForbiddenError("User is not a member of this group", "NOT_MEMBER");
+    const isMember = box.receiverIds.some(
+      (id: any) => id.toString() === userId
+    );
+    if (!isMember)
+      throw new ForbiddenError(
+        "User is not a member of this group",
+        "NOT_MEMBER"
+      );
 
-    const remainingAdmins = box.adminIds.filter((id: any) => id.toString() !== userId);
-    const remainingMembers = box.receiverIds.filter((id: any) => id.toString() !== userId);
+    const remainingAdmins = box.adminIds.filter(
+      (id: any) => id.toString() !== userId
+    );
+    const remainingMembers = box.receiverIds.filter(
+      (id: any) => id.toString() !== userId
+    );
 
     let newAdminIds = remainingAdmins;
     if (remainingAdmins.length === 0 && remainingMembers.length > 0) {
@@ -961,18 +1010,34 @@ export const MessageService = {
     return { success: true, message: "Left group successfully" };
   },
 
-  async promoteMember(boxId: string, dto: PromoteMemberDto, requesterId: string) {
+  async promoteMember(
+    boxId: string,
+    dto: PromoteMemberDto,
+    requesterId: string
+  ) {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can promote members", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError("Only admins can promote members", "NOT_ADMIN");
 
-    const isMember = box.receiverIds.some((id: any) => id.toString() === dto.memberId);
-    if (!isMember) throw new NotFoundError("User is not a member of this group", "NOT_MEMBER");
+    const isMember = box.receiverIds.some(
+      (id: any) => id.toString() === dto.memberId
+    );
+    if (!isMember)
+      throw new NotFoundError(
+        "User is not a member of this group",
+        "NOT_MEMBER"
+      );
 
-    const alreadyAdmin = box.adminIds.some((id: any) => id.toString() === dto.memberId);
-    if (alreadyAdmin) throw new ConflictError("User is already an admin", "ALREADY_ADMIN");
+    const alreadyAdmin = box.adminIds.some(
+      (id: any) => id.toString() === dto.memberId
+    );
+    if (alreadyAdmin)
+      throw new ConflictError("User is already an admin", "ALREADY_ADMIN");
 
     await MessageBoxModel.findByIdAndUpdate(boxId, {
       $addToSet: { adminIds: new Types.ObjectId(dto.memberId) },
@@ -985,16 +1050,29 @@ export const MessageService = {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can demote members", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError("Only admins can demote members", "NOT_ADMIN");
 
-    if (dto.memberId === requesterId) throw new ValidationError("Cannot demote yourself", "CANNOT_DEMOTE_SELF");
+    if (dto.memberId === requesterId)
+      throw new ValidationError("Cannot demote yourself", "CANNOT_DEMOTE_SELF");
 
-    const isTargetAdmin = box.adminIds.some((id: any) => id.toString() === dto.memberId);
-    if (!isTargetAdmin) throw new ValidationError("User is not an admin", "NOT_ADMIN_TARGET");
+    const isTargetAdmin = box.adminIds.some(
+      (id: any) => id.toString() === dto.memberId
+    );
+    if (!isTargetAdmin)
+      throw new ValidationError("User is not an admin", "NOT_ADMIN_TARGET");
 
-    const remainingAdmins = box.adminIds.filter((id: any) => id.toString() !== dto.memberId);
-    if (remainingAdmins.length === 0) throw new ValidationError("Group must have at least one admin", "LAST_ADMIN");
+    const remainingAdmins = box.adminIds.filter(
+      (id: any) => id.toString() !== dto.memberId
+    );
+    if (remainingAdmins.length === 0)
+      throw new ValidationError(
+        "Group must have at least one admin",
+        "LAST_ADMIN"
+      );
 
     await MessageBoxModel.findByIdAndUpdate(boxId, {
       $pull: { adminIds: new Types.ObjectId(dto.memberId) },
@@ -1003,38 +1081,67 @@ export const MessageService = {
     return { success: true, message: "Admin demoted to member" };
   },
 
-  async updateGroupInfo(boxId: string, dto: UpdateGroupInfoDto, requesterId: string) {
+  async updateGroupInfo(
+    boxId: string,
+    dto: UpdateGroupInfoDto,
+    requesterId: string
+  ) {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can update group info", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError(
+        "Only admins can update group info",
+        "NOT_ADMIN"
+      );
 
     const updateFields: Record<string, any> = {};
     if (dto.groupName?.trim()) updateFields.groupName = dto.groupName.trim();
-    if (dto.description !== undefined) updateFields.description = dto.description;
+    if (dto.description !== undefined)
+      updateFields.description = dto.description;
 
     if (Object.keys(updateFields).length === 0) {
-      throw new ValidationError("No valid fields to update", "NO_UPDATE_FIELDS");
+      throw new ValidationError(
+        "No valid fields to update",
+        "NO_UPDATE_FIELDS"
+      );
     }
 
     await MessageBoxModel.findByIdAndUpdate(boxId, { $set: updateFields });
     return { success: true, message: "Group info updated" };
   },
 
-  async updateGroupCategory(boxId: string, dto: UpdateGroupCategoryDto, requesterId: string) {
+  async updateGroupCategory(
+    boxId: string,
+    dto: UpdateGroupCategoryDto,
+    requesterId: string
+  ) {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const isAdmin = box.adminIds.some((id: any) => id.toString() === requesterId);
-    if (!isAdmin) throw new ForbiddenError("Only admins can update group category", "NOT_ADMIN");
+    const isAdmin = box.adminIds.some(
+      (id: any) => id.toString() === requesterId
+    );
+    if (!isAdmin)
+      throw new ForbiddenError(
+        "Only admins can update group category",
+        "NOT_ADMIN"
+      );
 
     const validCategories = ["friends", "family", "work", "other"];
     if (!validCategories.includes(dto.category)) {
-      throw new ValidationError("category must be one of: friends, family, work, other", "INVALID_CATEGORY");
+      throw new ValidationError(
+        "category must be one of: friends, family, work, other",
+        "INVALID_CATEGORY"
+      );
     }
 
-    await MessageBoxModel.findByIdAndUpdate(boxId, { $set: { category: dto.category } });
+    await MessageBoxModel.findByIdAndUpdate(boxId, {
+      $set: { category: dto.category },
+    });
     return { success: true, message: "Group category updated" };
   },
 
@@ -1057,7 +1164,8 @@ export const MessageService = {
     const withDetails = await Promise.all(
       boxes.map(async (box) => {
         const lastId = box.messageIds[box.messageIds.length - 1];
-        if (!lastId) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastId)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
         const lastMsg = await MessageModel.findById(lastId)
           .populate({
@@ -1066,10 +1174,17 @@ export const MessageService = {
             options: { strictPopulate: false },
           })
           .populate("createBy", "name avatar");
-        if (!lastMsg) return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastMsg)
+          return { ...box.toObject(), lastMessage: null, readStatus: false };
 
-        const readStatus = lastMsg.readedId.some((id: any) => id.toString() === userId);
-        return { ...box.toObject(), lastMessage: toMessageResponse(lastMsg), readStatus };
+        const readStatus = lastMsg.readedId.some(
+          (id: any) => id.toString() === userId
+        );
+        return {
+          ...box.toObject(),
+          lastMessage: toMessageResponse(lastMsg),
+          readStatus,
+        };
       })
     );
 
@@ -1083,12 +1198,20 @@ export const MessageService = {
 
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
 
-    const memberIds = (box.receiverIds as Types.ObjectId[]).map((id) => id.toString());
+    const memberIds = (box.receiverIds as Types.ObjectId[]).map((id) =>
+      id.toString()
+    );
 
     const isMember = memberIds.includes(requesterId);
-    if (!isMember) throw new ForbiddenError("User is not a member of this group", "NOT_MEMBER");
+    if (!isMember)
+      throw new ForbiddenError(
+        "User is not a member of this group",
+        "NOT_MEMBER"
+      );
 
-    const userDocs = await UserModel.find({ _id: { $in: memberIds } }).select("name avatar phoneNumber onlineStatus");
+    const userDocs = await UserModel.find({ _id: { $in: memberIds } }).select(
+      "name avatar phoneNumber onlineStatus"
+    );
     const userMap = new Map(userDocs.map((u) => [u._id.toString(), u]));
 
     const members = memberIds.map((id) => {
@@ -1274,6 +1397,86 @@ export const MessageService = {
     });
 
     return { success: true, messages: filtered };
+  },
+
+  // ── Friends with online status (for chat UI) ──────────────────────────────
+
+  async getFriendsWithOnlineStatus(
+    userId: string,
+    page = 1,
+    limit = 50
+  ): Promise<{ friends: FriendOnlineDto[]; pagination: any }> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new ValidationError("Invalid userId", "INVALID_USER_ID");
+    }
+
+    const userObjectId = new Types.ObjectId(userId);
+
+    // Lấy tất cả người userId đang follow (accepted)
+    const following = await (
+      await import("../models/follow.model")
+    ).FollowModel.find({
+      followerId: userObjectId,
+      followStatus: "accepted",
+    })
+      .select("followingId")
+      .lean();
+
+    const followingIds = following.map((f) => f.followingId);
+    if (followingIds.length === 0) {
+      return {
+        friends: [],
+        pagination: { page, limit, total: 0, totalPages: 0, hasMore: false },
+      };
+    }
+
+    // Lọc ra những người cũng follow lại (mutual = bạn bè)
+    const mutualFollows = await (
+      await import("../models/follow.model")
+    ).FollowModel.find({
+      followerId: { $in: followingIds },
+      followingId: userObjectId,
+      followStatus: "accepted",
+    })
+      .select("followerId")
+      .lean();
+
+    const mutualSet = new Set(
+      mutualFollows.map((f) => f.followerId.toString())
+    );
+    const friendIds = followingIds.filter((id) => mutualSet.has(id.toString()));
+
+    const total = friendIds.length;
+    const totalPages = Math.ceil(total / limit);
+    const paginated = friendIds.slice((page - 1) * limit, page * limit);
+
+    // Lấy user info kèm onlineStatus
+    const users = await UserModel.find({ _id: { $in: paginated } })
+      .select("name avatar verified onlineStatus")
+      .lean();
+
+    // Online trước, offline sau
+    const sorted = users.sort((a, b) => {
+      if (a.onlineStatus === b.onlineStatus) return 0;
+      return a.onlineStatus ? -1 : 1;
+    });
+
+    return {
+      friends: sorted.map((u) => ({
+        id: u._id.toString(),
+        name: u.name ?? "",
+        avatar: u.avatar ?? "",
+        verified: u.verified ?? false,
+        onlineStatus: u.onlineStatus ?? false,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    };
   },
 };
 
