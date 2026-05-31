@@ -121,6 +121,8 @@ export interface MessageResponseDto {
   boxId: string;
   createAt: Date | string;
   createBy: string;
+  isEdited?: boolean;
+  updatedAt?: Date | string;
   sender?: {
     id: string;
     name?: string;
@@ -223,6 +225,14 @@ export interface PusherDeleteDto {
   createBy: string;
 }
 
+export interface PusherEditDto {
+  id: string;
+  boxId: string;
+  text: string;
+  updatedAt: string;
+  isEdited: true;
+}
+
 // ─── Mapper helpers ───────────────────────────────────────────────────────────
 
 export function toMessageResponse(msg: any): MessageResponseDto {
@@ -238,6 +248,8 @@ export function toMessageResponse(msg: any): MessageResponseDto {
     boxId: msg.boxId?.toString(),
     createAt: msg.createAt,
     createBy: msg.createBy?._id?.toString() ?? msg.createBy?.toString(),
+    isEdited: msg.text?.length > 1 ? true : undefined,
+    updatedAt: msg.updatedAt,
     sender:
       msg.createBy && typeof msg.createBy === "object"
         ? {

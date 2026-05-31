@@ -31,6 +31,7 @@ import {
   PusherNewMessageDto,
   PusherRevokeDto,
   PusherDeleteDto,
+  PusherEditDto,
   toMessageResponse,
   AddMemberDto,
   RemoveMemberDto,
@@ -678,6 +679,18 @@ export const MessageService = {
     await msg.save();
 
     const updated = await MessageModel.findById(msg._id).populate("contentId");
+
+    const editPayload: PusherEditDto = {
+      id: updated!._id.toString(),
+      boxId: updated!.boxId.toString(),
+      text: dto.newContent,
+      updatedAt: updated!.updatedAt.toISOString(),
+      isEdited: true,
+    };
+    await pusherServer
+      .trigger(`private-${editPayload.boxId}`, "message-edited", editPayload)
+      .catch((err) => console.error("Pusher message-edited error:", err));
+
     return { success: true, message: toMessageResponse(updated) };
   },
 
@@ -1040,6 +1053,18 @@ export const MessageService = {
         adminIds: new Types.ObjectId(dto.memberId),
       },
     });
+
+    const updatedBox = await MessageBoxModel.findById(boxId);
+
+    await pusherServer
+      .trigger(`private-${dto.memberId}`, "removed-from-group", {
+        boxId,
+        groupName: updatedBox?.groupName ?? "Group",
+        removedBy: requesterId,
+      })
+      .catch((err) =>
+        console.error("Pusher removed-from-group error:", err)
+      );
 
     return { success: true, message: "Member removed from group" };
   },
