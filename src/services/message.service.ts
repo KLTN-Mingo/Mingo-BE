@@ -354,8 +354,26 @@ export const MessageService = {
       );
 
       await pusherServer
-        .trigger(`private-${userId}`, "new-message", pusherPayload)
+        .trigger(`private-${newBox._id.toString()}`, "new-message", pusherPayload)
         .catch((err) => console.error("Pusher error:", err));
+
+      await pusherServer
+        .trigger(`private-${targetUserId}`, "new-box", {
+          boxId: newBox._id.toString(),
+          senderId: userId,
+          senderName: populated.createBy?.name ?? "Unknown",
+          senderAvatar: populated.createBy?.avatar ?? "",
+          lastMessage: {
+            id: populated._id.toString(),
+            text: pusherPayload.text,
+            createAt: pusherPayload.createAt,
+            createBy: userId,
+            readedId: [userId],
+            flag: true,
+            contentId: pusherPayload.contentId ?? null,
+          },
+        })
+        .catch((err) => console.error("Pusher new-box error:", err));
 
       return {
         success: true,
@@ -930,6 +948,60 @@ export const MessageService = {
         receiverIds: { $each: newIds.map((id) => new Types.ObjectId(id)) },
       },
     });
+
+    const updatedBox = await MessageBoxModel.findById(boxId)
+      .populate("receiverIds", "name avatar")
+      .populate("senderId", "name avatar");
+
+    let lastMessagePayload = null;
+    if (updatedBox && updatedBox.messageIds.length > 0) {
+      const lastMsgId = updatedBox.messageIds[updatedBox.messageIds.length - 1];
+      const lastMsg = await MessageModel.findById(lastMsgId).populate(
+        "createBy",
+        "name avatar"
+      );
+      if (lastMsg) {
+        lastMessagePayload = {
+          id: lastMsg._id.toString(),
+          text: lastMsg.flag
+            ? (lastMsg.text[lastMsg.text.length - 1] ?? "")
+            : "unsent message",
+          createAt: lastMsg.createAt,
+          createBy: (
+            lastMsg.createBy as unknown as { _id: { toString: () => string }; name: string; avatar: string }
+          )?._id?.toString() ?? "",
+          readedId: lastMsg.readedId.map((id: any) => id.toString()),
+          flag: lastMsg.flag,
+        };
+      }
+    }
+
+    if (updatedBox) {
+      const memberList = (updatedBox.receiverIds as unknown as Array<{ _id: { toString: () => string }; name: string; avatar: string }>).map((r) => ({
+        id: r._id.toString(),
+        name: r.name ?? "",
+        avatar: r.avatar ?? "",
+      }));
+
+      await Promise.all(
+        newIds.map((memberId) =>
+          pusherServer
+            .trigger(`private-${memberId}`, "added-to-group", {
+              boxId,
+              groupName: updatedBox.groupName ?? "Group",
+              groupAva: updatedBox.groupAva ?? "",
+              addedBy: requesterId,
+              members: memberList,
+              participantIds: memberList.map((m) => m.id),
+              lastMessage: lastMessagePayload,
+              updatedAt: new Date().toISOString(),
+            })
+            .catch((err) =>
+              console.error("Pusher added-to-group error:", err)
+            )
+        )
+      );
+    }
 
     return {
       success: true,
