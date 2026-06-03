@@ -10,6 +10,7 @@ import { CallModel } from "../models/call.model";
 import { UserModel } from "../models/user.model";
 import { BlockModel } from "../models/block.model";
 import { pusherServer } from "../lib/pusher";
+import { getOnlineUsers } from "../socket/presence";
 
 import {
   NotFoundError,
@@ -103,21 +104,42 @@ async function uploadFileToCloudinary(
         if (error)
           return reject(
             new InternalServerError(
-              `Cloudinary upload failed: ${error.message}`,
+              `Cloudinary error: ${error.message}`,
               "FILE_UPLOAD_FAILED"
             )
           );
         if (!result)
           return reject(
             new InternalServerError(
-              "No result received from Cloudinary",
+              "No result from Cloudinary",
               "FILE_UPLOAD_FAILED"
             )
           );
         resolve(result);
       }
     );
-    streamifier.createReadStream(buffer).pipe(uploadStream);
+
+    // Khởi tạo read stream và bắt lỗi trên luồng đọc/ghi
+    const readStream = streamifier.createReadStream(buffer);
+
+    readStream.on("error", (err) =>
+      reject(
+        new InternalServerError(
+          `Read stream failed: ${err.message}`,
+          "FILE_UPLOAD_FAILED"
+        )
+      )
+    );
+    uploadStream.on("error", (err) =>
+      reject(
+        new InternalServerError(
+          `Upload stream failed: ${err.message}`,
+          "FILE_UPLOAD_FAILED"
+        )
+      )
+    );
+
+    readStream.pipe(uploadStream);
   });
 
   const savedFile = await MessageFileModel.create({
@@ -226,6 +248,57 @@ function buildPusherNewMessage(
   };
 }
 
+// File: services/message.service.js (hoặc tương đương)
+async function restoreConversationForParticipants(
+  box: any,
+  senderId: string,
+  lastMessagePayload: any
+) {
+  // Lấy chính xác những user thực sự đang bị ẩn cuộc hội thoại này ra để thông báo
+  // Không phụ thuộc vào logic phỏng đoán dựa trên receiverIds
+  const participantIds = Array.isArray(box.hiddenBy)
+    ? box.hiddenBy.map((id: any) => id.toString())
+    : [];
+
+  if (participantIds.length === 0) {
+    console.log(
+      "[restoreConversationForParticipants] No hidden users to restore"
+    );
+    return;
+  }
+
+  const restorePayload = {
+    boxId: box._id.toString(),
+    type: box.receiverIds.length > 2 ? "group" : "dm",
+    name: box.groupName || undefined,
+    avatarUrl: box.groupAva || undefined,
+    updatedAt: new Date().toISOString(),
+    senderId,
+    lastMessage: lastMessagePayload,
+    participantIds: box.receiverIds.map((id: any) => id.toString()),
+  };
+
+  await Promise.all(
+    participantIds.map((participantId: string) =>
+      (async () => {
+        const channel = `private-${participantId}`;
+        try {
+          await pusherServer.trigger(
+            channel,
+            "conversation-restored",
+            restorePayload
+          );
+        } catch (err) {
+          console.error(
+            `[restoreConversationForParticipants] ❌ Pusher error for ${channel}:`,
+            err
+          );
+        }
+      })()
+    )
+  );
+}
+
 // ─── MessageService ───────────────────────────────────────────────────────────
 
 export const MessageService = {
@@ -246,7 +319,6 @@ export const MessageService = {
       );
 
       if (receiverIds.length > 2) {
-        // Group chat
         const memberIds = [...receiverIds, box.senderId.toString()];
         if (!memberIds.includes(userId)) {
           throw new ForbiddenError(
@@ -261,9 +333,18 @@ export const MessageService = {
           userId,
           memberIds
         );
+
+        const originalHiddenBy = Array.isArray(box.hiddenBy)
+          ? box.hiddenBy.map((id: any) => id.toString())
+          : [];
+        const wasHidden = originalHiddenBy.length > 0;
+
         box = await MessageBoxModel.findByIdAndUpdate(
           data.boxId,
-          { $push: { messageIds: message._id }, $set: { senderId: userId } },
+          {
+            $push: { messageIds: message._id },
+            $set: { senderId: userId, hiddenBy: [] },
+          },
           { new: true }
         );
         if (!box)
@@ -281,9 +362,19 @@ export const MessageService = {
           .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
           .catch((err) => console.error("Pusher error:", err));
 
+        if (wasHidden) {
+          const mockBoxForRestore = box.toObject ? box.toObject() : { ...box };
+          mockBoxForRestore.hiddenBy = originalHiddenBy;
+
+          await restoreConversationForParticipants(
+            mockBoxForRestore,
+            userId,
+            pusherPayload
+          );
+        }
+
         return { success: true, message: "Message sent successfully" };
       } else {
-        // Direct (1-1) chat
         const [firstId, secondId] = [receiverIds[0], userId].sort();
         const isBlocked = await BlockModel.findOne({
           $or: [
@@ -305,11 +396,16 @@ export const MessageService = {
           memberIds
         );
 
+        const originalHiddenBy = Array.isArray(box.hiddenBy)
+          ? box.hiddenBy.map((id: any) => id.toString())
+          : [];
+        const wasHidden = originalHiddenBy.length > 0;
+
         box = await MessageBoxModel.findByIdAndUpdate(
           box._id,
           {
             $push: { messageIds: message._id },
-            $set: { senderId: userId },
+            $set: { senderId: userId, hiddenBy: [] },
             $addToSet: { receiverIds: userId },
           },
           { new: true }
@@ -324,10 +420,20 @@ export const MessageService = {
           .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
           .catch((err) => console.error("Pusher error:", err));
 
+        if (wasHidden) {
+          const mockBoxForRestore = box.toObject ? box.toObject() : { ...box };
+          mockBoxForRestore.hiddenBy = originalHiddenBy;
+
+          await restoreConversationForParticipants(
+            mockBoxForRestore,
+            userId,
+            pusherPayload
+          );
+        }
+
         return { success: true, message: "Message sent successfully" };
       }
     } else {
-      // No box found — create new direct box (boxId is the target userId)
       const targetUserId = data.boxId;
       const message = await buildMessageContent(data, file, userId, [
         userId,
@@ -355,7 +461,11 @@ export const MessageService = {
       );
 
       await pusherServer
-        .trigger(`private-${newBox._id.toString()}`, "new-message", pusherPayload)
+        .trigger(
+          `private-${newBox._id.toString()}`,
+          "new-message",
+          pusherPayload
+        )
         .catch((err) => console.error("Pusher error:", err));
 
       await pusherServer
@@ -524,8 +634,13 @@ export const MessageService = {
   // ── Message Box Fetching ──────────────────────────────────────────────────
 
   async getDirectBoxes(userId: string) {
+    const userOid = new Types.ObjectId(userId);
     const boxes = await MessageBoxModel.find({
-      $and: [{ receiverIds: { $in: [userId] } }, { receiverIds: { $size: 2 } }],
+      $and: [
+        { receiverIds: { $in: [userOid] } },
+        { receiverIds: { $size: 2 } },
+        { hiddenBy: { $ne: userOid } },
+      ],
     }).populate("receiverIds", "name avatar phoneNumber onlineStatus");
 
     if (!boxes.length) return { success: true, box: [] };
@@ -602,10 +717,12 @@ export const MessageService = {
   },
 
   async getGroupBoxes(userId: string) {
+    const userOid = new Types.ObjectId(userId);
     const boxes = await MessageBoxModel.find({
       $and: [
-        { receiverIds: { $in: [userId] } },
+        { receiverIds: { $in: [userOid] } },
         { $expr: { $gt: [{ $size: "$receiverIds" }, 2] } },
+        { hiddenBy: { $ne: userOid } },
       ],
     })
       .populate("receiverIds", "name avatar phoneNumber onlineStatus")
@@ -751,8 +868,10 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
+
+      // Thay vì bắn vào private-${boxId}, chỉ bắn vào private-${userId} của người xóa
       await pusherServer
-        .trigger(`private-${boxId}`, "delete-message", payload)
+        .trigger(`private-${userId}`, "delete-message", payload)
         .catch((err) => console.error("Pusher error:", err));
 
       return { success: true, message: "Message deleted" };
@@ -980,9 +1099,14 @@ export const MessageService = {
             ? (lastMsg.text[lastMsg.text.length - 1] ?? "")
             : "unsent message",
           createAt: lastMsg.createAt,
-          createBy: (
-            lastMsg.createBy as unknown as { _id: { toString: () => string }; name: string; avatar: string }
-          )?._id?.toString() ?? "",
+          createBy:
+            (
+              lastMsg.createBy as unknown as {
+                _id: { toString: () => string };
+                name: string;
+                avatar: string;
+              }
+            )?._id?.toString() ?? "",
           readedId: lastMsg.readedId.map((id: any) => id.toString()),
           flag: lastMsg.flag,
         };
@@ -990,7 +1114,13 @@ export const MessageService = {
     }
 
     if (updatedBox) {
-      const memberList = (updatedBox.receiverIds as unknown as Array<{ _id: { toString: () => string }; name: string; avatar: string }>).map((r) => ({
+      const memberList = (
+        updatedBox.receiverIds as unknown as Array<{
+          _id: { toString: () => string };
+          name: string;
+          avatar: string;
+        }>
+      ).map((r) => ({
         id: r._id.toString(),
         name: r.name ?? "",
         avatar: r.avatar ?? "",
@@ -1009,9 +1139,7 @@ export const MessageService = {
               lastMessage: lastMessagePayload,
               updatedAt: new Date().toISOString(),
             })
-            .catch((err) =>
-              console.error("Pusher added-to-group error:", err)
-            )
+            .catch((err) => console.error("Pusher added-to-group error:", err))
         )
       );
     }
@@ -1062,9 +1190,7 @@ export const MessageService = {
         groupName: updatedBox?.groupName ?? "Group",
         removedBy: requesterId,
       })
-      .catch((err) =>
-        console.error("Pusher removed-from-group error:", err)
-      );
+      .catch((err) => console.error("Pusher removed-from-group error:", err));
 
     return { success: true, message: "Member removed from group" };
   },
@@ -1344,11 +1470,18 @@ export const MessageService = {
     };
   },
 
-  async deleteBox(boxId: string) {
+  async deleteBox(boxId: string, userId: string) {
     const box = await MessageBoxModel.findById(boxId);
     if (!box) throw new NotFoundError("Box not found", "BOX_NOT_FOUND");
-    await MessageBoxModel.findByIdAndDelete(boxId);
-    return { success: true, message: "Box deleted" };
+
+    await MessageBoxModel.updateOne(
+      { _id: boxId },
+      { $addToSet: { hiddenBy: new Types.ObjectId(userId) } }
+    );
+
+    const updatedBox = await MessageBoxModel.findById(boxId);
+
+    return { success: true, message: "Conversation hidden" };
   },
 
   // ── Online Status ─────────────────────────────────────────────────────────
@@ -1547,25 +1680,36 @@ export const MessageService = {
     const totalPages = Math.ceil(total / limit);
     const paginated = friendIds.slice((page - 1) * limit, page * limit);
 
-    // Lấy user info kèm onlineStatus
+    // Lấy user info (KHÔNG dùng onlineStatus từ MongoDB — nó stale)
     const users = await UserModel.find({ _id: { $in: paginated } })
-      .select("name avatar verified onlineStatus")
+      .select("name avatar verified")
       .lean();
+
+    // presence.ts là ground-truth cho online status
+    const onlineSet = new Set(getOnlineUsers().map((u) => u.userId));
 
     // Online trước, offline sau
     const sorted = users.sort((a, b) => {
-      if (a.onlineStatus === b.onlineStatus) return 0;
-      return a.onlineStatus ? -1 : 1;
+      const aOnline = onlineSet.has(a._id.toString());
+      const bOnline = onlineSet.has(b._id.toString());
+      if (aOnline === bOnline) return 0;
+      return aOnline ? -1 : 1;
     });
 
     return {
-      friends: sorted.map((u) => ({
-        id: u._id.toString(),
-        name: u.name ?? "",
-        avatar: u.avatar ?? "",
-        verified: u.verified ?? false,
-        onlineStatus: u.onlineStatus ?? false,
-      })),
+      friends: sorted.map((u) => {
+        const uid = u._id.toString();
+        const isOnline = onlineSet.has(uid);
+        const mongoStatus = u.onlineStatus ?? false;
+
+        return {
+          id: uid,
+          name: u.name ?? "",
+          avatar: u.avatar ?? "",
+          verified: u.verified ?? false,
+          onlineStatus: isOnline,
+        };
+      }),
       pagination: {
         page,
         limit,

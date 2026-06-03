@@ -89,13 +89,14 @@ export const getBoxById = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, result, "Fetched box");
 });
 
-/** DELETE /api/messages/boxes/:boxId — Delete a box */
+/** DELETE /api/messages/boxes/:boxId — Hide a box for current user */
 export const deleteBox = asyncHandler(async (req: Request, res: Response) => {
   const boxId = param(req, "boxId");
   if (!boxId) throw new ValidationError("boxId is required");
   validateObjectId(boxId, "boxId");
+  const userId = getUserId(req);
 
-  const result = await MessageService.deleteBox(boxId);
+  const result = await MessageService.deleteBox(boxId, userId);
   sendSuccess(res, result, result.message);
 });
 

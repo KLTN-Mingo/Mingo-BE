@@ -34,6 +34,8 @@ app.use(
   })
 );
 app.use(auditMiddleware);
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.post("/api/pusher/auth", authMiddleware, (req, res) => {
   try {
