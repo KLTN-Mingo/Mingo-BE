@@ -18,6 +18,7 @@ export interface IMessageBox extends Document {
   createBy: Types.ObjectId;
   createAt: Date;
   updatedAt: Date;
+  hiddenBy: Types.ObjectId[];
 }
 
 const MessageBoxSchema = new Schema<IMessageBox>(
@@ -40,6 +41,7 @@ const MessageBoxSchema = new Schema<IMessageBox>(
     status: { type: Boolean, default: true },
     createBy: { type: Schema.Types.ObjectId, ref: "User" },
     createAt: { type: Date, default: Date.now },
+    hiddenBy: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
   },
   { timestamps: true }
 );

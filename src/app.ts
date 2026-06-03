@@ -1,4 +1,3 @@
-// src/app.ts
 import express from "express";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes";
@@ -20,10 +19,13 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error-handler.middleware";
+import { pusherServer } from "./lib/pusher";
+import { authMiddleware } from "./middleware/auth.middleware";
 import cors from "cors";
 export const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
@@ -32,6 +34,29 @@ app.use(
   })
 );
 app.use(auditMiddleware);
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+app.post("/api/pusher/auth", authMiddleware, (req, res) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const socketId = req.body.socket_id;
+    const channel = req.body.channel_name;
+    const authResponse = pusherServer.authorizeChannel(socketId, channel, {
+      user_id: userId,
+    });
+
+    res.send(authResponse);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      name: err?.name,
+      message: err?.message,
+      stack: err?.stack,
+    });
+  }
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);

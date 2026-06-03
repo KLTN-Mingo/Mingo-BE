@@ -103,6 +103,14 @@ export interface UserInfoDto {
   onlineStatus?: boolean;
 }
 
+export interface FriendOnlineDto {
+  id: string;
+  name: string;
+  avatar: string;
+  verified: boolean;
+  onlineStatus: boolean;
+}
+
 export interface MessageResponseDto {
   id: string;
   flag: boolean;
@@ -113,6 +121,8 @@ export interface MessageResponseDto {
   boxId: string;
   createAt: Date | string;
   createBy: string;
+  isEdited?: boolean;
+  updatedAt?: Date | string;
   sender?: {
     id: string;
     name?: string;
@@ -215,6 +225,14 @@ export interface PusherDeleteDto {
   createBy: string;
 }
 
+export interface PusherEditDto {
+  id: string;
+  boxId: string;
+  text: string;
+  updatedAt: string;
+  isEdited: true;
+}
+
 // ─── Mapper helpers ───────────────────────────────────────────────────────────
 
 export function toMessageResponse(msg: any): MessageResponseDto {
@@ -224,18 +242,19 @@ export function toMessageResponse(msg: any): MessageResponseDto {
     isReact: msg.isReact,
     readedId: (msg.readedId ?? []).map((id: any) => id.toString()),
     contentId: msg.flag
-      ? msg.contentId?.[msg.contentId.length - 1] ?? undefined
+      ? (msg.contentId?.[msg.contentId.length - 1] ?? undefined)
       : undefined,
-    text: msg.flag
-      ? (msg.text?.[msg.text.length - 1] ?? "")
-      : "Message unsent",
+    text: msg.flag ? (msg.text?.[msg.text.length - 1] ?? "") : "Message unsent",
     boxId: msg.boxId?.toString(),
     createAt: msg.createAt,
     createBy: msg.createBy?._id?.toString() ?? msg.createBy?.toString(),
+    isEdited: msg.text?.length > 1 ? true : undefined,
+    updatedAt: msg.updatedAt,
     sender:
       msg.createBy && typeof msg.createBy === "object"
         ? {
-            id: msg.createBy._id?.toString() ?? msg.createBy.id?.toString() ?? "",
+            id:
+              msg.createBy._id?.toString() ?? msg.createBy.id?.toString() ?? "",
             name: msg.createBy.name,
             avatar: msg.createBy.avatar,
           }
