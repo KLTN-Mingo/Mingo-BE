@@ -732,6 +732,8 @@ export const MessageService = {
 
     const withDetails = await Promise.all(
       boxes.map(async (box) => {
+        const boxObj = box.toObject();
+
         const filteredIds = await Promise.all(
           box.messageIds.map(async (msgId: any) => {
             const msg = await MessageModel.findById(msgId).select("visibility");
@@ -741,8 +743,15 @@ export const MessageService = {
         const validIds = filteredIds.filter(Boolean);
         const lastId = validIds[validIds.length - 1];
 
-        if (!lastId)
-          return { ...box.toObject(), lastMessage: null, readStatus: false };
+        if (!lastId) {
+          return {
+            ...boxObj,
+            id: boxObj._id.toString(),
+            category: boxObj.category || "other",
+            lastMessage: null,
+            readStatus: false,
+          };
+        }
 
         const lastMsg = await MessageModel.findById(lastId)
           .populate({
@@ -751,15 +760,25 @@ export const MessageService = {
             select: "",
           })
           .populate("createBy", "name avatar");
-        if (!lastMsg)
-          return { ...box.toObject(), lastMessage: null, readStatus: false };
+
+        if (!lastMsg) {
+          return {
+            ...boxObj,
+            id: boxObj._id.toString(),
+            category: boxObj.category || "other",
+            lastMessage: null,
+            readStatus: false,
+          };
+        }
 
         const readStatus = lastMsg.readedId.some(
           (id: any) => id.toString() === userId
         );
 
         return {
-          ...box.toObject(),
+          ...boxObj,
+          id: boxObj._id.toString(),
+          category: boxObj.category || "other",
           lastMessage: toMessageResponse(lastMsg),
           readStatus,
         };
