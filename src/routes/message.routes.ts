@@ -49,6 +49,7 @@ import {
   getCallHistory,
   createCall,
   updateCallStatus,
+  getFriendsOnlineStatus,
 } from "../controllers/message.controller";
 
 const router = Router();
@@ -81,8 +82,13 @@ router.get("/boxes", authMiddleware, getDirectBoxes);
 router.get("/conversations", authMiddleware, getDirectBoxes);
 router.get("/boxes/groups", authMiddleware, getGroupBoxes);
 router.get("/boxes/read-status", authMiddleware, checkReadStatus);
+router.get("/friends/online-status", authMiddleware, getFriendsOnlineStatus);
 // Group detail & category filtering — MUST be before /boxes/:boxId
-router.get("/boxes/groups/category/:category", authMiddleware, getGroupsByCategory);
+router.get(
+  "/boxes/groups/category/:category",
+  authMiddleware,
+  getGroupsByCategory
+);
 router.get("/boxes/:boxId/detail", authMiddleware, getGroupDetail);
 // Box CRUD with :boxId param
 router.get("/boxes/:boxId", authMiddleware, getBoxById);
