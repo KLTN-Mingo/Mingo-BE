@@ -12,12 +12,25 @@ import {
   deleteAllRead,
   deleteAllNotifications,
 } from "../controllers/notification.controller";
+import {
+  registerDevice,
+  unregisterDevice,
+  listDevices,
+} from "../controllers/device.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
 // Tất cả routes đều cần authenticate
 router.use(authMiddleware);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DEVICE TOKENS (đặt trước các route có :notificationId param)
+// ══════════════════════════════════════════════════════════════════════════════
+
+router.post("/devices", registerDevice);
+router.get("/devices", listDevices);
+router.delete("/devices/:token", unregisterDevice);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GET NOTIFICATIONS

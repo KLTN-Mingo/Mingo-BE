@@ -1,6 +1,7 @@
 // src/dtos/post.dto.ts
 
 import { PostVisibility, ModerationStatus, IPost } from "../models/post.model";
+import type { ICultureTerm } from "../models/culture-translation.model";
 import { UserMinimalDto } from "./user.dto";
 
 // ==========================================
@@ -149,6 +150,10 @@ export class PostResponseDto {
   moderationStatus!: ModerationStatus;
   isHidden!: boolean;
 
+  // Culture translation — cached on Post after background analysis
+  culturalTerms!: ICultureTerm[];
+  cultureAnalyzed!: boolean;
+
   isEdited!: boolean;
   createdAt!: Date;
   updatedAt!: Date;
@@ -251,6 +256,8 @@ export function toPostResponse(
 
     moderationStatus: post.moderationStatus,
     isHidden: post.isHidden,
+    culturalTerms: post.culturalTerms ?? [],
+    cultureAnalyzed: post.cultureAnalyzed ?? false,
     isEdited: post.isEdited,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,

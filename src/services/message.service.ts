@@ -9,7 +9,7 @@ import { MessageFileModel } from "../models/message-file.model";
 import { CallModel } from "../models/call.model";
 import { UserModel } from "../models/user.model";
 import { BlockModel } from "../models/block.model";
-import { pusherServer } from "../lib/pusher";
+import { triggerPusherEvent } from "../lib/pusher";
 
 import {
   NotFoundError,
@@ -274,9 +274,7 @@ export const MessageService = {
         );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
-          .catch((err) => console.error("Pusher error:", err));
+        await triggerPusherEvent(`private-${data.boxId}`, "new-message", pusherPayload);
 
         return { success: true, message: "Message sent successfully" };
       } else {
@@ -317,9 +315,7 @@ export const MessageService = {
         );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
-          .catch((err) => console.error("Pusher error:", err));
+        await triggerPusherEvent(`private-${data.boxId}`, "new-message", pusherPayload);
 
         return { success: true, message: "Message sent successfully" };
       }
@@ -351,9 +347,7 @@ export const MessageService = {
         newBox._id.toString()
       );
 
-      await pusherServer
-        .trigger(`private-${userId}`, "new-message", pusherPayload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${userId}`, "new-message", pusherPayload);
 
       return { success: true, message: "New box created and message sent" };
     }
@@ -685,9 +679,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-      await pusherServer
-        .trigger(`private-${boxId}`, "revoke-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${boxId}`, "revoke-message", payload);
 
       return { success: true, message: "Message revoked" };
     }
@@ -707,9 +699,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-      await pusherServer
-        .trigger(`private-${boxId}`, "delete-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${boxId}`, "delete-message", payload);
 
       return { success: true, message: "Message deleted" };
     }
@@ -736,9 +726,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-      await pusherServer
-        .trigger(`private-${boxId}`, "unsend-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${boxId}`, "unsend-message", payload);
 
       return { success: true, message: "Message unsent" };
     }
@@ -1149,9 +1137,7 @@ export const MessageService = {
     const payload = { userId, status, createAt: new Date() };
     const event = status ? "online-status" : "offline-status";
 
-    await pusherServer
-      .trigger(`private-${userId}`, event, payload)
-      .catch((err) => console.error("Pusher error:", err));
+    await triggerPusherEvent(`private-${userId}`, event, payload);
 
     return {
       success: true,

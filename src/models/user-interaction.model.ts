@@ -40,6 +40,7 @@ export interface IUserInteraction extends Document {
   commented: boolean;
   shared:    boolean;
   saved:     boolean;
+  followedFromPost: boolean;
 
   weight:       number;  // Cộng dồn từ mọi lần track (like + comment + ...)
   feedbackType: FeedbackType;
@@ -72,6 +73,7 @@ const UserInteractionSchema = new Schema<IUserInteraction>(
     commented: { type: Boolean, default: false },
     shared:    { type: Boolean, default: false },
     saved:     { type: Boolean, default: false },
+    followedFromPost: { type: Boolean, default: false },
 
     weight: { type: Number, default: 1 },
     feedbackType: {

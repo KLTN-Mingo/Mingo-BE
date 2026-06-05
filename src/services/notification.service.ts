@@ -15,9 +15,11 @@ import {
   PaginatedNotificationsDto,
   NotificationCountDto,
   toNotificationResponse,
+  getNotificationMessage,
 } from "../dtos/notification.dto";
 import { getSocketIdsByUserId } from "../socket/presence";
 import { getIO } from "../socket/socket";
+import { PushService } from "./push.service";
 
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
@@ -85,6 +87,26 @@ export const NotificationService = {
     safeEmitToUser(dto.userId, "notification", responseDto);
     safeEmitToUser(dto.userId, "notification:new", responseDto);
     await this.emitNotificationCount(dto.userId);
+
+    // Push notification (FCM) — fire-and-forget để không block luồng tạo notification.
+    void PushService.sendToUser(dto.userId, {
+      title: actor?.name ? actor.name : "Mingo",
+      body:
+        dto.content ||
+        getNotificationMessage(dto.notificationType, actor?.name),
+      data: {
+        notificationId: responseDto.id,
+        type: dto.notificationType,
+        entityType: dto.entityType,
+        entityId: dto.entityId,
+        postId: dto.postId,
+        commentId: dto.commentId,
+        mediaId: dto.mediaId,
+      },
+      imageUrl: dto.thumbnailUrl,
+    }).catch((err) => {
+      console.error("[NotificationService] push error:", err);
+    });
 
     return responseDto;
   },

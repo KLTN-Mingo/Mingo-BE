@@ -5,6 +5,7 @@ import {
   createTokenPair,
   refreshTokens,
   revokeAllUserTokens,
+  revokeTokenFamily,
 } from "../lib/auth/token-service";
 import {
   setRefreshTokenCookie,
@@ -14,6 +15,7 @@ import {
 import {
   generateTwoFactorPendingToken,
   verifyTwoFactorPendingToken,
+  verifyRefreshToken,
 } from "../lib/auth/jwt";
 import { UserModel, checkAndUnbanUser } from "../models/user.model";
 import bcrypt from "bcrypt";
@@ -26,7 +28,7 @@ import {
 } from "../errors";
 import { sendSuccess, sendCreated } from "../utils/response";
 import { toAuthUser, type RegisterDto, type LoginDto } from "../dtos/auth.dto";
-import { generateSecret, generateURI, verifySync } from "otplib";
+import { authenticator } from "otplib";
 import { OAuth2Client } from "google-auth-library";
 
 function randomEmailOnlyPhone(): string {
@@ -285,13 +287,9 @@ export const setupTwoFactor = asyncHandler(
       throw new ValidationError("2FA đã được bật");
     }
 
-    const secret = generateSecret();
-    const label = user.email || user.phoneNumber;
-    const otpauthUrl = generateURI({
-      issuer: "Mingo",
-      label,
-      secret,
-    });
+    const secret = authenticator.generateSecret();
+    const label = user.email || user.phoneNumber || user._id.toString();
+    const otpauthUrl = authenticator.keyuri(label, "Mingo", secret);
 
     sendSuccess(
       res,
@@ -320,7 +318,7 @@ export const enableTwoFactor = asyncHandler(
       throw new ValidationError("2FA đã được bật");
     }
 
-    const { valid: ok } = verifySync({ token: code, secret });
+    const ok = authenticator.check(code, secret);
     if (!ok) {
       throw new ValidationError("Mã 2FA không đúng");
     }
@@ -357,10 +355,7 @@ export const disableTwoFactor = asyncHandler(
       throw new UnauthorizedError("Mật khẩu không đúng");
     }
 
-    const { valid: totpOk } = verifySync({
-      token: code,
-      secret: user.twoFactorSecret,
-    });
+    const totpOk = authenticator.check(code, user.twoFactorSecret);
     if (!totpOk) {
       throw new ValidationError("Mã 2FA không đúng");
     }
@@ -402,10 +397,7 @@ export const completeTwoFactorLogin = asyncHandler(
       throw new UnauthorizedError("2FA không áp dụng cho tài khoản này");
     }
 
-    const { valid: ok } = verifySync({
-      token: code,
-      secret: user.twoFactorSecret,
-    });
+    const ok = authenticator.check(code, user.twoFactorSecret);
     if (!ok) {
       throw new UnauthorizedError("Mã 2FA không đúng");
     }
@@ -449,10 +441,27 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
  */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { allDevices } = req.body;
-  const userId = (req as any).user?.userId;
+  const token = getRefreshTokenFromCookie(req);
+  let userId: string | undefined;
+  let family: string | undefined;
+
+  if (token) {
+    try {
+      const payload = verifyRefreshToken(token) as {
+        userId?: string;
+        family?: string;
+      };
+      userId = payload.userId;
+      family = payload.family;
+    } catch {
+      // Token hỏng/hết hạn vẫn cho logout để FE luôn clear cookie.
+    }
+  }
 
   if (allDevices && userId) {
     await revokeAllUserTokens(userId);
+  } else if (family) {
+    await revokeTokenFamily(family);
   }
 
   clearAllAuthCookies(res);

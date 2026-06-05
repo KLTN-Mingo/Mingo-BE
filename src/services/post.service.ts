@@ -108,6 +108,10 @@ async function loadPostRelations(
   };
 }
 
+export function shouldReAnalyzeCultureForPostUpdate(dto: UpdatePostDto): boolean {
+  return dto.contentText !== undefined;
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const PostService = {
@@ -348,6 +352,8 @@ export const PostService = {
       throw new ForbiddenError("Bạn không có quyền chỉnh sửa bài viết này");
     }
 
+    const shouldReAnalyzeCulture = shouldReAnalyzeCultureForPostUpdate(dto);
+
     if (dto.contentText !== undefined) {
       post.contentText = dto.contentText;
 
@@ -359,6 +365,9 @@ export const PostService = {
         contentText: dto.contentText,
         hashtags: currentHashtags,
       });
+
+      post.culturalTerms = [];
+      post.cultureAnalyzed = !dto.contentText.trim();
     }
     if (dto.contentRichText !== undefined) {
       (post as any).contentRichText = dto.contentRichText;
@@ -367,6 +376,12 @@ export const PostService = {
     post.isEdited = true;
 
     await post.save();
+
+    if (shouldReAnalyzeCulture && dto.contentText?.trim()) {
+      CultureTranslationService.analyzePost(postId).catch((err) =>
+        console.error("[CultureTranslation] background re-analyze error:", err)
+      );
+    }
 
     return this.getPostById(postId, userId);
   },
@@ -553,6 +568,8 @@ export const PostService = {
           isSaved: true,
           moderationStatus: dto.moderationStatus,
           isHidden: dto.isHidden,
+          culturalTerms: dto.culturalTerms,
+          cultureAnalyzed: dto.cultureAnalyzed,
           isEdited: dto.isEdited,
           createdAt: dto.createdAt,
           updatedAt: dto.updatedAt,
