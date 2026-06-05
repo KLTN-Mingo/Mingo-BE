@@ -127,4 +127,10 @@ PostSchema.index({ userId: 1, visibility: 1, createdAt: -1 });
 PostSchema.index({ topics: 1 });
 PostSchema.index({ contentText: "text" });
 
+PostSchema.pre("validate", function clampEngagementRate() {
+  if (typeof this.engagementRate === "number") {
+    this.engagementRate = Math.min(1, Math.max(0, this.engagementRate));
+  }
+});
+
 export const PostModel = model<IPost>("Post", PostSchema);

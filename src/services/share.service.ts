@@ -5,9 +5,14 @@ import { RepostDto, SendDMShareDto } from "../dtos/share.dto";
 import { PostModel } from "../models/post.model";
 import { RepostModel } from "../models/repost.model";
 import { ShareMessageModel } from "../models/share-message.model";
+import { MessageModel } from "../models/message.model";
+import { MessageBoxModel } from "../models/message-box.model";
+import { BlockModel } from "../models/block.model";
 import { FollowModel, FollowStatus } from "../models/follow.model";
 import { UserModel } from "../models/user.model";
+import { triggerPusherEvent } from "../lib/pusher";
 import { NotificationGateway } from "../socket/notification.gateway";
+import { buildPostShareMessageText } from "../utils/share-message.util";
 
 const FRIENDS_CACHE_TTL_SECONDS = 5 * 60;
 const SHARE_RATE_LIMIT = 20;
@@ -82,6 +87,94 @@ async function validatePostForShare(postId: string) {
   return post;
 }
 
+async function createPostShareChatMessage(params: {
+  senderId: string;
+  recipientId: string;
+  postId: string;
+  shareId: string;
+  message?: string;
+  createdAt: Date;
+  sender?: { name?: string; avatar?: string } | null;
+}) {
+  const [firstId, secondId] = [params.senderId, params.recipientId].sort();
+  const isBlocked = await BlockModel.findOne({
+    $or: [
+      { blockerId: firstId, blockedId: secondId },
+      { blockerId: secondId, blockedId: firstId },
+    ],
+  }).lean();
+
+  if (isBlocked) {
+    throw new ValidationError(
+      "Không thể chia sẻ bài viết do người dùng đã bị chặn",
+      "BLOCKED_USER"
+    );
+  }
+
+  const memberObjectIds = [params.senderId, params.recipientId].map(
+    (id) => new Types.ObjectId(id)
+  );
+
+  let box = await MessageBoxModel.findOne({
+    receiverIds: { $all: memberObjectIds, $size: 2 },
+  });
+
+  if (!box) {
+    box = await MessageBoxModel.create({
+      senderId: new Types.ObjectId(params.senderId),
+      receiverIds: memberObjectIds,
+      messageIds: [],
+      groupName: "",
+      groupAva: "",
+      flag: true,
+      pin: false,
+      createBy: new Types.ObjectId(params.senderId),
+      status: true,
+    });
+  }
+
+  const visibilityMap = new Map<string, boolean>();
+  visibilityMap.set(params.senderId, true);
+  visibilityMap.set(params.recipientId, true);
+
+  const text = buildPostShareMessageText({
+    postId: params.postId,
+    shareId: params.shareId,
+    message: params.message,
+    createdAt: params.createdAt,
+  });
+
+  const chatMessage = await MessageModel.create({
+    flag: true,
+    visibility: visibilityMap,
+    readedId: [new Types.ObjectId(params.senderId)],
+    contentId: [],
+    text: [text],
+    boxId: box._id,
+    createBy: new Types.ObjectId(params.senderId),
+    createAt: params.createdAt,
+    updatedAt: params.createdAt,
+  });
+
+  await MessageBoxModel.findByIdAndUpdate(box._id, {
+    $push: { messageIds: chatMessage._id },
+    $set: { senderId: new Types.ObjectId(params.senderId) },
+  });
+
+  await triggerPusherEvent(`private-${box._id.toString()}`, "new-message", {
+    id: chatMessage._id.toString(),
+    flag: true,
+    isReact: false,
+    readedId: [params.senderId],
+    text,
+    boxId: box._id.toString(),
+    createAt: params.createdAt.toISOString(),
+    createBy: params.senderId,
+    createName: params.sender?.name ?? "Unknown",
+    createAvatar: params.sender?.avatar ?? "",
+  });
+}
+
 export const ShareService = {
   async sendDM(senderId: string, dto: SendDMShareDto) {
     await enforceShareRateLimit(senderId);
@@ -122,6 +215,16 @@ export const ShareService = {
     );
 
     for (const record of records) {
+      await createPostShareChatMessage({
+        senderId,
+        recipientId: record.recipientId.toString(),
+        postId: dto.postId,
+        shareId: record._id.toString(),
+        message: dto.message,
+        createdAt: record.createdAt,
+        sender,
+      });
+
       NotificationGateway.emitDmShare(record.recipientId.toString(), {
         type: "dm_share",
         shareId: record._id.toString(),
@@ -212,6 +315,49 @@ export const ShareService = {
       postId: dto.postId,
       comment: repost.comment,
       createdAt: repost.createdAt,
+    };
+  },
+
+  async getUserReposts(userId: string, page: number, limit: number, currentUserId?: string) {
+    const authorId = new Types.ObjectId(userId);
+    const [total, rows] = await Promise.all([
+      RepostModel.countDocuments({ authorId, isDeleted: false }),
+      RepostModel.find({ authorId, isDeleted: false })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const { PostService } = await import("./post.service");
+    const reposts = [];
+    for (const row of rows as any[]) {
+      const postId = row.postId?.toString();
+      if (!postId) continue;
+      try {
+        const post = await PostService.getPostById(postId, currentUserId);
+        reposts.push({
+          repostId: row._id.toString(),
+          postId,
+          comment: row.comment || "",
+          createdAt: row.createdAt,
+          post,
+        });
+      } catch {
+        // Post gốc đã xoá/ẩn -> bỏ qua khỏi feed repost
+      }
+    }
+
+    const totalPages = Math.ceil(total / limit) || 0;
+    return {
+      reposts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
     };
   },
 };

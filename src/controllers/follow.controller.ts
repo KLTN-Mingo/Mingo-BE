@@ -4,6 +4,14 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
 import { FollowService } from "../services/follow.service";
 import { FollowStatus } from "../models/follow.model";
+import {
+  interactionTrackerService,
+  TrackPayload,
+} from "../services/interaction-tracker.service";
+import {
+  InteractionSource,
+  InteractionType,
+} from "../models/user-interaction.model";
 import { sendSuccess, sendCreated } from "../utils/response";
 import { ValidationError } from "../errors";
 
@@ -22,6 +30,18 @@ function getParam(param: string | string[] | undefined): string {
   return param || "";
 }
 
+function getInteractionSource(value: unknown): InteractionSource {
+  return Object.values(InteractionSource).includes(value as InteractionSource)
+    ? (value as InteractionSource)
+    : InteractionSource.FEED;
+}
+
+function trackFollowFromPostSafely(payload: TrackPayload): void {
+  void interactionTrackerService.track(payload).catch((err) => {
+    console.error("[FollowController] track follow_from_post error:", err);
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // FOLLOW REQUEST HANDLERS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -30,9 +50,20 @@ function getParam(param: string | string[] | undefined): string {
 export const sendFollowRequest = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const { userId: targetId } = req.body;
+    const { userId: targetId, postId, source, deviceType } = req.body;
 
     const result = await FollowService.sendFollowRequest(userId, targetId);
+
+    if (typeof postId === "string" && postId.trim().length > 0) {
+      trackFollowFromPostSafely({
+        userId,
+        postId,
+        type: InteractionType.FOLLOW_FROM_POST,
+        source: getInteractionSource(source),
+        deviceType,
+      });
+    }
+
     sendCreated(res, result, "Đã gửi yêu cầu follow");
   }
 );

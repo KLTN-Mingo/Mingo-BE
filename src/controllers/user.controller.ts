@@ -14,6 +14,7 @@ import {
 } from "../dtos/user.dto";
 import { UserService } from "../services/user.service";
 import { PostService } from "../services/post.service";
+import { ShareService } from "../services/share.service";
 
 function getCurrentUserId(req: Request): string {
   const userId = (req as any).user?.userId;
@@ -410,6 +411,44 @@ export const getUserPosts = asyncHandler(
     );
 
     sendPaginated(res, result.posts, result.pagination);
+  }
+);
+
+/**
+ * @route   GET /api/users/:id/reposts
+ * @desc    Lấy danh sách repost theo user (phân trang)
+ * @access  Private
+ */
+export const getUserReposts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    const currentUserId = (req as any).user?.userId as string | undefined;
+    const { page: pageStr, limit: limitStr } = req.query as Record<
+      string,
+      string
+    >;
+
+    validateObjectId(id, "User ID");
+
+    const page = parseInt(pageStr, 10) || 1;
+    const limit = parseInt(limitStr, 10) || 10;
+
+    if (page < 1) {
+      throw new ValidationError("Số trang phải lớn hơn 0");
+    }
+
+    if (limit < 1 || limit > 20) {
+      throw new ValidationError("Limit phải từ 1 đến 20");
+    }
+
+    const result = await ShareService.getUserReposts(
+      id,
+      page,
+      limit,
+      currentUserId
+    );
+
+    sendPaginated(res, result.reposts, result.pagination);
   }
 );
 

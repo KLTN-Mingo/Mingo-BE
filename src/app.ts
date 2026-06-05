@@ -21,15 +21,26 @@ import {
 } from "./middleware/error-handler.middleware";
 import { pusherServer } from "./lib/pusher";
 import { authMiddleware } from "./middleware/auth.middleware";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 export const app = express();
+
+function parseCorsOriginOption(): CorsOptions["origin"] {
+  const raw = process.env.CORS_ORIGINS?.trim();
+  if (!raw) return ["http://localhost:3001"];
+  if (raw === "*") return true;
+  const origins = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return origins.length ? origins : ["http://localhost:3001"];
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:3001",
+    origin: parseCorsOriginOption(),
     credentials: true,
   })
 );

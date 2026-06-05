@@ -10,6 +10,7 @@ import {
   getUserById,
   getUserByPhone,
   getUserPosts,
+  getUserReposts,
   getUserStats,
   getUsers,
   uploadAvatar,
@@ -75,6 +76,7 @@ router.delete("/:id", authMiddleware, adminMiddleware, deleteUser);
 // ── Public user routes ───────────────────────────────────────────────────────
 router.get("/phone/:phoneNumber", authMiddleware, getUserByPhone);
 router.get("/:id/posts", authMiddleware, getUserPosts);
+router.get("/:id/reposts", authMiddleware, getUserReposts);
 router.get("/:id", authMiddleware, getUserById);
 
 export default router;

@@ -46,6 +46,7 @@ router.get("/feed", authMiddleware, getFeedPosts);
 router.post("/feed/feedback", authMiddleware, submitFeedFeedback);
 router.get("/feed/metrics", authMiddleware, getFeedMetrics);
 router.get("/stats/count", authMiddleware, getPostStats);
+router.get("/saved", authMiddleware, getSavedPosts);
 
 // ── Post CRUD ─────────────────────────────────────────────────────────────────
 router.get("/", authMiddleware, getAllPosts);

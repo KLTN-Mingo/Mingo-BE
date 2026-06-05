@@ -4,10 +4,21 @@ import { Response, Request } from "express";
 const COOKIE_NAME = "refreshToken";
 
 export function setRefreshTokenCookie(res: Response, token: string) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const secure =
+    String(process.env.COOKIE_SECURE ?? (isProduction ? "true" : "false"))
+      .toLowerCase()
+      .trim() === "true";
+  const sameSiteRaw = (process.env.COOKIE_SAMESITE || "lax").toLowerCase();
+  const sameSite: "lax" | "strict" | "none" =
+    sameSiteRaw === "strict" || sameSiteRaw === "none" ? sameSiteRaw : "lax";
+  const cookieDomain = process.env.COOKIE_DOMAIN?.trim();
+
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    secure,
+    sameSite,
+    domain: cookieDomain || undefined,
     path: "/",
   });
 }

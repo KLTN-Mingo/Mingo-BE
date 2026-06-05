@@ -9,7 +9,7 @@ import { MessageFileModel } from "../models/message-file.model";
 import { CallModel } from "../models/call.model";
 import { UserModel } from "../models/user.model";
 import { BlockModel } from "../models/block.model";
-import { pusherServer } from "../lib/pusher";
+import { triggerPusherEvent } from "../lib/pusher";
 import { getOnlineUsers } from "../socket/presence";
 
 import {
@@ -283,7 +283,7 @@ async function restoreConversationForParticipants(
       (async () => {
         const channel = `private-${participantId}`;
         try {
-          await pusherServer.trigger(
+          await triggerPusherEvent(
             channel,
             "conversation-restored",
             restorePayload
@@ -358,9 +358,7 @@ export const MessageService = {
         );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
-          .catch((err) => console.error("Pusher error:", err));
+        await triggerPusherEvent(`private-${data.boxId}`, "new-message", pusherPayload);
 
         if (wasHidden) {
           const mockBoxForRestore = box.toObject ? box.toObject() : { ...box };
@@ -416,9 +414,7 @@ export const MessageService = {
         );
         const pusherPayload = buildPusherNewMessage(populated, data.boxId);
 
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherPayload)
-          .catch((err) => console.error("Pusher error:", err));
+        await triggerPusherEvent(`private-${data.boxId}`, "new-message", pusherPayload);
 
         if (wasHidden) {
           const mockBoxForRestore = box.toObject ? box.toObject() : { ...box };
@@ -460,16 +456,13 @@ export const MessageService = {
         newBox._id.toString()
       );
 
-      await pusherServer
-        .trigger(
-          `private-${newBox._id.toString()}`,
-          "new-message",
-          pusherPayload
-        )
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(
+        `private-${newBox._id.toString()}`,
+        "new-message",
+        pusherPayload
+      );
 
-      await pusherServer
-        .trigger(`private-${targetUserId}`, "new-box", {
+      await triggerPusherEvent(`private-${targetUserId}`, "new-box", {
           boxId: newBox._id.toString(),
           senderId: userId,
           senderName: populated.createBy?.name ?? "Unknown",
@@ -483,8 +476,7 @@ export const MessageService = {
             flag: true,
             contentId: pusherPayload.contentId ?? null,
           },
-        })
-        .catch((err) => console.error("Pusher new-box error:", err));
+        });
 
       return {
         success: true,
@@ -823,9 +815,11 @@ export const MessageService = {
       updatedAt: updated!.updatedAt.toISOString(),
       isEdited: true,
     };
-    await pusherServer
-      .trigger(`private-${editPayload.boxId}`, "message-edited", editPayload)
-      .catch((err) => console.error("Pusher message-edited error:", err));
+    await triggerPusherEvent(
+      `private-${editPayload.boxId}`,
+      "message-edited",
+      editPayload
+    );
 
     return { success: true, message: toMessageResponse(updated) };
   },
@@ -865,9 +859,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-      await pusherServer
-        .trigger(`private-${boxId}`, "revoke-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${boxId}`, "revoke-message", payload);
 
       return { success: true, message: "Message revoked" };
     }
@@ -887,11 +879,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-
-      // Thay vì bắn vào private-${boxId}, chỉ bắn vào private-${userId} của người xóa
-      await pusherServer
-        .trigger(`private-${userId}`, "delete-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${userId}`, "delete-message", payload);
 
       return { success: true, message: "Message deleted" };
     }
@@ -918,9 +906,7 @@ export const MessageService = {
         createAt: now,
         createBy: userId,
       };
-      await pusherServer
-        .trigger(`private-${boxId}`, "unsend-message", payload)
-        .catch((err) => console.error("Pusher error:", err));
+      await triggerPusherEvent(`private-${boxId}`, "unsend-message", payload);
 
       return { success: true, message: "Message unsent" };
     }
@@ -1147,8 +1133,7 @@ export const MessageService = {
 
       await Promise.all(
         newIds.map((memberId) =>
-          pusherServer
-            .trigger(`private-${memberId}`, "added-to-group", {
+          triggerPusherEvent(`private-${memberId}`, "added-to-group", {
               boxId,
               groupName: updatedBox.groupName ?? "Group",
               groupAva: updatedBox.groupAva ?? "",
@@ -1158,7 +1143,6 @@ export const MessageService = {
               lastMessage: lastMessagePayload,
               updatedAt: new Date().toISOString(),
             })
-            .catch((err) => console.error("Pusher added-to-group error:", err))
         )
       );
     }
@@ -1203,13 +1187,11 @@ export const MessageService = {
 
     const updatedBox = await MessageBoxModel.findById(boxId);
 
-    await pusherServer
-      .trigger(`private-${dto.memberId}`, "removed-from-group", {
+    await triggerPusherEvent(`private-${dto.memberId}`, "removed-from-group", {
         boxId,
         groupName: updatedBox?.groupName ?? "Group",
         removedBy: requesterId,
-      })
-      .catch((err) => console.error("Pusher removed-from-group error:", err));
+      });
 
     return { success: true, message: "Member removed from group" };
   },
@@ -1521,9 +1503,7 @@ export const MessageService = {
     const payload = { userId, status, createAt: new Date() };
     const event = status ? "online-status" : "offline-status";
 
-    await pusherServer
-      .trigger(`private-${userId}`, event, payload)
-      .catch((err) => console.error("Pusher error:", err));
+    await triggerPusherEvent(`private-${userId}`, event, payload);
 
     return {
       success: true,

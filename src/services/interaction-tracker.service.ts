@@ -153,6 +153,7 @@ export class InteractionTrackerService {
       [InteractionType.COMMENT]: { commented: true },
       [InteractionType.SHARE]:   { shared:    true },
       [InteractionType.SAVE]:    { saved:     true },
+      [InteractionType.FOLLOW_FROM_POST]: { followedFromPost: true },
     };
     return map[type] ?? {};
   }
