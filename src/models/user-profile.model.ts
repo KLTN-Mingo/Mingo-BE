@@ -1,21 +1,31 @@
 // src/models/user-profile.model.ts
 import { Schema, model, Document, Types } from "mongoose";
+import type { ProfileScoreEntry } from "../utils/profile-score.util";
+
+export type IProfileScoreEntry = ProfileScoreEntry;
 
 export interface IUserProfile extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
 
-  topicScores: Map<string, number>;
-  hashtagScores: Map<string, number>;
-  authorScores: Map<string, number>;
+  topicScores: Map<string, IProfileScoreEntry>;
+  hashtagScores: Map<string, IProfileScoreEntry>;
+  authorScores: Map<string, IProfileScoreEntry>;
 
   interactionCount: number;
   avgSessionDuration?: number;
   preferredContentType?: "image" | "video" | "text";
 
-  lastCalculatedAt: Date;
   updatedAt: Date;
 }
+
+const ProfileScoreEntrySchema = new Schema<IProfileScoreEntry>(
+  {
+    score: { type: Number, required: true, default: 0 },
+    lastUpdatedAt: { type: Date, required: true, default: Date.now },
+  },
+  { _id: false }
+);
 
 const UserProfileSchema = new Schema<IUserProfile>(
   {
@@ -29,17 +39,17 @@ const UserProfileSchema = new Schema<IUserProfile>(
 
     topicScores: {
       type: Map,
-      of: Number,
+      of: ProfileScoreEntrySchema,
       default: new Map(),
     },
     hashtagScores: {
       type: Map,
-      of: Number,
+      of: ProfileScoreEntrySchema,
       default: new Map(),
     },
     authorScores: {
       type: Map,
-      of: Number,
+      of: ProfileScoreEntrySchema,
       default: new Map(),
     },
 
@@ -56,18 +66,12 @@ const UserProfileSchema = new Schema<IUserProfile>(
       type: String,
       enum: ["image", "video", "text"],
     },
-
-    lastCalculatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   }
 );
-
-UserProfileSchema.index({ lastCalculatedAt: 1 });
 
 export const UserProfileModel = model<IUserProfile>(
   "UserProfile",
