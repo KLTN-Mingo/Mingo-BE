@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { getRedisClient } from "../lib/redis";
 import { RepostDto, SendDMShareDto } from "../dtos/share.dto";
 import { PostModel } from "../models/post.model";
@@ -8,11 +8,19 @@ import { ShareMessageModel } from "../models/share-message.model";
 import { MessageModel } from "../models/message.model";
 import { MessageBoxModel } from "../models/message-box.model";
 import { BlockModel } from "../models/block.model";
-import { FollowModel, FollowStatus } from "../models/follow.model";
+import {
+  CloseFriendStatus,
+  FollowModel,
+  FollowStatus,
+} from "../models/follow.model";
 import { UserModel } from "../models/user.model";
 import { triggerPusherEvent } from "../lib/pusher";
 import { NotificationGateway } from "../socket/notification.gateway";
 import { buildPostShareMessageText } from "../utils/share-message.util";
+import {
+  canViewPostWithRelationship,
+  collectMutualCloseFriendIds,
+} from "../utils/relationship-visibility.util";
 
 const FRIENDS_CACHE_TTL_SECONDS = 5 * 60;
 const SHARE_RATE_LIMIT = 20;
@@ -79,10 +87,70 @@ async function getFriendsOfUserCached(userId: string): Promise<string[]> {
   return friendIds;
 }
 
-async function validatePostForShare(postId: string) {
-  const post = await PostModel.findById(postId).select("userId isHidden").lean();
+async function getShareVisibilityContext(userId: string) {
+  const userObjectId = new Types.ObjectId(userId);
+  const [friends, closeFriendRows, blockedRows, blockedMeRows] =
+    await Promise.all([
+      getFriendsOfUserCached(userId),
+      FollowModel.find({
+        $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
+        followStatus: FollowStatus.ACCEPTED,
+        closeFriendStatus: CloseFriendStatus.ACCEPTED,
+      })
+        .select("followerId followingId")
+        .lean(),
+      BlockModel.find({ blockerId: userObjectId }).select("blockedId").lean(),
+      BlockModel.find({ blockedId: userObjectId }).select("blockerId").lean(),
+    ]);
+
+  const blockedUserIds = new Set<string>();
+  (blockedRows as any[]).forEach((row) =>
+    blockedUserIds.add(row.blockedId.toString())
+  );
+  (blockedMeRows as any[]).forEach((row) =>
+    blockedUserIds.add(row.blockerId.toString())
+  );
+
+  return {
+    friendIds: new Set(friends),
+    closeFriendIds: collectMutualCloseFriendIds(
+      userId,
+      closeFriendRows as any[]
+    ),
+    blockedUserIds,
+  };
+}
+
+async function validatePostForShare(postId: string, viewerIds: string[]) {
+  const post = await PostModel.findById(postId)
+    .select("userId visibility isHidden")
+    .lean();
   if (!post || post.isHidden) {
     throw new NotFoundError("Bài viết không tồn tại hoặc đã bị xoá", "POST_NOT_FOUND");
+  }
+  const contexts = await Promise.all(
+    viewerIds.map(async (viewerId) => ({
+      viewerId,
+      context: await getShareVisibilityContext(viewerId),
+    }))
+  );
+
+  const blockedViewer = contexts.find(
+    ({ viewerId, context }) =>
+      !canViewPostWithRelationship({
+        visibility: post.visibility,
+        authorId: post.userId,
+        viewerId,
+        friendIds: context.friendIds,
+        closeFriendIds: context.closeFriendIds,
+        blockedUserIds: context.blockedUserIds,
+      })
+  );
+  if (blockedViewer) {
+    throw new ForbiddenError(
+      "Không thể chia sẻ bài viết cho người không có quyền xem",
+      "POST_SHARE_VISIBILITY_FORBIDDEN"
+    );
   }
   return post;
 }
@@ -178,7 +246,6 @@ async function createPostShareChatMessage(params: {
 export const ShareService = {
   async sendDM(senderId: string, dto: SendDMShareDto) {
     await enforceShareRateLimit(senderId);
-    const post = await validatePostForShare(dto.postId);
 
     const recipientIds = Array.from(new Set(dto.recipientIds));
     if (!recipientIds.length) {
@@ -204,6 +271,10 @@ export const ShareService = {
         "RECIPIENT_NOT_FRIEND"
       );
     }
+    const post = await validatePostForShare(dto.postId, [
+      senderId,
+      ...recipientIds,
+    ]);
 
     const records = await ShareMessageModel.insertMany(
       recipientIds.map((recipientId) => ({
@@ -266,7 +337,7 @@ export const ShareService = {
 
   async repost(authorId: string, dto: RepostDto) {
     await enforceShareRateLimit(authorId);
-    const post = await validatePostForShare(dto.postId);
+    const post = await validatePostForShare(dto.postId, [authorId]);
 
     if (post.userId.toString() === authorId) {
       throw new ValidationError("Không thể repost bài viết của chính mình", "REPOST_OWN_POST_FORBIDDEN");

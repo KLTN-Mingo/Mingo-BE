@@ -1,0 +1,68 @@
+\contentsline {chapter}{DANH MỤC TỪ VIẾT TẮT}{vi}{chapter*.6}%
+\contentsline {chapter}{TÓM TẮT KHÓA LUẬN}{1}{chapter*.7}%
+\contentsline {chapter}{\numberline {1}GIỚI THIỆU ĐỀ TÀI}{2}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Lý do chọn đề tài}{2}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Mục tiêu đề tài}{3}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Đối tượng và phạm vi nghiên cứu}{3}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}Đối tượng nghiên cứu:}{3}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}Phạm vi nghiên cứu:}{4}{subsection.1.3.2}%
+\contentsline {section}{\numberline {1.4}Công cụ và công nghệ sử dụng}{4}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Phương pháp thực hiện}{5}{section.1.5}%
+\contentsline {chapter}{\numberline {2}CƠ SỞ LÝ THUYẾT}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Công nghệ nền tảng}{7}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}TypeScript}{7}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}React Native}{8}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Next.js}{8}{subsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.1.4}Node.js}{9}{subsection.2.1.4}%
+\contentsline {section}{\numberline {2.2}Cơ sở dữ liệu}{10}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}MongoDB}{10}{subsection.2.2.1}%
+\contentsline {section}{\numberline {2.3}Dịch vụ hỗ trợ}{11}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Pusher}{11}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Cloudinary}{11}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Socket.io}{12}{subsection.2.3.3}%
+\contentsline {section}{\numberline {2.4}Kiểm duyệt nội dung}{13}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Biểu thức chính quy và đối sánh từ khóa (Rule-based Filter)}{13}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Mô hình ngôn ngữ lớn -- LLM (Gemini API)}{13}{subsection.2.4.2}%
+\contentsline {subsection}{\numberline {2.4.3}Prompt Engineering}{14}{subsection.2.4.3}%
+\contentsline {subsection}{\numberline {2.4.4}Kiến trúc pipeline 2 tầng và Human-in-the-loop}{14}{subsection.2.4.4}%
+\contentsline {section}{\numberline {2.5}Giải thích thuật ngữ và ngữ cảnh văn hóa mạng}{15}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Đối sánh từ điển dựa trên biểu thức chính quy}{15}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Chiến lược Batch API Call}{15}{subsection.2.5.2}%
+\contentsline {section}{\numberline {2.6}Cá nhân hóa nội dung}{16}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Content-Based Filtering}{16}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}Popularity-Based Filtering}{16}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}Công thức tính điểm xếp hạng (Time Decay, CTR, Impression Tracking)}{16}{subsection.2.6.3}%
+\contentsline {chapter}{\numberline {3}PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG}{18}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Khảo sát hiện trạng}{18}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}Các vấn đề của mạng xã hội hiện tại }{18}{subsection.3.1.1}%
+\contentsline {subsection}{\numberline {3.1.2}Khảo sát các nền tảng hiện có }{19}{subsection.3.1.2}%
+\contentsline {section}{\numberline {3.2}Danh sách các yêu cầu}{20}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Yêu cầu chức năng}{20}{subsection.3.2.1}%
+\contentsline {paragraph}{Quản lý người dùng}{20}{paragraph*.17}%
+\contentsline {paragraph}{Quản lý bài đăng và tương tác}{21}{paragraph*.18}%
+\contentsline {paragraph}{Module AI Kiểm duyệt nội dung }{22}{paragraph*.19}%
+\contentsline {paragraph}{Module AI Cá nhân hóa Feed }{23}{paragraph*.20}%
+\contentsline {paragraph}{Module giải thích thuật ngữ và ngữ cảnh văn hóa mạng}{24}{paragraph*.21}%
+\contentsline {paragraph}{Nhắn tin và Thông báo}{25}{paragraph*.22}%
+\contentsline {subsection}{\numberline {3.2.2}Yêu cầu phi chức năng}{25}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Yêu cầu chất lượng}{27}{subsection.3.2.3}%
+\contentsline {section}{\numberline {3.3}Kiến trúc hệ thống}{29}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Kiến trúc tổng thể}{29}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Module AI Content Moderation}{31}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Module Personalized Feed}{34}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Module giải thích thuật ngữ và ngữ cảnh văn hóa mạng}{37}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Thiết kế Use Case}{39}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Danh sách các Actor}{39}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Danh sách các Use Case chính}{39}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Đặc tả chi tiết Use Case}{39}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Sơ đồ Activity}{40}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Thiết kế dữ liệu}{40}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Sơ đồ lớp (Class Diagram)}{40}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Sơ đồ ERD}{40}{subsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6.3}Mô tả chi tiết các collection}{40}{subsection.3.6.3}%
+\contentsline {chapter}{\numberline {4}XÂY DỰNG ỨNG DỤNG}{41}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Giao diện ứng dụng di động}{41}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Giao diện trang quản trị}{42}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Minh họa các module hỗ trợ thông minh}{43}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Liên kết mã nguồn}{44}{section.4.4}%
+\contentsline {chapter}{TÀI LIỆU THAM KHẢO}{45}{chapter*.27}%
