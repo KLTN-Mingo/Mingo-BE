@@ -17,6 +17,7 @@ import {
   CANDIDATE_POOL_SIZE,
   MAX_POST_AGE_DAYS,
   EXPLORATION_RATE,
+  TOP_INTEREST_TOPIC_COUNT,
 } from "../constants/feed.constants";
 import type { IPost } from "../models/post.model";
 import type { PaginatedPostsDto, PostResponseDto } from "../dtos/post.dto";
@@ -33,6 +34,12 @@ import { SavedPostModel } from "../models/saved-post.model";
 import { UserModel } from "../models/user.model";
 import { toUserMinimal } from "../dtos/user.dto";
 import { feedAnalyticsService } from "./feed-analytics.service";
+import { applyOutsideInterestExploration } from "../utils/feed-exploration.util";
+import { getTopProfileScoreKeys } from "../utils/profile-score.util";
+import {
+  canViewPostWithRelationship,
+  collectMutualCloseFriendIds,
+} from "../utils/relationship-visibility.util";
 
 export interface SocialIds {
   followingIds: Set<string>;
@@ -58,6 +65,7 @@ async function getSocialIds(userId: string): Promise<SocialIds> {
       .lean(),
     FollowModel.find({
       $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
+      followStatus: FollowStatus.ACCEPTED,
       closeFriendStatus: CloseFriendStatus.ACCEPTED,
     })
       .select("followerId followingId")
@@ -75,13 +83,10 @@ async function getSocialIds(userId: string): Promise<SocialIds> {
     if (followerIds.has(id)) friendIds.add(id);
   });
 
-  const closeFriendIds = new Set<string>();
-  (closeFriendRows as any[]).forEach((r) => {
-    const a = r.followerId?.toString();
-    const b = r.followingId?.toString();
-    if (a && a !== userId) closeFriendIds.add(a);
-    if (b && b !== userId) closeFriendIds.add(b);
-  });
+  const closeFriendIds = collectMutualCloseFriendIds(
+    userId,
+    closeFriendRows as any[]
+  );
 
   return { followingIds, friendIds, closeFriendIds };
 }
@@ -119,19 +124,14 @@ function canViewPost(
   if (!authorId) return false;
   if (authorId === currentUserId) return true;
 
-  const visibility = post.visibility as PostVisibility | undefined;
-  switch (visibility) {
-    case PostVisibility.PUBLIC:
-      return true;
-    case PostVisibility.PRIVATE:
-      return false;
-    case PostVisibility.FRIENDS:
-      return social.friendIds.has(authorId);
-    case PostVisibility.BESTFRIENDS:
-      return social.closeFriendIds.has(authorId);
-    default:
-      return false;
-  }
+  return canViewPostWithRelationship({
+    visibility: post.visibility,
+    authorId,
+    viewerId: currentUserId,
+    friendIds: social.friendIds,
+    closeFriendIds: social.closeFriendIds,
+    blockedUserIds: new Set(),
+  });
 }
 
 export type PostRelationsForFeed = {
@@ -262,29 +262,6 @@ async function loadPostRelationsForFeedBatch(
   }
 
   return result;
-}
-
-function applyExploration<T>(sorted: T[], explorationRate: number): T[] {
-  if (sorted.length <= 1 || explorationRate <= 0) return sorted;
-
-  const keepTop = Math.max(
-    1,
-    Math.floor(sorted.length * (1 - explorationRate))
-  );
-  const top = sorted.slice(0, keepTop);
-  const rest = sorted.slice(keepTop);
-  if (rest.length === 0) return top;
-
-  const shuffle = <T>(arr: T[]): T[] => {
-    const out = [...arr];
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
-    return out;
-  };
-
-  return [...top, ...shuffle(rest)];
 }
 
 export const FeedService = {
@@ -466,7 +443,17 @@ export const FeedService = {
       social.followingIds
     );
 
-    const withExploration = applyExploration(scored, EXPLORATION_RATE);
+    const topInterestTopics = new Set(
+      getTopProfileScoreKeys(
+        (userProfile as any)?.topicScores,
+        TOP_INTEREST_TOPIC_COUNT
+      )
+    );
+    const withExploration = applyOutsideInterestExploration(
+      scored,
+      topInterestTopics,
+      EXPLORATION_RATE
+    );
     // total = kích thước pool đã lọc (tối đa CANDIDATE_POOL_SIZE), không phải tổng bài trong DB
     const total = withExploration.length;
     const totalPages = Math.ceil(total / limit);

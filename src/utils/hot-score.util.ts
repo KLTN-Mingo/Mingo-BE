@@ -1,8 +1,11 @@
 // src/utils/hot-score.util.ts
 import { IPost }              from "../models/post.model";
-import { POPULARITY_GRAVITY } from "../constants/feed.constants";
+import {
+  HOT_SCORE_MULTIPLIER,
+  POPULARITY_GRAVITY,
+} from "../constants/feed.constants";
 
-export function calculateHotScore(post: IPost): number {
+export function calculateHotScore(post: IPost, now: Date = new Date()): number {
   const engagements =
     (post.likesCount    ?? 0) * 3 +
     (post.commentsCount ?? 0) * 4 +
@@ -11,8 +14,9 @@ export function calculateHotScore(post: IPost): number {
     (post.viewsCount    ?? 0) * 0.1;
 
   const ageHours =
-    (Date.now() - new Date(post.createdAt).getTime()) / 3_600_000;
+    Math.max(0, now.getTime() - new Date(post.createdAt).getTime()) / 3_600_000;
 
   const raw = engagements / Math.pow(ageHours + 2, POPULARITY_GRAVITY);
-  return Math.round(raw * 100) / 100;
+  const hotScore = raw * HOT_SCORE_MULTIPLIER;
+  return Math.round(hotScore * 100) / 100;
 }

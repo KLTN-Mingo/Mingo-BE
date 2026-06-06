@@ -6,8 +6,12 @@ import { FollowModel }  from "../models/follow.model";
 import {
   SCORE_WEIGHTS,
   COLD_START_THRESHOLD,
-  POPULARITY_GRAVITY,
 } from "../constants/feed.constants";
+import {
+  getEffectiveProfileScore,
+  ProfileScoreValue,
+} from "../utils/profile-score.util";
+import { calculateHotScore } from "../utils/hot-score.util";
 
 export interface ScoredPost {
   post:  IPost;
@@ -22,13 +26,20 @@ export interface ScoredPost {
 
 /** Mongoose Map khi .lean() trở thành plain object — không có .get */
 function scoreFromMapOrRecord(
-  scores: Map<string, number> | Record<string, number> | undefined | null,
-  key: string
+  scores:
+    | Map<string, ProfileScoreValue>
+    | Record<string, ProfileScoreValue>
+    | undefined
+    | null,
+  key: string,
+  now: Date
 ): number {
   if (scores == null) return 0;
-  if (scores instanceof Map) return scores.get(key) ?? 0;
-  const v = (scores as Record<string, number>)[key];
-  return typeof v === "number" ? v : 0;
+  const value =
+    scores instanceof Map
+      ? scores.get(key)
+      : (scores as Record<string, ProfileScoreValue>)[key];
+  return getEffectiveProfileScore(value, now);
 }
 
 export class ScoringService {
@@ -39,7 +50,8 @@ export class ScoringService {
     posts:         IPost[],
     userId:        string,
     userProfile:   IUserProfile | null,
-    followingIds?: Set<string>
+    followingIds?: Set<string>,
+    now: Date = new Date()
   ): Promise<ScoredPost[]> {
     const isNewUser = this.isColdStart(userProfile);
     const weights   = isNewUser ? SCORE_WEIGHTS.cold_start : SCORE_WEIGHTS.normal;
@@ -47,7 +59,7 @@ export class ScoringService {
 
     const results = await Promise.all(
       posts.map((post) =>
-        this.scoreOne(post, userProfile, following, weights)
+        this.scoreOne(post, userProfile, following, weights, now)
       )
     );
 
@@ -60,10 +72,11 @@ export class ScoringService {
     post:         IPost,
     userProfile:  IUserProfile | null,
     followingIds: Set<string>,
-    weights:      typeof SCORE_WEIGHTS.normal
+    weights:      typeof SCORE_WEIGHTS.normal,
+    now:          Date
   ): ScoredPost {
-    const cs = this.contentScore(post, userProfile);
-    const ps = this.popularityScore(post);
+    const cs = this.contentScore(post, userProfile, now);
+    const ps = this.popularityScore(post, now);
     const ss = this.socialScore(post, followingIds);
 
     const final =
@@ -83,7 +96,8 @@ export class ScoringService {
 
   private contentScore(
     post:        IPost,
-    userProfile: IUserProfile | null
+    userProfile: IUserProfile | null,
+    now:         Date
   ): number {
     if (!userProfile) return 0;
 
@@ -97,7 +111,8 @@ export class ScoringService {
       const key = topic.replace(/\./g, "_");
       score += scoreFromMapOrRecord(
         userProfile.topicScores as any,
-        key
+        key,
+        now
       );
     }
 
@@ -106,7 +121,8 @@ export class ScoringService {
     if (authorId) {
       score += scoreFromMapOrRecord(
         userProfile.authorScores as any,
-        authorId
+        authorId,
+        now
       ) * 1.2;
     }
 
@@ -116,23 +132,11 @@ export class ScoringService {
   // ─── Score 2: Popularity ──────────────────────────────────────────────────
   // Dùng Post.hotScore đã cache; fallback tính tạm nếu chưa có cron
 
-  private popularityScore(post: IPost): number {
+  private popularityScore(post: IPost, now: Date): number {
     if (post.hotScore > 0) {
       return Math.min(post.hotScore, 100);
     }
-
-    const engagements =
-      (post.likesCount    ?? 0) * 3 +
-      (post.commentsCount ?? 0) * 4 +
-      (post.sharesCount   ?? 0) * 5 +
-      (post.savesCount    ?? 0) * 4 +
-      (post.viewsCount    ?? 0) * 0.1;
-
-    const ageHours =
-      (Date.now() - new Date(post.createdAt).getTime()) / 3_600_000;
-
-    const raw = engagements / Math.pow(ageHours + 2, POPULARITY_GRAVITY);
-    return Math.min(raw * 2, 100);
+    return Math.min(calculateHotScore(post, now), 100);
   }
 
   // ─── Score 3: Social graph ────────────────────────────────────────────────

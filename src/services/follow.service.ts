@@ -1,6 +1,6 @@
 // src/services/follow.service.ts
 
-import { Types } from "mongoose";
+import mongoose, { ClientSession, Types } from "mongoose";
 import {
   FollowModel,
   FollowStatus,
@@ -34,6 +34,9 @@ import {
   determineRelationshipType,
 } from "../dtos/follow.dto";
 import { NotificationService } from "./notification.service";
+import { BlockModel } from "../models/block.model";
+import { invalidateRelationshipCaches } from "./relationship-cache.service";
+import { isAcceptedRelationship } from "../utils/relationship.util";
 
 // Helper: validate ObjectId
 function assertObjectId(id: string, label: string) {
@@ -49,6 +52,86 @@ async function assertUserExists(userId: string, label = "Người dùng") {
     throw new NotFoundError(`${label} không tồn tại`);
   }
   return user;
+}
+
+async function withRelationshipTransaction<T>(
+  work: (session: ClientSession) => Promise<T>
+): Promise<T> {
+  const session = await mongoose.startSession();
+  try {
+    let result: T | undefined;
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+    return result as T;
+  } finally {
+    await session.endSession();
+  }
+}
+
+async function assertUsersNotBlocked(
+  firstUserId: string,
+  secondUserId: string,
+  session?: ClientSession
+): Promise<void> {
+  const block = await BlockModel.findOne({
+    $or: [
+      { blockerId: firstUserId, blockedId: secondUserId },
+      { blockerId: secondUserId, blockedId: firstUserId },
+    ],
+  })
+    .session(session || null)
+    .lean();
+
+  if (block) {
+    throw new ForbiddenError("Không thể thực hiện thao tác do quan hệ chặn");
+  }
+}
+
+async function adjustUserCounter(
+  userId: Types.ObjectId | string,
+  field: "followersCount" | "followingCount",
+  delta: number,
+  session: ClientSession
+): Promise<void> {
+  await UserModel.updateOne(
+    { _id: userId },
+    [
+      {
+        $set: {
+          [field]: {
+            $max: [
+              0,
+              {
+                $add: [{ $ifNull: [`$${field}`, 0] }, delta],
+              },
+            ],
+          },
+        },
+      },
+    ],
+    { session, updatePipeline: true }
+  );
+}
+
+async function clearCloseFriendState(
+  firstUserId: string,
+  secondUserId: string,
+  session: ClientSession
+): Promise<void> {
+  await FollowModel.updateMany(
+    {
+      $or: [
+        { followerId: firstUserId, followingId: secondUserId },
+        { followerId: secondUserId, followingId: firstUserId },
+      ],
+    },
+    {
+      $set: { closeFriendStatus: CloseFriendStatus.NONE },
+      $unset: { closeFriendRequestedBy: 1, closeFriendRequestedAt: 1 },
+    },
+    { session }
+  );
 }
 
 export const FollowService = {
@@ -70,6 +153,8 @@ export const FollowService = {
 
     await assertUserExists(followingId, "Người dùng bạn muốn follow");
 
+    await assertUsersNotBlocked(followerId, followingId);
+
     // Check if already exists
     const existing = await FollowModel.findOne({
       followerId: new Types.ObjectId(followerId),
@@ -85,16 +170,32 @@ export const FollowService = {
       }
       // If rejected, allow re-request
       existing.followStatus = FollowStatus.PENDING;
+      existing.closeFriendStatus = CloseFriendStatus.NONE;
+      existing.closeFriendRequestedBy = undefined;
+      existing.closeFriendRequestedAt = undefined;
       await existing.save();
+      void NotificationService.notifyFollowRequest(followingId, followerId).catch(
+        (err) => {
+          console.error("[FollowService] notify follow request error:", err);
+        }
+      );
       return this.toFollowResponse(existing);
     }
 
-    const follow = await FollowModel.create({
-      followerId: new Types.ObjectId(followerId),
-      followingId: new Types.ObjectId(followingId),
-      followStatus: FollowStatus.PENDING,
-      closeFriendStatus: CloseFriendStatus.NONE,
-    });
+    let follow;
+    try {
+      follow = await FollowModel.create({
+        followerId: new Types.ObjectId(followerId),
+        followingId: new Types.ObjectId(followingId),
+        followStatus: FollowStatus.PENDING,
+        closeFriendStatus: CloseFriendStatus.NONE,
+      });
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        throw new ConflictError("Yêu cầu follow đã tồn tại");
+      }
+      throw error;
+    }
 
     void NotificationService.notifyFollowRequest(followingId, followerId).catch(
       (err) => {
@@ -113,34 +214,49 @@ export const FollowService = {
   ): Promise<FollowResponseDto> {
     assertObjectId(requestId, "ID yêu cầu");
 
-    const follow = await FollowModel.findById(requestId);
-    if (!follow) {
-      throw new NotFoundError("Yêu cầu follow không tồn tại");
-    }
+    const follow = await withRelationshipTransaction(async (session) => {
+      const current = await FollowModel.findById(requestId).session(session);
+      if (!current) {
+        throw new NotFoundError("Yêu cầu follow không tồn tại");
+      }
+      if (current.followingId.toString() !== userId) {
+        throw new ForbiddenError("Bạn không có quyền phản hồi yêu cầu này");
+      }
 
-    // Only the followingId (receiver) can respond
-    if (follow.followingId.toString() !== userId) {
-      throw new ForbiddenError("Bạn không có quyền phản hồi yêu cầu này");
-    }
+      const updated = await FollowModel.findOneAndUpdate(
+        {
+          _id: current._id,
+          followingId: new Types.ObjectId(userId),
+          followStatus: FollowStatus.PENDING,
+        },
+        {
+          $set: {
+            followStatus: accept
+              ? FollowStatus.ACCEPTED
+              : FollowStatus.REJECTED,
+          },
+        },
+        { new: true, session }
+      );
+      if (!updated) {
+        throw new ConflictError("Yêu cầu này đã được xử lý");
+      }
 
-    if (follow.followStatus !== FollowStatus.PENDING) {
-      throw new ConflictError("Yêu cầu này đã được xử lý");
-    }
+      if (accept) {
+        await Promise.all([
+          adjustUserCounter(updated.followerId, "followingCount", 1, session),
+          adjustUserCounter(updated.followingId, "followersCount", 1, session),
+        ]);
+      }
+      return updated;
+    });
 
-    follow.followStatus = accept ? FollowStatus.ACCEPTED : FollowStatus.REJECTED;
-    await follow.save();
+    await invalidateRelationshipCaches(
+      follow.followerId.toString(),
+      follow.followingId.toString()
+    );
 
-    // Update follower/following counts if accepted
     if (accept) {
-      await Promise.all([
-        UserModel.findByIdAndUpdate(follow.followerId, {
-          $inc: { followingCount: 1 },
-        }),
-        UserModel.findByIdAndUpdate(follow.followingId, {
-          $inc: { followersCount: 1 },
-        }),
-      ]);
-
       void NotificationService.notifyFollowAccepted(
         follow.followerId.toString(),
         userId
@@ -176,56 +292,54 @@ export const FollowService = {
   async unfollow(followerId: string, followingId: string): Promise<void> {
     assertObjectId(followingId, "ID người được follow");
 
-    const follow = await FollowModel.findOne({
-      followerId: new Types.ObjectId(followerId),
-      followingId: new Types.ObjectId(followingId),
+    await withRelationshipTransaction(async (session) => {
+      const follow = await FollowModel.findOne({
+        followerId: new Types.ObjectId(followerId),
+        followingId: new Types.ObjectId(followingId),
+      }).session(session);
+
+      if (!follow) {
+        throw new NotFoundError("Bạn chưa follow người này");
+      }
+
+      await FollowModel.deleteOne({ _id: follow._id }, { session });
+      await clearCloseFriendState(followerId, followingId, session);
+
+      if (follow.followStatus === FollowStatus.ACCEPTED) {
+        await Promise.all([
+          adjustUserCounter(followerId, "followingCount", -1, session),
+          adjustUserCounter(followingId, "followersCount", -1, session),
+        ]);
+      }
     });
 
-    if (!follow) {
-      throw new NotFoundError("Bạn chưa follow người này");
-    }
-
-    const wasAccepted = follow.followStatus === FollowStatus.ACCEPTED;
-
-    await follow.deleteOne();
-
-    // Update counts if was accepted
-    if (wasAccepted) {
-      await Promise.all([
-        UserModel.findByIdAndUpdate(followerId, {
-          $inc: { followingCount: -1 },
-        }),
-        UserModel.findByIdAndUpdate(followingId, {
-          $inc: { followersCount: -1 },
-        }),
-      ]);
-    }
+    await invalidateRelationshipCaches(followerId, followingId);
   },
 
   // Xóa follower (remove someone who follows you)
   async removeFollower(userId: string, followerId: string): Promise<void> {
     assertObjectId(followerId, "ID người follow");
 
-    const follow = await FollowModel.findOne({
-      followerId: new Types.ObjectId(followerId),
-      followingId: new Types.ObjectId(userId),
-      followStatus: FollowStatus.ACCEPTED,
+    await withRelationshipTransaction(async (session) => {
+      const follow = await FollowModel.findOne({
+        followerId: new Types.ObjectId(followerId),
+        followingId: new Types.ObjectId(userId),
+        followStatus: FollowStatus.ACCEPTED,
+      }).session(session);
+
+      if (!follow) {
+        throw new NotFoundError("Người này không follow bạn");
+      }
+
+      await FollowModel.deleteOne({ _id: follow._id }, { session });
+      await clearCloseFriendState(userId, followerId, session);
+      await Promise.all([
+        adjustUserCounter(followerId, "followingCount", -1, session),
+        adjustUserCounter(userId, "followersCount", -1, session),
+      ]);
     });
 
-    if (!follow) {
-      throw new NotFoundError("Người này không follow bạn");
-    }
-
-    await follow.deleteOne();
-
-    await Promise.all([
-      UserModel.findByIdAndUpdate(followerId, {
-        $inc: { followingCount: -1 },
-      }),
-      UserModel.findByIdAndUpdate(userId, {
-        $inc: { followersCount: -1 },
-      }),
-    ]);
+    await invalidateRelationshipCaches(userId, followerId);
   },
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -243,49 +357,56 @@ export const FollowService = {
       throw new ValidationError("Không thể tự gửi request bạn thân cho mình");
     }
 
-    // Check if they are mutual friends (both follow each other)
-    const [followToTarget, followFromTarget] = await Promise.all([
-      FollowModel.findOne({
-        followerId: new Types.ObjectId(requesterId),
-        followingId: new Types.ObjectId(targetId),
-        followStatus: FollowStatus.ACCEPTED,
-      }),
-      FollowModel.findOne({
-        followerId: new Types.ObjectId(targetId),
-        followingId: new Types.ObjectId(requesterId),
-        followStatus: FollowStatus.ACCEPTED,
-      }),
-    ]);
+    const updated = await withRelationshipTransaction(async (session) => {
+      await assertUsersNotBlocked(requesterId, targetId, session);
 
-    if (!followToTarget || !followFromTarget) {
-      throw new ValidationError(
-        "Cả hai phải là bạn bè (mutual follow) mới có thể gửi request bạn thân"
+      const rows = await FollowModel.find({
+        $or: [
+          { followerId: requesterId, followingId: targetId },
+          { followerId: targetId, followingId: requesterId },
+        ],
+        followStatus: FollowStatus.ACCEPTED,
+      }).session(session);
+
+      if (rows.length !== 2) {
+        throw new ValidationError(
+          "Cả hai phải là bạn bè (mutual follow) mới có thể gửi request bạn thân"
+        );
+      }
+      if (
+        rows.some(
+          (row) => row.closeFriendStatus === CloseFriendStatus.ACCEPTED
+        )
+      ) {
+        throw new ConflictError("Hai bạn đã là bạn thân rồi");
+      }
+      if (
+        rows.some((row) => row.closeFriendStatus === CloseFriendStatus.PENDING)
+      ) {
+        throw new ConflictError("Yêu cầu bạn thân đang chờ xác nhận");
+      }
+
+      const now = new Date();
+      const result = await FollowModel.updateMany(
+        { _id: { $in: rows.map((row) => row._id) } },
+        {
+          $set: {
+            closeFriendStatus: CloseFriendStatus.PENDING,
+            closeFriendRequestedBy: new Types.ObjectId(requesterId),
+            closeFriendRequestedAt: now,
+          },
+        },
+        { session }
       );
-    }
+      if (result.modifiedCount !== 2) {
+        throw new ConflictError("Quan hệ bạn bè đã thay đổi, vui lòng thử lại");
+      }
 
-    // Check current close friend status
-    if (followToTarget.closeFriendStatus === CloseFriendStatus.ACCEPTED) {
-      throw new ConflictError("Hai bạn đã là bạn thân rồi");
-    }
-
-    if (followToTarget.closeFriendStatus === CloseFriendStatus.PENDING) {
-      throw new ConflictError("Yêu cầu bạn thân đang chờ xác nhận");
-    }
-
-    // Update both follow records
-    const now = new Date();
-    await Promise.all([
-      FollowModel.findByIdAndUpdate(followToTarget._id, {
-        closeFriendStatus: CloseFriendStatus.PENDING,
-        closeFriendRequestedBy: new Types.ObjectId(requesterId),
-        closeFriendRequestedAt: now,
-      }),
-      FollowModel.findByIdAndUpdate(followFromTarget._id, {
-        closeFriendStatus: CloseFriendStatus.PENDING,
-        closeFriendRequestedBy: new Types.ObjectId(requesterId),
-        closeFriendRequestedAt: now,
-      }),
-    ]);
+      return FollowModel.findOne({
+        followerId: requesterId,
+        followingId: targetId,
+      }).session(session);
+    });
 
     void NotificationService.notifyCloseFriendRequest(targetId, requesterId).catch(
       (err) => {
@@ -293,7 +414,7 @@ export const FollowService = {
       }
     );
 
-    const updated = await FollowModel.findById(followToTarget._id);
+    await invalidateRelationshipCaches(requesterId, targetId);
     return this.toFollowResponse(updated!);
   },
 
@@ -305,100 +426,165 @@ export const FollowService = {
   ): Promise<FollowResponseDto> {
     assertObjectId(requestId, "ID yêu cầu");
 
-    const follow = await FollowModel.findById(requestId);
-    if (!follow) {
-      throw new NotFoundError("Yêu cầu không tồn tại");
-    }
+    const result = await withRelationshipTransaction(async (session) => {
+      const follow = await FollowModel.findById(requestId).session(session);
+      if (!follow) {
+        throw new NotFoundError("Yêu cầu không tồn tại");
+      }
+      if (follow.closeFriendStatus !== CloseFriendStatus.PENDING) {
+        throw new ConflictError("Yêu cầu này đã được xử lý");
+      }
 
-    if (follow.closeFriendStatus !== CloseFriendStatus.PENDING) {
-      throw new ConflictError("Yêu cầu này đã được xử lý");
-    }
+      const requesterId = follow.closeFriendRequestedBy?.toString();
+      if (!requesterId || requesterId === userId) {
+        throw new ForbiddenError("Bạn không thể phản hồi request này");
+      }
 
-    // Only the non-requester can respond
-    if (follow.closeFriendRequestedBy?.toString() === userId) {
-      throw new ForbiddenError("Bạn không thể phản hồi request của chính mình");
-    }
+      const participantIds = [
+        follow.followerId.toString(),
+        follow.followingId.toString(),
+      ];
+      if (!participantIds.includes(userId)) {
+        throw new ForbiddenError("Bạn không có quyền phản hồi yêu cầu này");
+      }
 
-    // Make sure user is part of this relationship
-    const isFollower = follow.followerId.toString() === userId;
-    const isFollowing = follow.followingId.toString() === userId;
-    if (!isFollower && !isFollowing) {
-      throw new ForbiddenError("Bạn không có quyền phản hồi yêu cầu này");
-    }
+      const otherUserId = participantIds.find((id) => id !== userId);
+      if (!otherUserId || otherUserId !== requesterId) {
+        throw new ForbiddenError("Yêu cầu không thuộc về người dùng này");
+      }
 
-    const newStatus = accept
-      ? CloseFriendStatus.ACCEPTED
-      : CloseFriendStatus.REJECTED;
-
-    const requesterId = follow.closeFriendRequestedBy?.toString();
-
-    // Update both follow records
-    const otherUserId = isFollower
-      ? follow.followingId
-      : follow.followerId;
-
-    await Promise.all([
-      FollowModel.findByIdAndUpdate(follow._id, {
-        closeFriendStatus: newStatus,
-      }),
-      FollowModel.findOneAndUpdate(
+      const newStatus = accept
+        ? CloseFriendStatus.ACCEPTED
+        : CloseFriendStatus.REJECTED;
+      const update = await FollowModel.updateMany(
         {
-          followerId: otherUserId,
-          followingId: new Types.ObjectId(userId),
+          $or: [
+            { followerId: userId, followingId: otherUserId },
+            { followerId: otherUserId, followingId: userId },
+          ],
+          followStatus: FollowStatus.ACCEPTED,
+          closeFriendStatus: CloseFriendStatus.PENDING,
+          closeFriendRequestedBy: new Types.ObjectId(requesterId),
         },
         {
-          closeFriendStatus: newStatus,
-        }
-      ),
-    ]);
+          $set: { closeFriendStatus: newStatus },
+          $unset: { closeFriendRequestedBy: 1, closeFriendRequestedAt: 1 },
+        },
+        { session }
+      );
+      if (update.modifiedCount !== 2) {
+        throw new ConflictError("Quan hệ bạn bè đã thay đổi, vui lòng thử lại");
+      }
 
-    if (accept && requesterId) {
+      const updated = await FollowModel.findById(follow._id).session(session);
+      return { updated, requesterId, otherUserId };
+    });
+
+    await invalidateRelationshipCaches(userId, result.otherUserId);
+
+    if (accept) {
       void NotificationService.notifyCloseFriendAccepted(
-        requesterId,
+        result.requesterId,
         userId
       ).catch((err) => {
         console.error("[FollowService] notify close-friend accepted error:", err);
       });
     }
 
-    const updated = await FollowModel.findById(follow._id);
-    return this.toFollowResponse(updated!);
+    return this.toFollowResponse(result.updated!);
   },
 
   // Hủy bạn thân
   async removeCloseFriend(userId: string, targetId: string): Promise<void> {
     assertObjectId(targetId, "ID người dùng");
 
-    const [follow1, follow2] = await Promise.all([
-      FollowModel.findOne({
-        followerId: new Types.ObjectId(userId),
-        followingId: new Types.ObjectId(targetId),
-      }),
-      FollowModel.findOne({
-        followerId: new Types.ObjectId(targetId),
-        followingId: new Types.ObjectId(userId),
-      }),
-    ]);
+    await withRelationshipTransaction(async (session) => {
+      const existing = await FollowModel.exists({
+        $or: [
+          { followerId: userId, followingId: targetId },
+          { followerId: targetId, followingId: userId },
+        ],
+        closeFriendStatus: {
+          $in: [CloseFriendStatus.PENDING, CloseFriendStatus.ACCEPTED],
+        },
+      }).session(session);
+      if (!existing) {
+        throw new NotFoundError("Không tìm thấy quan hệ bạn thân");
+      }
 
-    if (!follow1 && !follow2) {
-      throw new NotFoundError("Không tìm thấy quan hệ với người này");
+      await clearCloseFriendState(userId, targetId, session);
+    });
+
+    await invalidateRelationshipCaches(userId, targetId);
+  },
+
+  async blockUser(
+    blockerId: string,
+    blockedId: string,
+    reason?: string
+  ): Promise<{ id: string; blockedId: string }> {
+    assertObjectId(blockedId, "ID người dùng");
+    if (blockerId === blockedId) {
+      throw new ValidationError("Không thể chặn chính mình");
     }
+    await assertUserExists(blockedId);
 
-    // Reset close friend status on both
-    await Promise.all([
-      follow1 &&
-        FollowModel.findByIdAndUpdate(follow1._id, {
-          closeFriendStatus: CloseFriendStatus.NONE,
-          closeFriendRequestedBy: undefined,
-          closeFriendRequestedAt: undefined,
-        }),
-      follow2 &&
-        FollowModel.findByIdAndUpdate(follow2._id, {
-          closeFriendStatus: CloseFriendStatus.NONE,
-          closeFriendRequestedBy: undefined,
-          closeFriendRequestedAt: undefined,
-        }),
-    ]);
+    const block = await withRelationshipTransaction(async (session) => {
+      const existingBlock = await BlockModel.findOne({
+        blockerId,
+        blockedId,
+      }).session(session);
+      if (existingBlock) {
+        throw new ConflictError("Đã chặn người dùng này trước đó");
+      }
+
+      const followRows = await FollowModel.find({
+        $or: [
+          { followerId: blockerId, followingId: blockedId },
+          { followerId: blockedId, followingId: blockerId },
+        ],
+      }).session(session);
+
+      for (const row of followRows) {
+        if (row.followStatus !== FollowStatus.ACCEPTED) continue;
+        await Promise.all([
+          adjustUserCounter(row.followerId, "followingCount", -1, session),
+          adjustUserCounter(row.followingId, "followersCount", -1, session),
+        ]);
+      }
+
+      await FollowModel.deleteMany(
+        {
+          $or: [
+            { followerId: blockerId, followingId: blockedId },
+            { followerId: blockedId, followingId: blockerId },
+          ],
+        },
+        { session }
+      );
+
+      try {
+        const [created] = await BlockModel.create(
+          [
+            {
+              blockerId: new Types.ObjectId(blockerId),
+              blockedId: new Types.ObjectId(blockedId),
+              reason: reason?.slice(0, 500),
+            },
+          ],
+          { session }
+        );
+        return created;
+      } catch (error: any) {
+        if (error?.code === 11000) {
+          throw new ConflictError("Đã chặn người dùng này trước đó");
+        }
+        throw error;
+      }
+    });
+
+    await invalidateRelationshipCaches(blockerId, blockedId);
+    return { id: block._id.toString(), blockedId };
   },
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -583,11 +769,17 @@ export const FollowService = {
       followingId: userObjectId,
       followStatus: FollowStatus.ACCEPTED,
     })
-      .select("followerId createdAt")
+      .select("followerId closeFriendStatus createdAt")
       .lean();
 
     const mutualSet = new Map(
-      mutualFollows.map((f) => [f.followerId.toString(), f.createdAt])
+      mutualFollows.map((f) => [
+        f.followerId.toString(),
+        {
+          createdAt: f.createdAt,
+          closeFriendStatus: f.closeFriendStatus,
+        },
+      ])
     );
 
     // Filter to only mutual
@@ -613,15 +805,23 @@ export const FollowService = {
         const friendsSince = new Date(
           Math.max(
             f.createdAt.getTime(),
-            mutualSet.get(f.followingId.toString())?.getTime() || 0
+            mutualSet
+              .get(f.followingId.toString())
+              ?.createdAt.getTime() || 0
           )
         );
+        const isCloseFriend =
+          f.closeFriendStatus === CloseFriendStatus.ACCEPTED &&
+          mutualSet.get(f.followingId.toString())?.closeFriendStatus ===
+            CloseFriendStatus.ACCEPTED;
 
         return {
           id: f.followingId.toString(),
           user: user ? toUserMinimal(user) : { id: f.followingId.toString(), verified: false },
-          isCloseFriend: f.closeFriendStatus === CloseFriendStatus.ACCEPTED,
-          closeFriendStatus: f.closeFriendStatus,
+          isCloseFriend,
+          closeFriendStatus: isCloseFriend
+            ? CloseFriendStatus.ACCEPTED
+            : CloseFriendStatus.NONE,
           friendsSince,
         };
       }),
@@ -649,15 +849,33 @@ export const FollowService = {
       closeFriendStatus: CloseFriendStatus.ACCEPTED,
     };
 
-    const [closeFriends, total] = await Promise.all([
-      FollowModel.find(query)
-        .populate("followingId", "name avatar verified")
-        .sort({ closeFriendRequestedAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      FollowModel.countDocuments(query),
-    ]);
+    const candidates = await FollowModel.find(query)
+      .populate("followingId", "name avatar verified")
+      .sort({ closeFriendRequestedAt: -1 })
+      .lean();
+
+    const candidateIds = candidates
+      .map((row) => (row.followingId as any)?._id)
+      .filter(Boolean);
+    const reverseRows = await FollowModel.find({
+      followerId: { $in: candidateIds },
+      followingId: new Types.ObjectId(userId),
+      followStatus: FollowStatus.ACCEPTED,
+      closeFriendStatus: CloseFriendStatus.ACCEPTED,
+    })
+      .select("followerId")
+      .lean();
+    const reverseIds = new Set(
+      reverseRows.map((row) => row.followerId.toString())
+    );
+    const validCloseFriends = candidates.filter((row) =>
+      reverseIds.has((row.followingId as any)?._id?.toString())
+    );
+    const total = validCloseFriends.length;
+    const closeFriends = validCloseFriends.slice(
+      (page - 1) * limit,
+      page * limit
+    );
 
     const totalPages = Math.ceil(total / limit);
 
@@ -764,10 +982,8 @@ export const FollowService = {
     limit = 20
   ): Promise<PaginatedCloseFriendRequestsDto> {
     const query = {
-      $or: [
-        { followerId: new Types.ObjectId(userId) },
-        { followingId: new Types.ObjectId(userId) },
-      ],
+      followingId: new Types.ObjectId(userId),
+      followStatus: FollowStatus.ACCEPTED,
       closeFriendStatus: CloseFriendStatus.PENDING,
       closeFriendRequestedBy: { $ne: new Types.ObjectId(userId) },
     };
@@ -828,7 +1044,7 @@ export const FollowService = {
       };
     }
 
-    const [followToTarget, followFromTarget] = await Promise.all([
+    const [followToTarget, followFromTarget, block] = await Promise.all([
       FollowModel.findOne({
         followerId: new Types.ObjectId(currentUserId),
         followingId: new Types.ObjectId(targetUserId),
@@ -837,10 +1053,27 @@ export const FollowService = {
         followerId: new Types.ObjectId(targetUserId),
         followingId: new Types.ObjectId(currentUserId),
       }).lean(),
+      BlockModel.findOne({
+        $or: [
+          { blockerId: currentUserId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: currentUserId },
+        ],
+      }).lean(),
     ]);
 
-    const isFollowing = !!followToTarget;
-    const isFollower = !!followFromTarget;
+    if (block) {
+      return {
+        isFollowing: false,
+        isFollower: false,
+        isFriend: false,
+        isCloseFriend: false,
+        closeFriendStatus: CloseFriendStatus.NONE,
+        relationshipType: RelationshipType.NONE,
+      };
+    }
+
+    const isFollowing = isAcceptedRelationship(followToTarget);
+    const isFollower = isAcceptedRelationship(followFromTarget);
     const followStatus = followToTarget?.followStatus;
     const followerStatus = followFromTarget?.followStatus;
 
@@ -850,9 +1083,18 @@ export const FollowService = {
       followStatus === FollowStatus.ACCEPTED &&
       followerStatus === FollowStatus.ACCEPTED;
 
-    const closeFriendStatus =
+    const hasMutualCloseFriendState =
+      isFriend &&
+      followToTarget?.closeFriendStatus === CloseFriendStatus.ACCEPTED &&
+      followFromTarget?.closeFriendStatus === CloseFriendStatus.ACCEPTED;
+    const rawCloseFriendStatus =
       followToTarget?.closeFriendStatus || CloseFriendStatus.NONE;
-    const isCloseFriend = closeFriendStatus === CloseFriendStatus.ACCEPTED;
+    const closeFriendStatus = hasMutualCloseFriendState
+      ? CloseFriendStatus.ACCEPTED
+      : rawCloseFriendStatus === CloseFriendStatus.ACCEPTED
+        ? CloseFriendStatus.NONE
+        : rawCloseFriendStatus;
+    const isCloseFriend = hasMutualCloseFriendState;
 
     const relationshipType = determineRelationshipType(
       isFollowing,
@@ -899,6 +1141,7 @@ export const FollowService = {
       }),
       FollowModel.countDocuments({
         followerId: userObjectId,
+        followStatus: FollowStatus.ACCEPTED,
         closeFriendStatus: CloseFriendStatus.ACCEPTED,
       }),
       FollowModel.countDocuments({
@@ -906,7 +1149,8 @@ export const FollowService = {
         followStatus: FollowStatus.PENDING,
       }),
       FollowModel.countDocuments({
-        $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
+        followingId: userObjectId,
+        followStatus: FollowStatus.ACCEPTED,
         closeFriendStatus: CloseFriendStatus.PENDING,
         closeFriendRequestedBy: { $ne: userObjectId },
       }),

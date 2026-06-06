@@ -2,11 +2,12 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { asyncHandler } from "../utils/async-handler";
-import { ValidationError, NotFoundError, ConflictError } from "../errors";
+import { ValidationError } from "../errors";
 import { sendSuccess, sendPaginated } from "../utils/response";
 import { BlockModel } from "../models/block.model";
 import { UserModel } from "../models/user.model";
 import { toUserMinimal } from "../dtos/user.dto";
+import { FollowService } from "../services/follow.service";
 
 /**
  * @route   POST /api/follow/blocks
@@ -26,23 +27,8 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError("Không thể chặn chính mình");
   }
 
-  const target = await UserModel.findById(targetId);
-  if (!target) throw new NotFoundError("Không tìm thấy người dùng");
-
-  try {
-    await BlockModel.create({
-      blockerId: new Types.ObjectId(me),
-      blockedId: new Types.ObjectId(targetId),
-      reason: reason?.slice(0, 500),
-    });
-  } catch (e: any) {
-    if (e?.code === 11000) {
-      throw new ConflictError("Đã chặn người dùng này trước đó");
-    }
-    throw e;
-  }
-
-  sendSuccess(res, { blockedId: targetId }, "Đã chặn người dùng");
+  const result = await FollowService.blockUser(me, targetId, reason);
+  sendSuccess(res, result, "Đã chặn người dùng");
 });
 
 /**

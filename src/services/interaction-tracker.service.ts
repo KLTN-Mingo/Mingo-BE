@@ -11,9 +11,13 @@ import { PostModel } from "../models/post.model";
 import { PostHashtagModel } from "../models/post-hashtag.model";
 import {
   INTERACTION_WEIGHTS,
-  INTERACTION_DECAY,
+  INTERACTION_SIGNAL_MULTIPLIERS,
   MIN_VIEW_DURATION_SECONDS,
 } from "../constants/interaction.constants";
+import {
+  ProfileScoreEntry,
+  updateProfileScoreMap,
+} from "../utils/profile-score.util";
 
 export interface TrackPayload {
   userId:       string;
@@ -26,6 +30,7 @@ export interface TrackPayload {
 }
 
 export class InteractionTrackerService {
+  private static readonly PROFILE_UPDATE_MAX_RETRIES = 3;
 
   // ─── Public ──────────────────────────────────────────────────────────────
 
@@ -86,48 +91,90 @@ export class InteractionTrackerService {
 
     if (!post) return;
 
-    const decay = INTERACTION_DECAY[type] ?? 1.0;
-    const delta = weight * decay;
-
-    const incUpdate: Record<string, number> = {};
-
-    // topicScores — từ Post.topics (đã có sẵn trong schema mới)
-    const topics: string[] = (post as any).topics ?? [];
-    for (const topic of topics) {
-      const key = `topicScores.${this.sanitizeKey(topic)}`;
-      incUpdate[key] = delta;
-    }
-
-    // authorScores — UserProfile có authorScores, dùng luôn
+    const signalMultiplier = INTERACTION_SIGNAL_MULTIPLIERS[type] ?? 1.0;
+    const delta = weight * signalMultiplier;
+    const topics = ((post as any).topics ?? []).map((topic: string) =>
+      this.sanitizeKey(topic)
+    );
     const authorId = (post as any).userId?.toString();
-    if (authorId) {
-      incUpdate[`authorScores.${authorId}`] = delta * 0.7;
-    }
 
-    // hashtagScores — từ PostHashtag (post không có field hashtags, nằm collection riêng)
     const postHashtags = await PostHashtagModel.find({ postId: new Types.ObjectId(postId) })
       .select("hashtag")
       .lean();
+    const hashtags = postHashtags.map(({ hashtag }) => this.sanitizeKey(hashtag));
 
-    for (const { hashtag } of postHashtags) {
-      const key = `hashtagScores.${this.sanitizeKey(hashtag)}`;
-      incUpdate[key] = delta * 0.9;
+    await this.updateProfileWithRetry({
+      userId,
+      topics,
+      hashtags,
+      authorId,
+      delta,
+      now: new Date(),
+    });
+  }
+
+  private async updateProfileWithRetry(input: {
+    userId: string;
+    topics: string[];
+    hashtags: string[];
+    authorId?: string;
+    delta: number;
+    now: Date;
+  }): Promise<void> {
+    for (
+      let attempt = 1;
+      attempt <= InteractionTrackerService.PROFILE_UPDATE_MAX_RETRIES;
+      attempt++
+    ) {
+      try {
+        const profile =
+          (await UserProfileModel.findOne({
+            userId: new Types.ObjectId(input.userId),
+          })) ??
+          new UserProfileModel({
+            userId: new Types.ObjectId(input.userId),
+            topicScores: new Map<string, ProfileScoreEntry>(),
+            hashtagScores: new Map<string, ProfileScoreEntry>(),
+            authorScores: new Map<string, ProfileScoreEntry>(),
+            interactionCount: 0,
+          });
+
+        updateProfileScoreMap(
+          profile.topicScores,
+          input.topics,
+          input.delta,
+          input.now
+        );
+        updateProfileScoreMap(
+          profile.hashtagScores,
+          input.hashtags,
+          input.delta * 0.9,
+          input.now
+        );
+        if (input.authorId) {
+          updateProfileScoreMap(
+            profile.authorScores,
+            [input.authorId],
+            input.delta * 0.7,
+            input.now
+          );
+        }
+
+        profile.interactionCount += 1;
+        await profile.save();
+        return;
+      } catch (error) {
+        const retryable =
+          error instanceof mongoose.Error.VersionError ||
+          (error as { code?: number }).code === 11000;
+        if (
+          !retryable ||
+          attempt === InteractionTrackerService.PROFILE_UPDATE_MAX_RETRIES
+        ) {
+          throw error;
+        }
+      }
     }
-
-    await UserProfileModel.findOneAndUpdate(
-      { userId: new Types.ObjectId(userId) },
-      {
-        $inc: {
-          ...incUpdate,
-          interactionCount: 1,
-        },
-        $set: {
-          updatedAt:         new Date(),
-          lastCalculatedAt:  new Date(),
-        },
-      },
-      { upsert: true, new: true }
-    );
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────

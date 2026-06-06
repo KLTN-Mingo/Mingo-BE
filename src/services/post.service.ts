@@ -30,10 +30,119 @@ import { CommentModel } from "../models/comment.model";
 import { UserModel } from "../models/user.model";
 import { SavedPostModel } from "../models/saved-post.model";
 import { ShareModel } from "../models/share.model";
+import {
+  FollowModel,
+  FollowStatus,
+  CloseFriendStatus,
+} from "../models/follow.model";
+import { BlockModel } from "../models/block.model";
 import { topicExtractorService } from "./topic-extractor.service";
 import { ModerationService } from "./moderation/moderation.service";
 import { NotificationService } from "./notification.service";
 import { CultureTranslationService } from "./culture-translation/culture-translation.service";
+import {
+  canViewPostWithRelationship,
+  collectMutualCloseFriendIds,
+} from "../utils/relationship-visibility.util";
+
+interface PostVisibilityContext {
+  friendIds: Set<string>;
+  closeFriendIds: Set<string>;
+  blockedUserIds: Set<string>;
+}
+
+async function getPostVisibilityContext(
+  currentUserId?: string
+): Promise<PostVisibilityContext> {
+  if (!currentUserId) {
+    return {
+      friendIds: new Set(),
+      closeFriendIds: new Set(),
+      blockedUserIds: new Set(),
+    };
+  }
+
+  const userObjectId = new Types.ObjectId(currentUserId);
+  const [
+    followingRows,
+    followerRows,
+    closeFriendRows,
+    blockedRows,
+    blockedMeRows,
+  ] = await Promise.all([
+    FollowModel.find({
+      followerId: userObjectId,
+      followStatus: FollowStatus.ACCEPTED,
+    })
+      .select("followingId")
+      .lean(),
+    FollowModel.find({
+      followingId: userObjectId,
+      followStatus: FollowStatus.ACCEPTED,
+    })
+      .select("followerId")
+      .lean(),
+    FollowModel.find({
+      $or: [{ followerId: userObjectId }, { followingId: userObjectId }],
+      followStatus: FollowStatus.ACCEPTED,
+      closeFriendStatus: CloseFriendStatus.ACCEPTED,
+    })
+      .select("followerId followingId")
+      .lean(),
+    BlockModel.find({ blockerId: userObjectId }).select("blockedId").lean(),
+    BlockModel.find({ blockedId: userObjectId }).select("blockerId").lean(),
+  ]);
+
+  const followingIds = new Set(
+    (followingRows as any[]).map((row) => row.followingId.toString())
+  );
+  const followerIds = new Set(
+    (followerRows as any[]).map((row) => row.followerId.toString())
+  );
+  const friendIds = new Set<string>();
+  followingIds.forEach((id) => {
+    if (followerIds.has(id)) friendIds.add(id);
+  });
+
+  const closeFriendIds = collectMutualCloseFriendIds(
+    currentUserId,
+    closeFriendRows as any[]
+  );
+  const blockedUserIds = new Set<string>();
+  (blockedRows as any[]).forEach((row) =>
+    blockedUserIds.add(row.blockedId.toString())
+  );
+  (blockedMeRows as any[]).forEach((row) =>
+    blockedUserIds.add(row.blockerId.toString())
+  );
+
+  return { friendIds, closeFriendIds, blockedUserIds };
+}
+
+function canCurrentUserViewPost(
+  post: { userId?: Types.ObjectId; visibility?: PostVisibility | string },
+  currentUserId: string | undefined,
+  context: PostVisibilityContext
+): boolean {
+  return canViewPostWithRelationship({
+    visibility: post.visibility,
+    authorId: post.userId,
+    viewerId: currentUserId,
+    friendIds: context.friendIds,
+    closeFriendIds: context.closeFriendIds,
+    blockedUserIds: context.blockedUserIds,
+  });
+}
+
+async function assertCanViewPost(
+  post: { userId?: Types.ObjectId; visibility?: PostVisibility | string },
+  currentUserId: string | undefined
+): Promise<void> {
+  const context = await getPostVisibilityContext(currentUserId);
+  if (!canCurrentUserViewPost(post, currentUserId, context)) {
+    throw new ForbiddenError("Bạn không có quyền xem bài viết này");
+  }
+}
 
 // ─── Helper: load related data cho một post ───────────────────────────────────
 
@@ -117,12 +226,16 @@ export function shouldReAnalyzeCultureForPostUpdate(dto: UpdatePostDto): boolean
 export const PostService = {
   // ── Get all posts ──────────────────────────────────────────────────────────
   async getAllPosts(currentUserId?: string): Promise<PostResponseDto[]> {
+    const visibilityContext = await getPostVisibilityContext(currentUserId);
     const posts = await PostModel.find({ isHidden: false })
       .sort({ createdAt: -1 })
       .lean();
+    const visiblePosts = posts.filter((post) =>
+      canCurrentUserViewPost(post as any, currentUserId, visibilityContext)
+    );
 
     return Promise.all(
-      posts.map(async (post) => {
+      visiblePosts.map(async (post) => {
         const relations = await loadPostRelations(post._id, currentUserId);
         return toPostResponse(post as any, relations);
       })
@@ -156,6 +269,7 @@ export const PostService = {
     if (!post) {
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
     }
+    await assertCanViewPost(post as any, currentUserId);
 
     const [relations, topCommentRows] = await Promise.all([
       loadPostRelations(post._id, currentUserId),
@@ -187,6 +301,7 @@ export const PostService = {
 
   // ── Trending posts ─────────────────────────────────────────────────────────
   async getTrendingPosts(currentUserId?: string): Promise<PostResponseDto[]> {
+    const visibilityContext = await getPostVisibilityContext(currentUserId);
     const posts = await PostModel.find({
       isHidden: false,
       moderationStatus: ModerationStatus.APPROVED,
@@ -195,6 +310,9 @@ export const PostService = {
     const now = new Date();
 
     const top10 = posts
+      .filter((post) =>
+        canCurrentUserViewPost(post as any, currentUserId, visibilityContext)
+      )
       .map((post) => {
         const hoursAgo = Math.max(
           differenceInHours(now, new Date(post.createdAt)),
@@ -434,6 +552,7 @@ export const PostService = {
     const post = await PostModel.findById(postId);
     if (!post)
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    await assertCanViewPost(post as any, userId);
 
     const existing = await LikeModel.findOne({ postId, userId });
     if (existing) return; // idempotent
@@ -498,6 +617,7 @@ export const PostService = {
     const post = await PostModel.findById(postId);
     if (!post)
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    await assertCanViewPost(post as any, userId);
 
     const uid = new Types.ObjectId(userId);
     const pid = new Types.ObjectId(postId);
@@ -604,6 +724,7 @@ export const PostService = {
     const post = await PostModel.findById(postId);
     if (!post)
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
+    await assertCanViewPost(post as any, userId);
 
     await ShareModel.create({
       userId: new Types.ObjectId(userId),
@@ -635,16 +756,15 @@ export const PostService = {
       throw new NotFoundError(`Không tìm thấy user với ID: ${userId}`);
     }
 
-    const skip = (page - 1) * limit;
-
-    const [total, rows] = await Promise.all([
-      PostModel.countDocuments({ userId: oid, isHidden: false }),
-      PostModel.find({ userId: oid, isHidden: false })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-    ]);
+    const visibilityContext = await getPostVisibilityContext(currentUserId);
+    const allRows = await PostModel.find({ userId: oid, isHidden: false })
+      .sort({ createdAt: -1 })
+      .lean();
+    const visibleRows = allRows.filter((post) =>
+      canCurrentUserViewPost(post as any, currentUserId, visibilityContext)
+    );
+    const total = visibleRows.length;
+    const rows = visibleRows.slice((page - 1) * limit, page * limit);
 
     const posts = await Promise.all(
       rows.map(async (post) => {

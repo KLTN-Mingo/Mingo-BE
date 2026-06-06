@@ -4,6 +4,7 @@ import { IPost }          from "../models/post.model";
 import { IUserProfile }   from "../models/user-profile.model";
 
 const service = new ScoringService();
+const scoringNow = new Date("2026-06-06T00:00:00.000Z");
 
 const mockPost = {
   _id:           "post_001",
@@ -21,10 +22,19 @@ const mockPost = {
 const normalProfile = {
   interactionCount: 25,
   topicScores:  new Map([
-    ["Công nghệ - Technology",  15],
-    ["Lập trình - Programming", 10],
+    ["Công nghệ - Technology", {
+      score: 15,
+      lastUpdatedAt: new Date("2026-05-27T00:00:00.000Z"),
+    }],
+    ["Lập trình - Programming", {
+      score: 10,
+      lastUpdatedAt: new Date("2026-06-05T00:00:00.000Z"),
+    }],
   ]),
-  authorScores:  new Map([["author_001", 5]]),
+  authorScores:  new Map([["author_001", {
+    score: 5,
+    lastUpdatedAt: new Date("2026-06-05T00:00:00.000Z"),
+  }]]),
   hashtagScores: new Map(),
 } as unknown as IUserProfile;
 
@@ -46,7 +56,13 @@ async function run() {
   };
 
   // ── Test 1: Normal user, đang follow tác giả ──────────────────────────
-  const r1 = await service.scorePosts([mockPost], "user_normal", normalProfile);
+  const r1 = await service.scorePosts(
+    [mockPost],
+    "user_normal",
+    normalProfile,
+    undefined,
+    scoringNow
+  );
   console.log("Test 1 — Normal user + following author:");
   console.log(`  content    = ${r1[0].breakdown.content.toFixed(2)}`);
   console.log(`  popularity = ${r1[0].breakdown.popularity.toFixed(2)}`);
@@ -54,6 +70,15 @@ async function run() {
   console.log(`  FINAL      = ${r1[0].breakdown.final.toFixed(2)}`);
   console.log(`  ${r1[0].breakdown.content > 0   ? "✅" : "❌"} content > 0`);
   console.log(`  ${r1[0].breakdown.social  > 0   ? "✅" : "❌"} social > 0`);
+  const expectedContent =
+    15 * Math.pow(0.98, 10) +
+    10 * Math.pow(0.98, 1) +
+    5 * Math.pow(0.98, 1) * 1.2;
+  if (Math.abs(r1[0].breakdown.content - expectedContent) > 0.0001) {
+    throw new Error(
+      `Expected independently decayed content score ${expectedContent}, received ${r1[0].breakdown.content}`
+    );
+  }
 
   // ── Test 2: Cold start, không follow ai ───────────────────────────────
   service["getFollowingIds"] = async (_userId: string) => new Set<string>();

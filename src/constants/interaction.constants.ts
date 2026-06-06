@@ -12,7 +12,9 @@ export const INTERACTION_WEIGHTS: Record<string, number> = {
   see_more: 2,
 };
 
-export const INTERACTION_DECAY: Record<string, number> = {
+// Multipliers express signal strength by interaction type; time decay is
+// handled independently for each UserProfile score entry.
+export const INTERACTION_SIGNAL_MULTIPLIERS: Record<string, number> = {
   view: 0.6,
   like: 1.0,
   comment: 1.0,
