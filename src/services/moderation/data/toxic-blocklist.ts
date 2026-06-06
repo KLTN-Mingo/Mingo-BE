@@ -1,21 +1,22 @@
-// src/services/moderation/toxic-blocklist.ts
+// src/services/moderation/data/toxic-blocklist.ts
 
-export const TOXIC_BLOCKLIST: readonly string[] = [
-  // ── Tiếng Việt — tục tĩu ─────────────────────────────────────────────────
-  "địt",
-  "đụ",
-  "lồn",
-  "cặc",
-  "buồi",
-  "đít",
-  "đéo",
-  "hốc",
-  "vkl",
-  "vl",
+/**
+ * Từ tiếng Việt có dấu — check bằng normalizeKeepDiacritic
+ * Giữ dấu để tránh false positive: "các bạn" ≠ "cặc"
+ */
+export const TOXIC_BLOCKLIST_DIACRITIC: readonly string[] = [
+  // ── Tục tĩu ───────────────────────────────────────────────────────────────
+  "địt con mẹ mày",
+  "đụ đĩ mẹ mày",
+  "cái lồn má mày",
+  "con lồn",
+  "con cặc",
+  "đầu buồi",
+  "đéo mẹ",
+  "đéo má",
   "vãi lồn",
 
-  // ── Tiếng Việt — xúc phạm cá nhân ───────────────────────────────────────
-  "đồ chó",
+  // ── Xúc phạm cá nhân ──────────────────────────────────────────────────────
   "đồ ngu",
   "con ngu",
   "thằng ngu",
@@ -24,33 +25,24 @@ export const TOXIC_BLOCKLIST: readonly string[] = [
   "thằng đĩ",
   "con mẹ mày",
   "thằng chó",
-  "đồ khốn",
   "chết tiệt",
-  "đồ điên",
-  "mẹ kiếp",
-  "vcl",
-  "clm",
   "đồ súc vật",
   "con súc vật",
-  "thằng hèn",
-  "con hèn",
   "đồ vô học",
   "thằng vô học",
-  "đồ mất dạy",
+  "loại mất dạy",
   "con mất dạy",
-  "đồ vô lại",
-  "thằng vô lại",
-  "đồ phản động",
-  "đồ cặn bã",
+  "thằng mất dạy",
+];
 
-  // ── Tiếng Anh — tục tĩu ──────────────────────────────────────────────────
-  "fuck",
-  "shit",
+/**
+ * Từ tiếng Anh + viết tắt + từ Việt không dấu cố tình né filter
+ * Check bằng normalizeStripped (bỏ dấu + leet)
+ */
+export const TOXIC_BLOCKLIST_NORMALIZED: readonly string[] = [
+  // ── Tiếng Anh ─────────────────────────────────────────────────────────────
   "bitch",
   "asshole",
-  "bastard",
-  "dick",
-  "pussy",
   "cunt",
   "cock",
   "whore",
@@ -58,10 +50,20 @@ export const TOXIC_BLOCKLIST: readonly string[] = [
   "faggot",
   "retard",
   "motherfucker",
-  "dumbass",
   "jackass",
   "dipshit",
   "scumbag",
   "prick",
   "wanker",
+
+  // ── Từ Việt thường bị viết không dấu để né filter ─────────────────────────
+  "dit con me may",
+  "du di me may",
+  "con lon",
+  "cai lon ma may",
+  "con cac",
+  "dau buoi",
+  "deo me",
+  "deo ma",
+  "vai lon",
 ];

@@ -108,7 +108,9 @@ async function loadPostRelations(
   };
 }
 
-export function shouldReAnalyzeCultureForPostUpdate(dto: UpdatePostDto): boolean {
+export function shouldReAnalyzeCultureForPostUpdate(
+  dto: UpdatePostDto
+): boolean {
   return dto.contentText !== undefined;
 }
 
@@ -220,6 +222,119 @@ export const PostService = {
   },
 
   // ── Create post ────────────────────────────────────────────────────────────
+  // async createPost(userId: string, dto: CreatePostDto): Promise<PostDetailDto> {
+  //   const user = await UserModel.findById(userId).select("createdAt").lean();
+  //   if (!user) {
+  //     throw new NotFoundError(`Không tìm thấy user với ID: ${userId}`);
+  //   }
+  //   const accountAgeDays =
+  //     (Date.now() - new Date(user.createdAt).getTime()) / 86400000;
+
+  //   const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
+  //   const topics = topicExtractorService.extract({
+  //     contentText: dto.contentText,
+  //     hashtags: dto.hashtags ?? [],
+  //     mediaTypes,
+  //   });
+
+  //   let post: InstanceType<typeof PostModel>;
+
+  //   const session = await mongoose.startSession();
+  //   try {
+  //     await session.withTransaction(async () => {
+  //       [post] = await PostModel.create(
+  //         [
+  //           {
+  //             userId: new Types.ObjectId(userId),
+  //             contentText: dto.contentText,
+  //             contentRichText: dto.contentRichText,
+  //             visibility: dto.visibility ?? PostVisibility.PUBLIC,
+  //             moderationStatus: ModerationStatus.PENDING,
+  //             locationName: dto.locationName,
+  //             locationLatitude: dto.locationLatitude,
+  //             locationLongitude: dto.locationLongitude,
+  //             topics,
+  //           },
+  //         ],
+  //         { session }
+  //       );
+
+  //       if (dto.mediaFiles?.length) {
+  //         await PostMediaModel.insertMany(
+  //           dto.mediaFiles.map((m, i) => ({
+  //             postId: post._id,
+  //             userId: new Types.ObjectId(userId),
+  //             mediaType: m.mediaType,
+  //             mediaUrl: m.mediaUrl,
+  //             thumbnailUrl: m.thumbnailUrl,
+  //             width: m.width,
+  //             height: m.height,
+  //             duration: m.duration,
+  //             fileSize: m.fileSize,
+  //             orderIndex: m.orderIndex ?? i,
+  //           })),
+  //           { session }
+  //         );
+  //       }
+
+  //       if (dto.hashtags?.length) {
+  //         await PostHashtagModel.insertMany(
+  //           dto.hashtags.map((tag) => ({ postId: post._id, hashtag: tag })),
+  //           { session }
+  //         );
+  //       }
+
+  //       if (dto.mentions?.length) {
+  //         await PostMentionModel.insertMany(
+  //           dto.mentions.map((mentionedId) => ({
+  //             postId: post._id,
+  //             mentionedUserId: new Types.ObjectId(mentionedId),
+  //           })),
+  //           { session }
+  //         );
+
+  //         // Gửi thông báo mention bất đồng bộ, không block response tạo bài.
+  //         for (const mentionedId of dto.mentions) {
+  //           void NotificationService.notifyMention(
+  //             mentionedId,
+  //             userId,
+  //             "post",
+  //             post._id.toString(),
+  //             post._id.toString(),
+  //             undefined,
+  //             dto.contentText?.slice(0, 200)
+  //           ).catch((err) => {
+  //             console.error("[PostService] notify mention error:", err);
+  //           });
+  //         }
+  //       }
+
+  //       await UserModel.findByIdAndUpdate(
+  //         userId,
+  //         { $inc: { postsCount: 1 } },
+  //         { session }
+  //       );
+  //     });
+  //   } finally {
+  //     await session.endSession();
+  //   }
+
+  //   const postId = post!._id.toString();
+
+  //   if (dto.contentText?.trim()) {
+  //     ModerationService.moderateAndUpdate("post", postId, dto.contentText, {
+  //       isNewAccount: accountAgeDays < 7,
+  //       reportCount: 0,
+  //     }).catch((err) => console.error("[Moderation] background error:", err));
+
+  //     CultureTranslationService.analyzePost(postId).catch((err) =>
+  //       console.error("[CultureTranslation] background error:", err)
+  //     );
+  //   }
+
+  //   return this.getPostById(postId, userId);
+  // },
+
   async createPost(userId: string, dto: CreatePostDto): Promise<PostDetailDto> {
     const user = await UserModel.findById(userId).select("createdAt").lean();
     if (!user) {
@@ -227,6 +342,7 @@ export const PostService = {
     }
     const accountAgeDays =
       (Date.now() - new Date(user.createdAt).getTime()) / 86400000;
+    const isNewAccount = accountAgeDays < 7;
 
     const mediaTypes = dto.mediaFiles?.map((m) => m.mediaType) ?? [];
     const topics = topicExtractorService.extract({
@@ -291,7 +407,6 @@ export const PostService = {
             { session }
           );
 
-          // Gửi thông báo mention bất đồng bộ, không block response tạo bài.
           for (const mentionedId of dto.mentions) {
             void NotificationService.notifyMention(
               mentionedId,
@@ -319,15 +434,35 @@ export const PostService = {
 
     const postId = post!._id.toString();
 
+    // ── Kiểm duyệt text ──────────────────────────────────────────────────────
     if (dto.contentText?.trim()) {
       ModerationService.moderateAndUpdate("post", postId, dto.contentText, {
-        isNewAccount: accountAgeDays < 7,
+        isNewAccount,
         reportCount: 0,
-      }).catch((err) => console.error("[Moderation] background error:", err));
+      }).catch((err) => console.error("[Moderation] text error:", err));
 
       CultureTranslationService.analyzePost(postId).catch((err) =>
         console.error("[CultureTranslation] background error:", err)
       );
+    }
+
+    // ── Kiểm duyệt ảnh / video ───────────────────────────────────────────────
+    if (dto.mediaFiles?.length) {
+      for (const media of dto.mediaFiles) {
+        if (!media.mediaUrl) continue;
+
+        if (media.mediaType === "video") {
+          ModerationService.moderateVideo(media.mediaUrl, postId, {
+            isNewAccount,
+            reportCount: 0,
+          }).catch((err) => console.error("[Moderation] video error:", err));
+        } else if (media.mediaType === "image") {
+          ModerationService.moderateImage(media.mediaUrl, postId, {
+            isNewAccount,
+            reportCount: 0,
+          }).catch((err) => console.error("[Moderation] image error:", err));
+        }
+      }
     }
 
     return this.getPostById(postId, userId);

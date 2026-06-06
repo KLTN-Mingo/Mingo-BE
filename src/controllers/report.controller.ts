@@ -43,12 +43,24 @@ function isReportEntityType(v: string): v is "post" | "comment" {
 }
 
 const USER_REPORT_REASONS = [
-  "spam",
-  "harassment",
-  "fake_account",
-  "inappropriate",
+  "spam", // Spam, quảng cáo
+  "harassment", // Quấy rối, bắt nạt
+  "hate_speech", // Phát ngôn thù ghét
+  "fake_account", // Tài khoản giả mạo
+  "impersonation", // Mạo danh người khác
+  "inappropriate_content", // Nội dung không phù hợp
+  "nudity", // Nội dung khỏa thân
+  "violence", // Bạo lực
+  "scam_fraud", // Lừa đảo
+  "misinformation", // Thông tin sai lệch
+  "copyright", // Vi phạm bản quyền
+  "underage_user", // Người dùng dưới độ tuổi quy định
+  "self_harm", // Khuyến khích tự gây hại
+  "illegal_activity", // Hoạt động bất hợp pháp
+  "privacy_violation", // Tiết lộ thông tin cá nhân
   "other",
 ] as const;
+
 type UserReportReason = (typeof USER_REPORT_REASONS)[number];
 
 function isUserReportReason(v: string): v is UserReportReason {
@@ -72,6 +84,182 @@ function toTargetType(entityType: "post" | "comment"): ReportTargetType {
  * @body    { entityType, entityId, reason, description? }
  * @access  Private
  */
+
+// export const createReport = asyncHandler(
+//   async (req: Request, res: Response) => {
+//     const userId = getUserId(req);
+//     const body = req.body as {
+//       entityType?: string;
+//       entityId?: string;
+//       reason?: string;
+//       description?: string;
+//     };
+
+//     const {
+//       entityType: rawType,
+//       entityId,
+//       reason: rawReason,
+//       description,
+//     } = body;
+
+//     if (!rawType || !isReportEntityType(rawType)) {
+//       throw new ValidationError(
+//         "entityType phải là 'post' hoặc 'comment'",
+//         "INVALID_ENTITY_TYPE"
+//       );
+//     }
+
+//     if (!entityId || !Types.ObjectId.isValid(String(entityId))) {
+//       throw new ValidationError("entityId không hợp lệ", "INVALID_ENTITY_ID");
+//     }
+
+//     if (!rawReason || !isReportReason(rawReason)) {
+//       throw new ValidationError(
+//         `reason không hợp lệ. Cho phép: ${Object.values(ReportReason).join(", ")}`,
+//         "INVALID_REPORT_REASON"
+//       );
+//     }
+
+//     const reason = rawReason;
+//     const targetType = toTargetType(rawType);
+//     const oid = new Types.ObjectId(String(entityId));
+
+//     let ownerUserId: string;
+//     let contentText = "";
+//     let existingAiScore: number | undefined;
+
+//     if (rawType === "post") {
+//       const post = await PostModel.findById(oid)
+//         .select("userId contentText aiToxicScore")
+//         .lean();
+//       if (!post) {
+//         throw new NotFoundError("Không tìm thấy bài viết");
+//       }
+//       ownerUserId = post.userId.toString();
+//       contentText = post.contentText ?? "";
+//       existingAiScore = post.aiToxicScore;
+//     } else {
+//       const comment = await CommentModel.findById(oid)
+//         .select("userId contentText aiToxicScore")
+//         .lean();
+//       if (!comment) {
+//         throw new NotFoundError("Không tìm thấy bình luận");
+//       }
+//       ownerUserId = comment.userId.toString();
+//       contentText = comment.contentText ?? "";
+//       existingAiScore = comment.aiToxicScore;
+//     }
+
+//     if (ownerUserId === userId) {
+//       throw new ValidationError(
+//         "Không thể báo cáo nội dung của chính bạn",
+//         "SELF_REPORT"
+//       );
+//     }
+
+//     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+//     const duplicate = await ReportModel.findOne({
+//       reporterId: userId,
+//       targetType,
+//       targetId: oid,
+//       createdAt: { $gte: since24h },
+//     }).lean();
+
+//     if (duplicate) {
+//       throw new ValidationError("Bạn đã báo cáo nội dung này rồi");
+//     }
+
+//     // Đếm số report hiện tại (trước khi tạo report mới)
+//     const reportCount = await ReportModel.countDocuments({
+//       targetType,
+//       targetId: oid,
+//     });
+
+//     const report = await ReportModel.create({
+//       reporterId: userId,
+//       targetType,
+//       targetId: oid,
+//       reason,
+//       description: description ? String(description).slice(0, 2000) : "",
+//       status: ReportStatus.PENDING,
+//     });
+
+//     // Trả response ngay, không block
+//     sendCreated(
+//       res,
+//       { id: report._id.toString(), status: report.status },
+//       "Báo cáo đã được ghi nhận"
+//     );
+
+//     // Chỉ gọi AI nếu: chưa có AI scores, hoặc đạt mốc report
+//     const REANALYZE_THRESHOLDS = [1, 5, 10, 20];
+//     const shouldReanalyze =
+//       existingAiScore == null || REANALYZE_THRESHOLDS.includes(reportCount + 1);
+
+//     if (contentText.trim() && shouldReanalyze) {
+//       void (async () => {
+//         try {
+//           const updatedDoc = await ModerationService.moderateAndUpdate(
+//             rawType,
+//             oid.toString(),
+//             contentText,
+//             { reportCount: reportCount + 1 }
+//           );
+
+//           const scores: AIScoreResult = {
+//             toxic: updatedDoc.aiToxicScore ?? 0,
+//             hateSpeech: updatedDoc.aiHateSpeechScore ?? 0,
+//             spam: updatedDoc.aiSpamScore ?? 0,
+//             reason: updatedDoc.hiddenReason ?? "ok",
+//           };
+//           const risk = Math.max(scores.toxic, scores.hateSpeech, scores.spam);
+//           const moderationSnapshot: ModerationResult = {
+//             status: updatedDoc.moderationStatus,
+//             isHidden: updatedDoc.isHidden ?? false,
+//             scores,
+//             action:
+//               risk >= 0.8 ? "auto_hide" : risk >= 0.5 ? "review" : "approve",
+//             method: updatedDoc.aiOverallRisk != null ? "ai" : "rule",
+//           };
+
+//           await ReportModel.findByIdAndUpdate(report._id, {
+//             $set: { moderationSnapshot },
+//           });
+//         } catch (err) {
+//           console.error("[Report] moderateAndUpdate failed:", err);
+//         }
+//       })();
+//     }
+
+//     // Fire-and-forget: image moderation — chỉ khi report đầu tiên
+//     if (rawType === "post" && reportCount === 0) {
+//       void (async () => {
+//         try {
+//           const mediaList = await PostMediaModel.find({
+//             postId: oid,
+//             mediaType: { $in: ["image", "video"] },
+//           }).lean();
+
+//           for (const media of mediaList) {
+//             const scanUrl =
+//               media.mediaType === "image" ? media.mediaUrl : media.thumbnailUrl;
+//             if (!scanUrl) continue;
+
+//             void ModerationService.moderateImage(scanUrl, oid.toString(), {
+//               reportCount: 1,
+//             }).catch((err) =>
+//               console.error("[Image Moderation] Report-trigger error:", err)
+//             );
+//           }
+//         } catch (err) {
+//           console.error("[Report] image moderation failed:", err);
+//         }
+//       })();
+//     }
+//   }
+// );
+
+// src/controllers/report.controller.ts (hàm createReport)
 
 export const createReport = asyncHandler(
   async (req: Request, res: Response) => {
@@ -179,12 +367,16 @@ export const createReport = asyncHandler(
       "Báo cáo đã được ghi nhận"
     );
 
-    // Chỉ gọi AI nếu: chưa có AI scores, hoặc đạt mốc report
+    const reportIdStr = report._id.toString();
+
+    // FIX: Chỉ gọi AI text nếu content thực sự có chữ (>= 5 ký tự)
+    // Tránh gọi AI với content rỗng rồi overwrite scores từ image moderation
     const REANALYZE_THRESHOLDS = [1, 5, 10, 20];
     const shouldReanalyze =
       existingAiScore == null || REANALYZE_THRESHOLDS.includes(reportCount + 1);
+    const hasRealContent = contentText.trim().length >= 5;
 
-    if (contentText.trim() && shouldReanalyze) {
+    if (hasRealContent && shouldReanalyze) {
       void (async () => {
         try {
           const updatedDoc = await ModerationService.moderateAndUpdate(
@@ -219,7 +411,7 @@ export const createReport = asyncHandler(
       })();
     }
 
-    // Fire-and-forget: image moderation — chỉ khi report đầu tiên
+    // Fire-and-forget: image/video moderation — chỉ khi report đầu tiên
     if (rawType === "post" && reportCount === 0) {
       void (async () => {
         try {
@@ -229,23 +421,39 @@ export const createReport = asyncHandler(
           }).lean();
 
           for (const media of mediaList) {
-            const scanUrl =
-              media.mediaType === "image" ? media.mediaUrl : media.thumbnailUrl;
-            if (!scanUrl) continue;
+            if (media.mediaType === "image") {
+              // FIX: truyền reportIdStr để moderateImage cập nhật đúng report
+              void ModerationService.moderateImage(
+                media.mediaUrl,
+                oid.toString(),
+                { reportCount: 1 },
+                reportIdStr
+              ).catch((err) =>
+                console.error("[Image Moderation] Report-trigger error:", err)
+              );
+            } else if (media.mediaType === "video") {
+              const scanUrl = media.thumbnailUrl;
+              if (!scanUrl) continue;
 
-            void ModerationService.moderateImage(scanUrl, oid.toString(), {
-              reportCount: 1,
-            }).catch((err) =>
-              console.error("[Image Moderation] Report-trigger error:", err)
-            );
+              // FIX: truyền reportIdStr để moderateVideo cập nhật đúng report
+              void ModerationService.moderateImage(
+                scanUrl,
+                oid.toString(),
+                { reportCount: 1 },
+                reportIdStr
+              ).catch((err) =>
+                console.error("[Video Moderation] Report-trigger error:", err)
+              );
+            }
           }
         } catch (err) {
-          console.error("[Report] image moderation failed:", err);
+          console.error("[Report] media moderation failed:", err);
         }
       })();
     }
   }
 );
+
 /**
  * @route   GET /api/reports/my
  * @query   page (default 1), limit (default 10)
