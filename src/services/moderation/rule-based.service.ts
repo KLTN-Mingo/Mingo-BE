@@ -1,4 +1,6 @@
 // src/services/moderation/rule-based.service.ts
+import { TOXIC_BLOCKLIST } from "./data/toxic-blocklist";
+import { HATE_PATTERNS } from "./data/hate-patterns";
 
 export interface RuleCheckResult {
   isClearViolation: boolean;
@@ -52,44 +54,6 @@ function normalizeForBlocklist(text: string): string {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Blocklist
-// ---------------------------------------------------------------------------
-
-/** 20+ từ/cụm cần lọc (tiếng Việt + tiếng Anh) */
-const TOXIC_BLOCKLIST: readonly string[] = [
-  "địt",
-  "đụ",
-  "lồn",
-  "cặc",
-  "đồ chó",
-  "đồ ngu",
-  "con ngu",
-  "thằng ngu",
-  "đồ đĩ",
-  "con đĩ",
-  "thằng đĩ",
-  "con mẹ mày",
-  "thằng chó",
-  "đồ khốn",
-  "chết tiệt",
-  "đồ điên",
-  "mẹ kiếp",
-  "vcl",
-  "clm",
-  "fuck",
-  "shit",
-  "bitch",
-  "asshole",
-  "bastard",
-  "dick",
-  "pussy",
-  "whore",
-  "slut",
-  "faggot",
-  "retard",
-];
-
 interface BlocklistEntry {
   original: string;
   normalized: string;
@@ -141,18 +105,6 @@ function blocklistMatches(
   // và "cac" không dính "cach"
   return entry.wordRe!.test(normalizedText);
 }
-
-// ---------------------------------------------------------------------------
-// Hate-speech patterns
-// ---------------------------------------------------------------------------
-
-/** Mẫu gợi ý nội dung thù hận / miệt thị (tiếng Việt) */
-const HATE_PATTERNS: readonly RegExp[] = [
-  /\b(?:đồ\s+chó|đồ\s+lợn|đồ\s+khỉ|thằng\s+hèn|con\s+hèn)\b/gi,
-  /\b(?:mày\s+chết|tao\s+giết|đập\s+chết|chết\s+đi)\b/gi,
-  /\b(?:đồ\s+đĩ|con\s+đĩ|đồ\s+cặn\s+bã)\b/gi,
-  /\b(?:thằng\s+ngu|con\s+ngu|đồ\s+ngu\s+dốt)\b/gi,
-];
 
 // ---------------------------------------------------------------------------
 // Spam signals

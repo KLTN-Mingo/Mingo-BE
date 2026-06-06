@@ -1,7 +1,7 @@
 // src/controllers/admin.controller.ts
 
 import { Request, Response } from "express";
-import { Types } from "mongoose";
+import { PipelineStage, Types } from "mongoose";
 import { startOfDay, subDays } from "date-fns";
 import { asyncHandler } from "../utils/async-handler";
 import { sendSuccess } from "../utils/response";
@@ -64,9 +64,11 @@ function getAdminUserId(req: Request): string {
 }
 
 function getAdminActorId(req: Request): string {
-  const authUser = (req as Request & {
-    user?: { _id?: string | Types.ObjectId; userId?: string };
-  }).user;
+  const authUser = (
+    req as Request & {
+      user?: { _id?: string | Types.ObjectId; userId?: string };
+    }
+  ).user;
   const actorId = authUser?._id ?? authUser?.userId;
   if (!actorId) {
     throw new ForbiddenError("Cần đăng nhập");
@@ -84,8 +86,8 @@ function getRequestLogContext(req: Request): {
     typeof reqBody?.reason === "string"
       ? reqBody.reason
       : typeof reqBody?.note === "string"
-      ? reqBody.note
-      : undefined;
+        ? reqBody.note
+        : undefined;
   const userAgent = req.headers["user-agent"];
   return {
     ipAddress: req.ip,
@@ -198,7 +200,12 @@ function badgeFromAiScores(
   return "Spam";
 }
 
-const REPORT_STATUSES = ["pending", "reviewing", "resolved", "dismissed"] as const;
+const REPORT_STATUSES = [
+  "pending",
+  "reviewing",
+  "resolved",
+  "dismissed",
+] as const;
 const REPORT_TARGET_TYPES = ["post", "comment", "user"] as const;
 const REPORT_REASONS = [
   "spam",
@@ -239,10 +246,9 @@ async function resolveTargetPreview(
     if (targetType === "post") {
       const doc = await PostModel.findById(targetId)
         .select("contentText userId")
-        .populate<{ userId: { name?: string; avatar?: string } }>(
-          "userId",
-          "name avatar"
-        )
+        .populate<{
+          userId: { name?: string; avatar?: string };
+        }>("userId", "name avatar")
         .lean();
       if (!doc) return {};
       return {
@@ -255,10 +261,9 @@ async function resolveTargetPreview(
     if (targetType === "comment") {
       const doc = await CommentModel.findById(targetId)
         .select("contentText userId")
-        .populate<{ userId: { name?: string; avatar?: string } }>(
-          "userId",
-          "name avatar"
-        )
+        .populate<{
+          userId: { name?: string; avatar?: string };
+        }>("userId", "name avatar")
         .lean();
       if (!doc) return {};
       return {
@@ -268,7 +273,9 @@ async function resolveTargetPreview(
       };
     }
 
-    const doc = await UserModel.findById(targetId).select("name avatar bio").lean();
+    const doc = await UserModel.findById(targetId)
+      .select("name avatar bio")
+      .lean();
     if (!doc) return {};
     return {
       targetPreview: (doc.bio as string | undefined)?.slice(0, 120),
@@ -280,42 +287,45 @@ async function resolveTargetPreview(
   }
 }
 
-async function buildAdminReportPayload(
-  report: {
-    _id: Types.ObjectId;
-    reporterId?:
-      | Types.ObjectId
-      | { _id: Types.ObjectId; name?: string; avatar?: string }
-      | null;
-    targetType: ReportTargetType | string;
-    targetId: Types.ObjectId;
-    reason?: ReportReason | string;
-    description?: string;
-    status: ReportStatus | string;
-    resolutionNote?: string;
-    reviewedBy?:
-      | Types.ObjectId
-      | { _id: Types.ObjectId; name?: string }
-      | null;
-    reviewedAt?: Date;
-    actionTaken?: string;
-    createdAt: Date;
-    updatedAt: Date;
-    reportCount?: number;
-    moderationSnapshot?: ModerationResult;
-  }
-) {
+async function buildAdminReportPayload(report: {
+  _id: Types.ObjectId;
+  reporterId?:
+    | Types.ObjectId
+    | { _id: Types.ObjectId; name?: string; avatar?: string }
+    | null;
+  targetType: ReportTargetType | string;
+  targetId: Types.ObjectId;
+  reason?: ReportReason | string;
+  description?: string;
+  status: ReportStatus | string;
+  resolutionNote?: string;
+  reviewedBy?: Types.ObjectId | { _id: Types.ObjectId; name?: string } | null;
+  reviewedAt?: Date;
+  actionTaken?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  reportCount?: number;
+  moderationSnapshot?: ModerationResult;
+}) {
   const isReporterPopulated = (
     value: typeof report.reporterId
   ): value is { _id: Types.ObjectId; name?: string; avatar?: string } =>
-    Boolean(value && typeof value === "object" && "_id" in value && "name" in value);
+    Boolean(
+      value && typeof value === "object" && "_id" in value && "name" in value
+    );
   const isReviewerPopulated = (
     value: typeof report.reviewedBy
   ): value is { _id: Types.ObjectId; name?: string } =>
-    Boolean(value && typeof value === "object" && "_id" in value && "name" in value);
+    Boolean(
+      value && typeof value === "object" && "_id" in value && "name" in value
+    );
 
-  const reporter = isReporterPopulated(report.reporterId) ? report.reporterId : null;
-  const reviewer = isReviewerPopulated(report.reviewedBy) ? report.reviewedBy : null;
+  const reporter = isReporterPopulated(report.reporterId)
+    ? report.reporterId
+    : null;
+  const reviewer = isReviewerPopulated(report.reviewedBy)
+    ? report.reviewedBy
+    : null;
 
   const preview = await resolveTargetPreview(
     report.targetType as AdminReportTargetType,
@@ -440,7 +450,10 @@ async function applyModerationAction(
 
   // ── post / comment ──────────────────────────────────────────────────────
   if (targetType === ReportTargetType.POST) {
-    if (modAction === ModerationAction.HIDE || modAction === ModerationAction.WARN_AUTHOR) {
+    if (
+      modAction === ModerationAction.HIDE ||
+      modAction === ModerationAction.WARN_AUTHOR
+    ) {
       await PostModel.findByIdAndUpdate(targetId, {
         isHidden: true,
         moderationStatus: ModerationStatus.VIOLATED,
@@ -483,9 +496,11 @@ async function applyModerationAction(
       }
     }
     // dismiss → không làm gì
-
   } else if (targetType === ReportTargetType.COMMENT) {
-    if (modAction === ModerationAction.HIDE || modAction === ModerationAction.WARN_AUTHOR) {
+    if (
+      modAction === ModerationAction.HIDE ||
+      modAction === ModerationAction.WARN_AUTHOR
+    ) {
       await CommentModel.findByIdAndUpdate(targetId, {
         isHidden: true,
         moderationStatus: CommentModerationStatus.VIOLATED,
@@ -520,13 +535,19 @@ async function applyModerationAction(
     }
     // dismiss → không làm gì
 
-  // ── user ────────────────────────────────────────────────────────────────
+    // ── user ────────────────────────────────────────────────────────────────
   } else if (targetType === ReportTargetType.USER) {
     if (
       modAction === ModerationAction.WARN_AUTHOR ||
       modAction === ModerationAction.HIDE
     ) {
-      const result = await addUserViolation(targetId, logNote, "warn_author", adminOid, now);
+      const result = await addUserViolation(
+        targetId,
+        logNote,
+        "warn_author",
+        adminOid,
+        now
+      );
       suggestBan = result.suggestBan;
       // Gọi suggestBanPreset với violationCount thực tế + AI scores
       const aiScores = moderationSnapshot?.scores;
@@ -540,7 +561,9 @@ async function applyModerationAction(
       }
     } else if (modAction === ModerationAction.BAN_TEMP) {
       // Lấy violationCount hiện tại trước khi tăng
-      const userBefore = await UserModel.findById(targetId).select("violationCount").lean();
+      const userBefore = await UserModel.findById(targetId)
+        .select("violationCount")
+        .lean();
       const vcBefore = userBefore?.violationCount ?? 0;
 
       // Tính bannedUntil từ preset
@@ -578,7 +601,10 @@ async function applyModerationAction(
         targetType: LogTargetType.USER,
         targetId,
         note: `[BAN_TEMP ${banPreset ?? "7d"}] ${logNote}`,
-        metadata: { banUntil: bannedUntil.toISOString(), banPreset: banPresetResult },
+        metadata: {
+          banUntil: bannedUntil.toISOString(),
+          banPreset: banPresetResult,
+        },
       });
       // Gợi ý preset tiếp theo dựa trên violationCount sau khi tăng
       const aiScores = moderationSnapshot?.scores;
@@ -638,7 +664,13 @@ async function warnPostAuthor(
 ): Promise<{ suggestBan: boolean }> {
   const post = await PostModel.findById(postId).select("userId").lean();
   if (!post?.userId) return { suggestBan: false };
-  return await addUserViolation(post.userId as Types.ObjectId, reason, "warn_author", adminOid, now);
+  return await addUserViolation(
+    post.userId as Types.ObjectId,
+    reason,
+    "warn_author",
+    adminOid,
+    now
+  );
 }
 
 /** Tăng violationCount + lastWarnedAt của author bình luận */
@@ -648,10 +680,12 @@ async function warnCommentAuthor(
   adminOid: Types.ObjectId,
   now: Date
 ) {
-  const comment = await CommentModel.findById(commentId).select("userId").lean();
+  const comment = await CommentModel.findById(commentId)
+    .select("userId")
+    .lean();
   if (!comment?.userId) return;
   await addUserViolation(
-    (comment.userId as Types.ObjectId),
+    comment.userId as Types.ObjectId,
     reason,
     "warn_author",
     adminOid,
@@ -712,17 +746,24 @@ async function addUserViolation(
 function buildAiAnalysisFromSnapshot(
   snap: ModerationResult | null | undefined,
   calledAt?: Date
-): {
-  calledAt: string;
-  model: string;
-  toxicityScore: number;
-  confidenceScore: number;
-  categories: string[];
-  decision: string;
-  reasoning: string;
-  actionTaken: string;
-  scores?: { toxic: number; hateSpeech: number; spam: number; reason: string };
-} | undefined {
+):
+  | {
+      calledAt: string;
+      model: string;
+      toxicityScore: number;
+      confidenceScore: number;
+      categories: string[];
+      decision: string;
+      reasoning: string;
+      actionTaken: string;
+      scores?: {
+        toxic: number;
+        hateSpeech: number;
+        spam: number;
+        reason: string;
+      };
+    }
+  | undefined {
   if (!snap?.scores) return undefined;
   const { toxic, hateSpeech, spam, reason } = snap.scores;
   const max = Math.max(toxic, hateSpeech, spam);
@@ -766,8 +807,97 @@ function buildAiAnalysisFromSnapshot(
 /**
  * @route   GET /api/admin/reports
  */
+// export const getReports = asyncHandler(async (req: Request, res: Response) => {
+//   const { page, limit, skip } = parsePagination(req, {
+//     defaultLimit: 10,
+//     maxLimit: 50,
+//   });
+//   const q = req.query as Record<string, string | undefined>;
+
+//   const filter: Record<string, unknown> = {};
+//   if (isReportStatus(q.status)) filter.status = q.status;
+//   if (isReportTargetType(q.targetType)) filter.targetType = q.targetType;
+//   if (isReportReason(q.reason)) filter.reason = q.reason;
+
+//   const keyword = q.keyword?.trim();
+//   if (keyword) {
+//     const safe = escapeRegex(keyword);
+//     filter.$or = [
+//       { description: { $regex: safe, $options: "i" } },
+//       { actionTaken: { $regex: safe, $options: "i" } },
+//       { "reporterId.name": { $regex: safe, $options: "i" } },
+//     ];
+//   }
+
+//   // reportCount là computed field không tồn tại trong DB — BE sort theo createdAt (report mới nhất)
+//   // FE sẽ re-sort lại kết quả theo reportCount sau khi nhận data
+//   const allowedSortKeys = ["createdAt", "updatedAt", "status"];
+//   const sortKey = allowedSortKeys.includes(q.sortKey ?? "")
+//     ? (q.sortKey as string)
+//     : "createdAt";
+//   const sortDir = q.sortDir === "asc" ? 1 : -1;
+
+//   const [rows, pendingCount, reviewingCount, resolvedCount, dismissedCount] =
+//     await Promise.all([
+//       ReportModel.find(filter)
+//         .sort({ [sortKey]: sortDir })
+//         .skip(skip)
+//         .limit(limit)
+//         .populate({ path: "reporterId", select: "_id name avatar" })
+//         .populate({ path: "reviewedBy", select: "_id name" })
+//         .lean(),
+//       ReportModel.countDocuments({ ...filter, status: "pending" }),
+//       ReportModel.countDocuments({ ...filter, status: "reviewing" }),
+//       ReportModel.countDocuments({ ...filter, status: "resolved" }),
+//       ReportModel.countDocuments({ ...filter, status: "dismissed" }),
+//     ]);
+
+//   const targetIds = rows.map((r) => r.targetId);
+
+//   const priorityCounts = await ReportModel.aggregate([
+//     { $match: { targetId: { $in: targetIds } } },
+//     { $group: { _id: "$targetId", count: { $sum: 1 } } },
+//   ]);
+
+//   const priorityMap = new Map(
+//     priorityCounts.map((p) => [p._id.toString(), p.count])
+//   );
+
+//   const reports = (
+//     await Promise.all(rows.map((row) => buildAdminReportPayload(row as never)))
+//   )
+//     .map((report) => ({
+//       ...report,
+//       reportCount: priorityMap.get(report.targetId) ?? 1,
+//     }))
+//     .filter((report) => {
+//       if (!keyword) return true;
+//       const kw = keyword.toLowerCase();
+//       return (
+//         report.reporterName.toLowerCase().includes(kw) ||
+//         report.targetPreview?.toLowerCase().includes(kw) ||
+//         report.description.toLowerCase().includes(kw) ||
+//         report.actionTaken?.toLowerCase().includes(kw)
+//       );
+//     });
+
+//   // Tổng = tổng các status → đảm bảo total = pending + resolved + dismissed
+//   const total = pendingCount + resolvedCount + dismissedCount;
+
+//   sendSuccess(res, {
+//     reports,
+//     total,
+//     page,
+//     totalPages: Math.ceil(total / limit) || 1,
+//     pendingCount,
+//     reviewingCount,
+//     resolvedCount,
+//     dismissedCount,
+//   });
+// });
+
 export const getReports = asyncHandler(async (req: Request, res: Response) => {
-  const { page, limit, skip } = parsePagination(req, {
+  const { page, limit } = parsePagination(req, {
     defaultLimit: 10,
     maxLimit: 50,
   });
@@ -778,38 +908,46 @@ export const getReports = asyncHandler(async (req: Request, res: Response) => {
   if (isReportTargetType(q.targetType)) filter.targetType = q.targetType;
   if (isReportReason(q.reason)) filter.reason = q.reason;
 
-  const keyword = q.keyword?.trim();
+  const keyword = q.keyword?.trim().toLowerCase();
   if (keyword) {
-    const safe = escapeRegex(keyword);
-    filter.$or = [
-      { description: { $regex: safe, $options: "i" } },
-      { actionTaken: { $regex: safe, $options: "i" } },
-      { "reporterId.name": { $regex: safe, $options: "i" } },
-    ];
+    // Tìm reporterId có name match keyword trước
+    const matchedUsers = await UserModel.find({
+      name: { $regex: keyword, $options: "i" },
+    })
+      .select("_id")
+      .lean();
+    filter.reporterId = { $in: matchedUsers.map((u) => u._id) };
   }
 
-  // reportCount là computed field không tồn tại trong DB — BE sort theo createdAt (report mới nhất)
-  // FE sẽ re-sort lại kết quả theo reportCount sau khi nhận data
   const allowedSortKeys = ["createdAt", "updatedAt", "status"];
   const sortKey = allowedSortKeys.includes(q.sortKey ?? "")
     ? (q.sortKey as string)
     : "createdAt";
   const sortDir = q.sortDir === "asc" ? 1 : -1;
 
-  const [rows, pendingCount, reviewingCount, resolvedCount, dismissedCount] =
-    await Promise.all([
-      ReportModel.find(filter)
-        .sort({ [sortKey]: sortDir })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "reporterId", select: "_id name avatar" })
-        .populate({ path: "reviewedBy", select: "_id name" })
-        .lean(),
-      ReportModel.countDocuments({ ...filter, status: "pending" }),
-      ReportModel.countDocuments({ ...filter, status: "reviewing" }),
-      ReportModel.countDocuments({ ...filter, status: "resolved" }),
-      ReportModel.countDocuments({ ...filter, status: "dismissed" }),
-    ]);
+  const skip = (page - 1) * limit;
+
+  const [
+    rows,
+    total,
+    pendingCount,
+    reviewingCount,
+    resolvedCount,
+    dismissedCount,
+  ] = await Promise.all([
+    ReportModel.find(filter)
+      .sort({ [sortKey]: sortDir })
+      .skip(skip)
+      .limit(limit)
+      .populate({ path: "reporterId", select: "_id name avatar" })
+      .populate({ path: "reviewedBy", select: "_id name" })
+      .lean(),
+    ReportModel.countDocuments(filter),
+    ReportModel.countDocuments({ status: "pending" }),
+    ReportModel.countDocuments({ status: "reviewing" }),
+    ReportModel.countDocuments({ status: "resolved" }),
+    ReportModel.countDocuments({ status: "dismissed" }),
+  ]);
 
   const targetIds = rows.map((r) => r.targetId);
 
@@ -824,24 +962,10 @@ export const getReports = asyncHandler(async (req: Request, res: Response) => {
 
   const reports = (
     await Promise.all(rows.map((row) => buildAdminReportPayload(row as never)))
-  )
-    .map((report) => ({
-      ...report,
-      reportCount: priorityMap.get(report.targetId) ?? 1,
-    }))
-    .filter((report) => {
-      if (!keyword) return true;
-      const kw = keyword.toLowerCase();
-      return (
-        report.reporterName.toLowerCase().includes(kw) ||
-        report.targetPreview?.toLowerCase().includes(kw) ||
-        report.description.toLowerCase().includes(kw) ||
-        report.actionTaken?.toLowerCase().includes(kw)
-      );
-    });
-
-  // Tổng = tổng các status → đảm bảo total = pending + resolved + dismissed
-  const total = pendingCount + resolvedCount + dismissedCount;
+  ).map((report) => ({
+    ...report,
+    reportCount: priorityMap.get(report.targetId) ?? 1,
+  }));
 
   sendSuccess(res, {
     reports,
@@ -868,31 +992,89 @@ export const getAdminReportById = asyncHandler(
       throw new NotFoundError(`Không tìm thấy báo cáo với ID: ${id}`);
     }
 
-    const [detail, relatedRows, logs, reportCount] = await Promise.all([
-      buildAdminReportPayload(report as never),
-      ReportModel.find({
-        targetType: report.targetType,
-        targetId: report.targetId,
-        _id: { $ne: report._id },
-      })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .populate({ path: "reporterId", select: "_id name avatar" })
-        .populate({ path: "reviewedBy", select: "_id name" })
-        .lean(),
-      LogModel.find({
-        targetType: LogTargetType.REPORT,
-        targetId: report._id,
-      })
-        .sort({ createdAt: 1 })
-        .populate({ path: "actorId", select: "_id name avatar" })
-        .select("action actorId actorRole note createdAt")
-        .lean(),
-      ReportModel.countDocuments({
-        targetType: report.targetType,
-        targetId: report.targetId,
-      }),
-    ]);
+    const [detail, relatedRows, logs, reportCount, targetDoc] =
+      await Promise.all([
+        buildAdminReportPayload(report as never),
+        ReportModel.find({
+          targetType: report.targetType,
+          targetId: report.targetId,
+          _id: { $ne: report._id },
+        })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate({ path: "reporterId", select: "_id name avatar" })
+          .populate({ path: "reviewedBy", select: "_id name" })
+          .lean(),
+        LogModel.find({
+          targetType: LogTargetType.REPORT,
+          targetId: report._id,
+        })
+          .sort({ createdAt: 1 })
+          .populate({ path: "actorId", select: "_id name avatar" })
+          .select("action actorId actorRole note createdAt")
+          .lean(),
+        ReportModel.countDocuments({
+          targetType: report.targetType,
+          targetId: report.targetId,
+        }),
+        // Lấy AI scores từ Post/Comment để fallback
+        report.targetType === ReportTargetType.POST
+          ? PostModel.findById(report.targetId)
+              .select(
+                "aiToxicScore aiHateSpeechScore aiSpamScore aiOverallRisk hiddenReason moderationStatus isHidden"
+              )
+              .lean()
+          : report.targetType === ReportTargetType.COMMENT
+            ? CommentModel.findById(report.targetId)
+                .select(
+                  "aiToxicScore aiHateSpeechScore aiSpamScore hiddenReason moderationStatus isHidden"
+                )
+                .lean()
+            : Promise.resolve(null),
+      ]);
+
+    // Build aiAnalysis: ưu tiên moderationSnapshot của report,
+    // fallback sang AI scores từ Post/Comment
+    let aiAnalysis = (detail as any).aiAnalysis ?? null;
+
+    if (!aiAnalysis && targetDoc) {
+      const td = targetDoc as any;
+      const hasScores =
+        td.aiToxicScore != null ||
+        td.aiHateSpeechScore != null ||
+        td.aiSpamScore != null;
+
+      if (hasScores) {
+        const toxic = td.aiToxicScore ?? 0;
+        const hateSpeech = td.aiHateSpeechScore ?? 0;
+        const spam = td.aiSpamScore ?? 0;
+        const risk = Math.max(toxic, hateSpeech, spam);
+
+        aiAnalysis = {
+          calledAt: report.createdAt,
+          model: "gemini (cached)",
+          toxicityScore: toxic,
+          confidenceScore: risk,
+          categories: [],
+          decision:
+            risk >= 0.8
+              ? "auto_hide"
+              : risk >= 0.5
+                ? "escalate"
+                : risk >= 0.3
+                  ? "needs_human"
+                  : "auto_pass",
+          reasoning: td.hiddenReason ?? "",
+          actionTaken: td.isHidden ? "hidden" : "none",
+          scores: {
+            toxic,
+            hateSpeech,
+            spam,
+            reason: td.hiddenReason ?? "ok",
+          },
+        };
+      }
+    }
 
     const activity = [
       {
@@ -908,7 +1090,8 @@ export const getAdminReportById = asyncHandler(
           [LogAction.ADMIN_REPORT_START_REVIEW]:
             "Admin chuyển trạng thái sang đang xem xét",
           [LogAction.ADMIN_REPORT_RESOLVE]: "Admin xử lý và đóng báo cáo",
-          [LogAction.ADMIN_REPORT_DISMISS]: "Báo cáo bị bỏ qua do không vi phạm",
+          [LogAction.ADMIN_REPORT_DISMISS]:
+            "Báo cáo bị bỏ qua do không vi phạm",
         };
         return {
           _id: log._id.toString(),
@@ -916,7 +1099,7 @@ export const getAdminReportById = asyncHandler(
           adminName:
             log.actorRole === LogActorRole.SYSTEM
               ? "System"
-              : actor?.name ?? "Admin",
+              : (actor?.name ?? "Admin"),
           note: log.note,
           createdAt: log.createdAt,
         };
@@ -924,11 +1107,14 @@ export const getAdminReportById = asyncHandler(
     ];
 
     const relatedReports = (
-      await Promise.all(relatedRows.map((row) => buildAdminReportPayload(row as never)))
+      await Promise.all(
+        relatedRows.map((row) => buildAdminReportPayload(row as never))
+      )
     ).map((r) => ({ ...r, reportCount }));
 
     sendSuccess(res, {
       ...detail,
+      aiAnalysis,
       reportCount,
       activity,
       relatedReports,
@@ -984,8 +1170,14 @@ export const handleReport = asyncHandler(
     // ── banPreset validation ─────────────────────────────────────────────
     // Bắt buộc khi action = "resolve" && modAction = "ban_temp"
     let banPreset: BanPreset | undefined;
-    if (body.action === "resolve" && body.modAction === ModerationAction.BAN_TEMP) {
-      if (!body.banPreset || !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)) {
+    if (
+      body.action === "resolve" &&
+      body.modAction === ModerationAction.BAN_TEMP
+    ) {
+      if (
+        !body.banPreset ||
+        !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)
+      ) {
         throw new ValidationError(
           `banPreset không hợp lệ. Cho phép: ${VALID_BAN_PRESETS.join(", ")}`,
           "INVALID_BAN_PRESET"
@@ -1000,7 +1192,8 @@ export const handleReport = asyncHandler(
 
     // ── MODERATION ACTION validation ───────────────────────────────────
     const VALID_MOD_ACTIONS: string[] = Object.values(ModerationAction);
-    const modAction = (body.modAction ?? ModerationAction.DISMISS) as ModerationAction;
+    const modAction = (body.modAction ??
+      ModerationAction.DISMISS) as ModerationAction;
 
     if (!VALID_MOD_ACTIONS.includes(modAction)) {
       throw new ValidationError(
@@ -1019,7 +1212,15 @@ export const handleReport = asyncHandler(
       suggestion: null,
     };
     if (body.action === "resolve") {
-      modResult = await applyModerationAction(report, modAction, warnAuthor, banPreset, adminOid, now, note);
+      modResult = await applyModerationAction(
+        report,
+        modAction,
+        warnAuthor,
+        banPreset,
+        adminOid,
+        now,
+        note
+      );
 
       // Auto-resolve các report khác cùng target đang pending/reviewing
       const related = await ReportModel.find({
@@ -1027,7 +1228,9 @@ export const handleReport = asyncHandler(
         targetType: report.targetType,
         targetId: report.targetId,
         status: { $in: [ReportStatus.PENDING, ReportStatus.REVIEWING] },
-      }).select("_id").lean();
+      })
+        .select("_id")
+        .lean();
 
       if (related.length > 0) {
         await ReportModel.updateMany(
@@ -1080,7 +1283,8 @@ export const handleReport = asyncHandler(
     }
 
     fireAndForgetAdminLog(req, mapReportActionToLogAction(body.action), {
-      severity: body.action === "resolve" ? LogSeverity.WARNING : LogSeverity.INFO,
+      severity:
+        body.action === "resolve" ? LogSeverity.WARNING : LogSeverity.INFO,
       targetType: LogTargetType.REPORT,
       targetId: reportId,
       affectedUserId: report.reporterId,
@@ -1471,7 +1675,10 @@ export const resolveAdminReport = asyncHandler(
     // ── banPreset validation (bắt buộc khi ban_temp) ──────────────────
     let banPreset: BanPreset | undefined;
     if (body.modAction === ModerationAction.BAN_TEMP) {
-      if (!body.banPreset || !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)) {
+      if (
+        !body.banPreset ||
+        !VALID_BAN_PRESETS.includes(body.banPreset as BanPreset)
+      ) {
         throw new ValidationError(
           `banPreset không hợp lệ. Cho phép: ${VALID_BAN_PRESETS.join(", ")}`,
           "INVALID_BAN_PRESET"
@@ -1485,7 +1692,8 @@ export const resolveAdminReport = asyncHandler(
     const now = new Date();
 
     const VALID_MOD_ACTIONS: string[] = Object.values(ModerationAction);
-    const modAction = (body.modAction ?? ModerationAction.DISMISS) as ModerationAction;
+    const modAction = (body.modAction ??
+      ModerationAction.DISMISS) as ModerationAction;
     if (!VALID_MOD_ACTIONS.includes(modAction)) {
       throw new ValidationError(
         `modAction không hợp lệ. Cho phép: ${VALID_MOD_ACTIONS.join(", ")}`,
@@ -1501,7 +1709,15 @@ export const resolveAdminReport = asyncHandler(
     }
 
     // Áp dụng hành động xử lý lên target
-    const modResult = await applyModerationAction(report, modAction, warnAuthor, banPreset, adminOid, now, note);
+    const modResult = await applyModerationAction(
+      report,
+      modAction,
+      warnAuthor,
+      banPreset,
+      adminOid,
+      now,
+      note
+    );
 
     // Auto-resolve các report cùng target
     const related = await ReportModel.find({
@@ -1509,7 +1725,9 @@ export const resolveAdminReport = asyncHandler(
       targetType: report.targetType,
       targetId: report.targetId,
       status: { $in: [ReportStatus.PENDING, ReportStatus.REVIEWING] },
-    }).select("_id").lean();
+    })
+      .select("_id")
+      .lean();
 
     if (related.length > 0) {
       await ReportModel.updateMany(
@@ -1657,16 +1875,26 @@ export const patchAdminUserBlock = asyncHandler(
       );
     }
 
-    const reason = body.reason !== undefined
-      ? (typeof body.reason === "string" ? body.reason.slice(0, 500) : "")
-      : undefined;
+    const reason =
+      body.reason !== undefined
+        ? typeof body.reason === "string"
+          ? body.reason.slice(0, 500)
+          : ""
+        : undefined;
 
     const now = new Date();
-    const PRESET_DAYS: Record<string, number> = { "1d": 1, "3d": 3, "7d": 7, "30d": 30 };
+    const PRESET_DAYS: Record<string, number> = {
+      "1d": 1,
+      "3d": 3,
+      "7d": 7,
+      "30d": 30,
+    };
     const bannedUntil =
       banPreset === "permanent"
         ? null
-        : new Date(Date.now() + (PRESET_DAYS[banPreset] ?? 7) * 24 * 60 * 60 * 1000);
+        : new Date(
+            Date.now() + (PRESET_DAYS[banPreset] ?? 7) * 24 * 60 * 60 * 1000
+          );
 
     const adminOid = getAdminActorId(req);
     const logAction = banPreset === "permanent" ? "ban_permanent" : "ban_temp";
@@ -1710,9 +1938,17 @@ export const patchAdminUserBlock = asyncHandler(
       targetId: id,
       affectedUserId: id,
       before: { isBlocked: before.isBlocked, isBanned: before.isBanned },
-      after: { isBlocked: user.isBlocked, isBanned: user.isBanned, bannedUntil: user.bannedUntil },
+      after: {
+        isBlocked: user.isBlocked,
+        isBanned: user.isBanned,
+        bannedUntil: user.bannedUntil,
+      },
       note: reason,
-      metadata: { banPreset, bannedUntil: bannedUntil?.toISOString() ?? null, reason },
+      metadata: {
+        banPreset,
+        bannedUntil: bannedUntil?.toISOString() ?? null,
+        reason,
+      },
     });
 
     sendSuccess(res, user, "Đã chặn người dùng");
@@ -1748,8 +1984,16 @@ export const patchAdminUserUnblock = asyncHandler(
       targetType: LogTargetType.USER,
       targetId: id,
       affectedUserId: id,
-      before: { isBlocked: before.isBlocked, isBanned: before.isBanned, bannedUntil: before.bannedUntil },
-      after: { isBlocked: user.isBlocked, isBanned: user.isBanned, bannedUntil: user.bannedUntil },
+      before: {
+        isBlocked: before.isBlocked,
+        isBanned: before.isBanned,
+        bannedUntil: before.bannedUntil,
+      },
+      after: {
+        isBlocked: user.isBlocked,
+        isBanned: user.isBanned,
+        bannedUntil: user.bannedUntil,
+      },
     });
 
     sendSuccess(res, user, "Đã bỏ chặn người dùng");
@@ -1958,7 +2202,13 @@ export const getAdminUserStats = asyncHandler(
 //  COMMENT MANAGEMENT
 // ─────────────────────────────────────────────────────────────
 
-const COMMENT_ACTIONS = ["hide", "unhide", "approve", "reject", "delete"] as const;
+const COMMENT_ACTIONS = [
+  "hide",
+  "unhide",
+  "approve",
+  "reject",
+  "delete",
+] as const;
 type CommentAdminAction = (typeof COMMENT_ACTIONS)[number];
 
 function isCommentAdminAction(v: string): v is CommentAdminAction {
@@ -1970,7 +2220,9 @@ function parseCommentModerationStatus(
 ): CommentModerationStatus | undefined {
   if (!raw) return undefined;
   if (
-    Object.values(CommentModerationStatus).includes(raw as CommentModerationStatus)
+    Object.values(CommentModerationStatus).includes(
+      raw as CommentModerationStatus
+    )
   ) {
     return raw as CommentModerationStatus;
   }
@@ -2037,26 +2289,110 @@ export const getAdminComments = asyncHandler(
     else if (replyOnly === false) filter.parentCommentId = null;
 
     const keyword = q.keyword?.trim();
-    if (keyword) {
-      const safe = escapeRegex(keyword);
-      filter.contentText = { $regex: safe, $options: "i" };
-    }
+    const keywordRegex = keyword
+      ? { $regex: escapeRegex(keyword), $options: "i" }
+      : null;
+    const keywordMatch: PipelineStage.Match["$match"] | null = keywordRegex
+      ? {
+          $or: [{ contentText: keywordRegex }, { "user.name": keywordRegex }],
+        }
+      : null;
 
-    const [comments, total] = await Promise.all([
-      CommentModel.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "userId", select: "_id name avatar email" })
-        .populate({ path: "postId", select: "_id contentText" })
-        .select(
-          "contentText moderationStatus isHidden isEdited " +
-            "likesCount repliesCount parentCommentId originalCommentId " +
-            "createdAt updatedAt userId postId"
-        )
-        .lean(),
-      CommentModel.countDocuments(filter),
-    ]);
+    const aggregationPipeline: PipelineStage[] = [
+      { $match: filter as PipelineStage.Match["$match"] },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      ...(keywordMatch ? [{ $match: keywordMatch }] : []),
+      {
+        $facet: {
+          comments: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $lookup: {
+                from: "posts",
+                localField: "postId",
+                foreignField: "_id",
+                as: "post",
+              },
+            },
+            {
+              $unwind: {
+                path: "$post",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                contentText: 1,
+                moderationStatus: 1,
+                isHidden: 1,
+                isEdited: 1,
+                likesCount: 1,
+                repliesCount: 1,
+                parentCommentId: 1,
+                originalCommentId: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                userId: {
+                  _id: "$user._id",
+                  name: "$user.name",
+                  avatar: "$user.avatar",
+                  email: "$user.email",
+                },
+                postId: {
+                  _id: "$post._id",
+                  contentText: "$post.contentText",
+                },
+              },
+            },
+          ],
+          totalCount: [{ $count: "total" }],
+        },
+      },
+    ];
+
+    const [aggregationResult] =
+      await CommentModel.aggregate(aggregationPipeline);
+    const comments = (aggregationResult?.comments ?? []) as Array<{
+      _id: Types.ObjectId;
+      contentText: string;
+      moderationStatus: CommentModerationStatus;
+      isHidden: boolean;
+      isEdited: boolean;
+      likesCount: number;
+      repliesCount: number;
+      parentCommentId?: Types.ObjectId | null;
+      originalCommentId?: Types.ObjectId | null;
+      createdAt: Date;
+      updatedAt: Date;
+      userId?: {
+        _id?: Types.ObjectId;
+        name?: string;
+        avatar?: string;
+        email?: string;
+      } | null;
+      postId?: {
+        _id?: Types.ObjectId;
+        contentText?: string;
+      } | null;
+    }>;
+    const total =
+      (aggregationResult?.totalCount?.[0]?.total as number | undefined) ?? 0;
 
     const flaggedIds = comments
       .filter((c) => c.moderationStatus === CommentModerationStatus.FLAGGED)
@@ -2352,7 +2688,7 @@ export const getAdminCommentActivity = asyncHandler(
         adminName:
           log.actorRole === LogActorRole.SYSTEM
             ? "Hệ thống"
-            : actor?.name ?? "Admin",
+            : (actor?.name ?? "Admin"),
         adminAvatar: actor?.avatar,
         actorRole: log.actorRole,
         severity: log.severity,
