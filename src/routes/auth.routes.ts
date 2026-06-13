@@ -16,6 +16,10 @@ import {
   verifyEmail,
   sendPhoneOtp,
   verifyPhoneOtp,
+  sendRegisterEmailOtp,
+  verifyRegisterEmailOtp,
+  sendRegisterPhoneOtp,
+  verifyRegisterPhoneOtp,
   forgotPassword,
   resetPassword,
 } from "../controllers/verification.controller";
@@ -36,10 +40,14 @@ router.post("/logout", logout);
 // ── Email verification ──────────────────────────────────────────────────────
 router.post("/email/send-verification", authMiddleware, sendEmailVerification);
 router.post("/email/verify", verifyEmail);
+router.post("/email/send-register-otp", sendRegisterEmailOtp);
+router.post("/email/verify-register-otp", verifyRegisterEmailOtp);
 
 // ── Phone OTP ───────────────────────────────────────────────────────────────
 router.post("/phone/send-otp", authMiddleware, sendPhoneOtp);
 router.post("/phone/verify-otp", verifyPhoneOtp);
+router.post("/phone/send-register-otp", sendRegisterPhoneOtp);
+router.post("/phone/verify-register-otp", verifyRegisterPhoneOtp);
 
 // ── Forgot / Reset password ─────────────────────────────────────────────────
 router.post("/forgot-password", forgotPassword);

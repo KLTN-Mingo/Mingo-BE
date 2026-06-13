@@ -1,8 +1,10 @@
 // src/server.ts
+import dns from "dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
-import dns from "node:dns";
+// import dns from "dns";
 
 import http from "http";
 import mongoose from "mongoose";

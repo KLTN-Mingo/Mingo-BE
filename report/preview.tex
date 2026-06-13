@@ -2,7 +2,7 @@
 
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
-\usepackage[a4paper,left=3.5cm,right=2cm,top=2.5cm,bottom=2cm,footskip=1cm]{geometry}
+\usepackage[a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2cm,footskip=1cm]{geometry}
 \usepackage{setspace}
 \onehalfspacing
 \usepackage{indentfirst}
@@ -28,10 +28,12 @@
 \usepackage{array}
 \usepackage{calc}
 \usepackage{multirow}
+\usepackage{seqsplit}
 \usepackage[table]{xcolor}
 \usepackage{soul}
 \usepackage[normalem]{ulem}
 \usepackage{caption}
+\usepackage{tocloft}
 \captionsetup{
   font={it,small},
   labelfont=it,
@@ -41,6 +43,12 @@
 }
 \renewcommand{\figurename}{Hình}
 \renewcommand{\tablename}{Bảng}
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\let\originaltexttt\texttt
+\renewcommand{\texttt}[1]{\originaltexttt{\seqsplit{#1}}}
+\emergencystretch=3em
+\sloppy
 
 \usepackage{titlesec}
 \titleformat{\chapter}[hang]
@@ -85,6 +93,78 @@
 }
 
 \usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\tikzset{
+  activity/.style={
+    draw,
+    rounded corners=2pt,
+    align=center,
+    minimum width=3.7cm,
+    minimum height=0.95cm,
+    font=\small
+  },
+  activity-wide/.style={
+    activity,
+    minimum width=4.5cm
+  },
+  decision/.style={
+    draw,
+    diamond,
+    aspect=2.2,
+    align=center,
+    inner sep=1pt,
+    font=\small
+  },
+  terminator/.style={
+    draw,
+    ellipse,
+    align=center,
+    minimum width=2.5cm,
+    minimum height=0.9cm,
+    font=\small
+  },
+  flow/.style={
+    -{Latex[length=2.2mm,width=1.6mm]},
+    line width=0.4pt
+  },
+  databox/.style={
+    draw,
+    rounded corners=2pt,
+    align=left,
+    font=\scriptsize,
+    text width=3.2cm,
+    inner sep=5pt
+  },
+  entitybox/.style={
+    draw,
+    rounded corners=2pt,
+    align=left,
+    font=\scriptsize,
+    text width=3.4cm,
+    inner sep=5pt
+  },
+  usecaseactor/.style={
+    draw,
+    rounded corners=2pt,
+    align=center,
+    minimum width=2.6cm,
+    minimum height=1cm,
+    font=\small
+  },
+  usecaseellipse/.style={
+    draw,
+    ellipse,
+    align=center,
+    minimum width=3.6cm,
+    minimum height=1.1cm,
+    text width=3.2cm,
+    font=\scriptsize
+  },
+  dataflow/.style={
+    -{Latex[length=2mm,width=1.5mm]},
+    line width=0.35pt
+  }
+}
 \newcommand{\coverframe}{%
   \begin{tikzpicture}[remember picture,overlay]
     \draw[line width=1.2pt]
@@ -195,6 +275,12 @@
 \renewcommand{\listtablename}{DANH MỤC BẢNG}
 \setcounter{tocdepth}{3}
 \setcounter{secnumdepth}{3}
+\renewcommand{\cftchappresnum}{Chương }
+\renewcommand{\cftchapaftersnum}{.}
+\setlength{\cftchapnumwidth}{5.4em}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftchappagefont}{\normalfont}
 
 \usepackage{hyperref}
 \hypersetup{

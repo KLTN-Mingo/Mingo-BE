@@ -1,0 +1,96 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+
+skinparam usecase {
+  BackgroundColor #FAFAFA
+  BorderColor #888888
+  FontSize 12
+}
+
+skinparam package {
+  BackgroundColor #F5F5F5
+  BorderColor #CCCCCC
+  FontStyle bold
+}
+
+actor "Khách" as Guest
+actor "Người dùng" as User
+actor "Quản trị viên" as Admin
+actor "Gemini API" as Gemini
+
+rectangle "Hệ thống mạng xã hội Mingo" {
+
+  package "Xác thực và bảo mật" {
+    usecase "UC-01\nĐăng ký tài khoản" as UC01
+    usecase "UC-02\nĐăng nhập và\nduy trì phiên" as UC02
+    usecase "UC-03\nQuản lý 2FA" as UC03
+    usecase "UC-04\nKhôi phục mật khẩu" as UC04
+  }
+
+  package "Hồ sơ và kết nối" {
+    usecase "UC-05\nQuản lý hồ sơ\ncá nhân" as UC05
+    usecase "UC-06\nTìm kiếm toàn cục" as UC06
+    usecase "UC-07\nQuản lý quan hệ\nngười dùng" as UC07
+  }
+
+  package "Nội dung và cá nhân hóa" {
+    usecase "UC-08\nQuản lý bài viết" as UC08
+    usecase "UC-09\nTương tác với\nnội dung" as UC09
+    usecase "UC-10\nXem feed\ncá nhân hóa" as UC10
+    usecase "UC-11\nGiải thích thuật ngữ\nvăn hóa mạng" as UC11
+    usecase "UC-14\nGửi báo cáo\nvi phạm" as UC14
+    usecase "UC-15\nKiểm duyệt nội dung\nbằng AI" as UC15
+  }
+
+  package "Thông báo và giao tiếp" {
+    usecase "UC-12\nNhận và quản lý\nthông báo" as UC12
+    usecase "UC-13\nNhắn tin và\ngọi thoại" as UC13
+  }
+
+  package "Quản trị hệ thống" {
+    usecase "UC-16\nQuản trị báo cáo\nvà nội dung" as UC16
+    usecase "UC-17\nQuản lý từ điển\nslang" as UC17
+    usecase "UC-18\nTheo dõi thống kê\nhệ thống" as UC18
+  }
+}
+
+Guest --> UC01
+Guest --> UC02
+Guest --> UC04
+
+User --> UC02
+User --> UC03
+User --> UC05
+User --> UC06
+User --> UC07
+User --> UC08
+User --> UC09
+User --> UC10
+User --> UC11
+User --> UC12
+User --> UC13
+User --> UC14
+
+Gemini --> UC11
+Gemini --> UC15
+
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+Admin --> UC18
+
+UC01 .> UC02 : <<extend>>
+UC09 .> UC14 : <<extend>>
+UC10 .> UC09 : <<extend>>
+
+UC08 .> UC15 : <<include>>
+UC08 .> UC11 : <<include>>
+UC16 .> UC15 : <<include>>
+UC17 .> UC11 : <<include>>
+
+@enduml

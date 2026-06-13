@@ -8,6 +8,8 @@ import { Schema, model, Document, Types } from "mongoose";
 export enum VerificationPurpose {
   EMAIL_VERIFY = "email_verify",
   PHONE_VERIFY = "phone_verify",
+  REGISTER_EMAIL_VERIFY = "register_email_verify",
+  REGISTER_PHONE_VERIFY = "register_phone_verify",
   PASSWORD_RESET = "password_reset",
 }
 

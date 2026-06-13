@@ -7,6 +7,7 @@ import {
   ValidationError,
   NotFoundError,
   UnauthorizedError,
+  ConflictError,
 } from "../errors";
 import { UserModel } from "../models/user.model";
 import {
@@ -24,6 +25,7 @@ import {
 } from "../lib/mailer";
 import { sendSms, buildOtpSmsBody } from "../lib/sms";
 import { revokeAllUserTokens } from "../lib/auth/token-service";
+import { validateEmail, validatePhoneNumber } from "../utils/validators";
 
 function getAuthUserId(req: Request): string {
   const userId = (req as Request & { user?: { userId?: string } }).user?.userId;
@@ -40,6 +42,32 @@ function buildClientUrl(path: string, params: Record<string, string>): string {
   );
   const qs = new URLSearchParams(params).toString();
   return `${base}${path}?${qs}`;
+}
+
+function buildRegisterOtpEmailContent(opts: {
+  otp?: string;
+  expiresInMinutes: number;
+}) {
+  const otpLine = opts.otp
+    ? `Ma OTP dang ky cua ban la: ${opts.otp}`
+    : "Ma OTP dang ky cua ban da san sang.";
+
+  const text = `Xin chao,
+
+${otpLine}
+
+Ma het han sau ${opts.expiresInMinutes} phut.
+Neu ban khong yeu cau tao tai khoan, hay bo qua email nay.
+
+- Doi ngu Mingo`;
+
+  const html = `<p>Xin chao,</p>
+<p><b>${otpLine}</b></p>
+<p>Ma het han sau ${opts.expiresInMinutes} phut.</p>
+<p>Neu ban khong yeu cau tao tai khoan, hay bo qua email nay.</p>
+<p>- Doi ngu Mingo</p>`;
+
+  return { text, html };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -212,6 +240,168 @@ export const verifyPhoneOtp = asyncHandler(
 // ─────────────────────────────────────────────────────────────────────────────
 // FORGOT / RESET PASSWORD
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @route POST /api/auth/email/send-register-otp
+ * Body: { email }
+ * Public - dÃ¹ng trÆ°á»›c khi Ä‘Äƒng kÃ½.
+ */
+export const sendRegisterEmailOtp = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email } = req.body as { email?: string };
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      throw new ValidationError("email lÃ  báº¯t buá»™c");
+    }
+
+    validateEmail(normalizedEmail);
+
+    const existingUser = await UserModel.findOne({ email: normalizedEmail })
+      .select("_id")
+      .lean();
+    if (existingUser) {
+      throw new ConflictError(
+        "Email Ä‘Ã£ Ä‘Æ°á»£c Ä‘Äƒng kÃ½",
+        "EMAIL_ALREADY_REGISTERED"
+      );
+    }
+
+    const issued = await VerificationService.issue({
+      identifier: normalizedEmail,
+      channel: VerificationChannel.EMAIL,
+      purpose: VerificationPurpose.REGISTER_EMAIL_VERIFY,
+    });
+
+    const expiresInMinutes =
+      VerificationConfig.DEFAULT_VERIFY_LINK_EXPIRES_MIN;
+    const { text, html } = buildRegisterOtpEmailContent({
+      otp: issued.otp,
+      expiresInMinutes,
+    });
+
+    await sendMail({
+      to: normalizedEmail,
+      subject: "OTP dang ky tai khoan Mingo",
+      text,
+      html,
+    });
+
+    sendSuccess(
+      res,
+      { expiresInMinutes },
+      "Da gui OTP dang ky qua email. Vui long kiem tra hop thu."
+    );
+  }
+);
+
+/**
+ * @route POST /api/auth/email/verify-register-otp
+ * Body: { email, code }
+ * Public - xÃ¡c thá»±c OTP Ä‘Äƒng kÃ½ email.
+ */
+export const verifyRegisterEmailOtp = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email, code } = req.body as { email?: string; code?: string };
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    if (!normalizedEmail || !code) {
+      throw new ValidationError("email vÃ  code lÃ  báº¯t buá»™c");
+    }
+
+    validateEmail(normalizedEmail);
+
+    await VerificationService.verify({
+      identifier: normalizedEmail,
+      purpose: VerificationPurpose.REGISTER_EMAIL_VERIFY,
+      code,
+    });
+
+    sendSuccess(res, { verified: true }, "Xac thuc OTP dang ky email thanh cong");
+  }
+);
+
+/**
+ * @route POST /api/auth/phone/send-register-otp
+ * Body: { phoneNumber }
+ * Public - dÃ¹ng trÆ°á»›c khi Ä‘Äƒng kÃ½.
+ */
+export const sendRegisterPhoneOtp = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { phoneNumber } = req.body as { phoneNumber?: string };
+    const normalizedPhone = phoneNumber?.trim();
+
+    if (!normalizedPhone) {
+      throw new ValidationError("phoneNumber lÃ  báº¯t buá»™c");
+    }
+
+    validatePhoneNumber(normalizedPhone);
+
+    const existingUser = await UserModel.findOne({
+      phoneNumber: normalizedPhone,
+    })
+      .select("_id")
+      .lean();
+    if (existingUser) {
+      throw new ConflictError(
+        "So dien thoai da duoc dang ky",
+        "PHONE_ALREADY_REGISTERED"
+      );
+    }
+
+    const issued = await VerificationService.issue({
+      identifier: normalizedPhone,
+      channel: VerificationChannel.SMS,
+      purpose: VerificationPurpose.REGISTER_PHONE_VERIFY,
+      expiresInMinutes: VerificationConfig.DEFAULT_OTP_EXPIRES_MIN,
+    });
+
+    const otp = issued.otp ?? issued.rawToken;
+    await sendSms({
+      to: normalizedPhone,
+      body: buildOtpSmsBody(otp, VerificationConfig.DEFAULT_OTP_EXPIRES_MIN),
+    });
+
+    sendSuccess(
+      res,
+      { expiresInMinutes: VerificationConfig.DEFAULT_OTP_EXPIRES_MIN },
+      "Da gui OTP dang ky qua SMS"
+    );
+  }
+);
+
+/**
+ * @route POST /api/auth/phone/verify-register-otp
+ * Body: { phoneNumber, code }
+ * Public - xÃ¡c thá»±c OTP Ä‘Äƒng kÃ½ sá»‘ Ä‘iá»‡n thoáº¡i.
+ */
+export const verifyRegisterPhoneOtp = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { phoneNumber, code } = req.body as {
+      phoneNumber?: string;
+      code?: string;
+    };
+    const normalizedPhone = phoneNumber?.trim();
+
+    if (!normalizedPhone || !code) {
+      throw new ValidationError("phoneNumber vÃ  code lÃ  báº¯t buá»™c");
+    }
+
+    validatePhoneNumber(normalizedPhone);
+
+    await VerificationService.verify({
+      identifier: normalizedPhone,
+      purpose: VerificationPurpose.REGISTER_PHONE_VERIFY,
+      code,
+    });
+
+    sendSuccess(
+      res,
+      { verified: true },
+      "Xac thuc OTP dang ky so dien thoai thanh cong"
+    );
+  }
+);
 
 /**
  * @route POST /api/auth/forgot-password
