@@ -67,9 +67,7 @@ class CloudinaryService {
    */
   async uploadImage(
     file: Express.Multer.File,
-    folder: string = "social-network/posts",
-    postId?: string,
-    context?: { reportCount?: number; isNewAccount?: boolean }
+    folder: string = "social-network/posts"
   ): Promise<UploadResult> {
     try {
       return await new Promise<UploadResult>((resolve, reject) => {
@@ -109,14 +107,9 @@ class CloudinaryService {
               resourceType: "image",
               bytes: result.bytes,
             });
-
-            if (postId) {
-              ModerationService.moderateImage(
-                result.secure_url,
-                postId,
-                context
-              ).catch((err) => console.error("[Image Moderation]", err));
-            }
+            // ❌ Đã xóa: tự gọi moderateImage ở đây.
+            // Moderation giờ do triggerMediaModeration() ở media.service.ts đảm nhiệm,
+            // sau khi TẤT CẢ media trong batch đã insert xong (tránh race condition).
           }
         );
 
@@ -135,9 +128,7 @@ class CloudinaryService {
    */
   async uploadVideo(
     file: Express.Multer.File,
-    folder: string = "social-network/videos",
-    postId?: string,
-    context?: { reportCount?: number; isNewAccount?: boolean }
+    folder: string = "social-network/videos"
   ): Promise<UploadResult> {
     try {
       const maxSize = 100 * 1024 * 1024; // 100MB
@@ -177,17 +168,10 @@ class CloudinaryService {
               bytes: result.bytes,
               duration: result.duration,
             });
-
-            if (postId) {
-              const thumbnailUrl = this.generateVideoThumbnail(
-                result.public_id
-              );
-              ModerationService.moderateImage(
-                thumbnailUrl,
-                postId,
-                context
-              ).catch((err) => console.error("[Video Moderation]", err));
-            }
+            // ❌ Đã xóa: tự gọi moderateImage(thumbnailUrl) ở đây.
+            // Đây chính là nguồn bug — video bị duyệt nhầm qua pipeline ẢNH
+            // (dùng thumbnail .jpg) thay vì pipeline VIDEO (moderateVideo, full video).
+            // Moderation giờ do triggerMediaModeration() ở media.service.ts đảm nhiệm.
           }
         );
 
