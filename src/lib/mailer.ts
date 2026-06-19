@@ -86,6 +86,7 @@ export async function sendMail(opts: SendMailOptions): Promise<void> {
     });
   } catch (err) {
     console.error("[mailer] Send mail failed:", err);
+    throw err;
   }
 }
 

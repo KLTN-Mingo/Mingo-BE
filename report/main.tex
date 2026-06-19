@@ -1,4 +1,4 @@
-\makeoutercover
+﻿\makeoutercover
 \makeinnercover
 
 \pagenumbering{gobble}
@@ -59,37 +59,36 @@ Nhóm sinh viên thực hiện:\par
 \addcontentsline{toc}{chapter}{DANH MỤC TỪ VIẾT TẮT}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.0955}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1450}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3860}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3517}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.0955}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1450}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3860}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3517}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
 \textbf{STT} & \textbf{Ký hiệu} & \textbf{Tiếng Anh} & \textbf{Tiếng
-Việt} \\
-1 & AI & Artificial Intelligence & Trí tuệ nhân tạo \\
+Việt} \\ \hline
+1 & AI & Artificial Intelligence & Trí tuệ nhân tạo \\ \hline
 2 & API & Application Programming Interface & Giao diện lập trình ứng
-dụng \\
-3 & UI & User Interface & Giao diện người dùng \\
-4 & UX & User Experience & Trải nghiệm người dùng \\
-5 & 2FA & Two-Factor Authentication & Xác thực hai yếu tố \\
-6 & LLM & Large Language Model & Mô hình ngôn ngữ lớn \\
-7 & CTR & Click-Through Rate & Tỉ lệ nhấp \\
-8 & NLP & Natural Language Processing & Xử lý ngôn ngữ tự nhiên \\
-9 & MVP & Minimum Viable Product & Sản phẩm khả dụng tối thiểu \\
+dụng \\ \hline
+3 & UI & User Interface & Giao diện người dùng \\ \hline
+4 & UX & User Experience & Trải nghiệm người dùng \\ \hline
+5 & 2FA & Two-Factor Authentication & Xác thực hai yếu tố \\ \hline
+6 & LLM & Large Language Model & Mô hình ngôn ngữ lớn \\ \hline
+7 & CTR & Click-Through Rate & Tỉ lệ nhấp \\ \hline
+8 & NLP & Natural Language Processing & Xử lý ngôn ngữ tự nhiên \\ \hline
+9 & MVP & Minimum Viable Product & Sản phẩm khả dụng tối thiểu \\ \hline
 10 & REST & Representational State Transfer & Kiểu kiến trúc truyền tải
-trạng thái đại diện \\
-11 & ERD & Entity Relationship Diagram & Sơ đồ thực thể quan hệ \\
-12 & SSR & Server-Side Rendering & Kết xuất phía máy chủ \\
-13 & SSG & Static Site Generation & Tạo trang tĩnh \\
-14 & CDN & Content Delivery Network & Mạng phân phối nội dung \\
-15 & JSON & JavaScript Object Notation & Định dạng dữ liệu \\
+trạng thái đại diện \\ \hline
+11 & ERD & Entity Relationship Diagram & Sơ đồ thực thể quan hệ \\ \hline
+12 & SSR & Server-Side Rendering & Kết xuất phía máy chủ \\ \hline
+13 & SSG & Static Site Generation & Tạo trang tĩnh \\ \hline
+14 & CDN & Content Delivery Network & Mạng phân phối nội dung \\ \hline
+15 & JSON & JavaScript Object Notation & Định dạng dữ liệu \\ \hline
 16 & BSON & Binary JavaScript Object Notation & Định dạng JSON nhị
-phân \\
-17 & HITL & Human-in-the-loop & Con người trong vòng lặp quyết định \\
+phân \\ \hline
+17 & HITL & Human-in-the-loop & Con người trong vòng lặp quyết định \\ \hline
 \end{longtable}
 }
 
@@ -744,27 +743,26 @@ Bảng 3.1: Nhóm Quản lý người dùng
 \addcontentsline{lot}{table}{\protect\numberline{3.1}Nhóm Quản lý người dùng}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-01 & Đăng ký tài khoản & Người dùng đăng ký bằng email, xác thực qua
-mã OTP \\
+mã OTP \\ \hline
 FR-02 & Đăng nhập / Đăng xuất & Xác thực bằng email/mật khẩu, cấp JWT
-access token và refresh token \\
+access token và refresh token \\ \hline
 FR-03 & Quản lý hồ sơ cá nhân & Cập nhật ảnh đại diện, tên hiển thị,
-bio, sở thích chủ đề \\
+bio, sở thích chủ đề \\ \hline
 FR-04 & Theo dõi / Hủy theo dõi & Người dùng follow/unfollow người dùng
-khác, cập nhật social graph \\
+khác, cập nhật social graph \\ \hline
 FR-05 & Tìm kiếm người dùng và bài đăng & Tìm kiếm theo tên, username,
-hashtag, nội dung \\
+hashtag, nội dung \\ \hline
 FR-06 & Chặn người dùng & Người dùng có thể chặn tài khoản khác, ẩn toàn
-bộ nội dung của họ \\
+bộ nội dung của họ \\ \hline
 \end{longtable}
 }
 
@@ -775,26 +773,25 @@ Bảng 3.2: Nhóm Quản lý bài đăng và tương tác
 \addcontentsline{lot}{table}{\protect\numberline{3.2}Nhóm Quản lý bài đăng và tương tác}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-07 & Tạo bài đăng & Đăng nội dung văn bản, hình ảnh; gắn hashtag,
 mention; hệ thống tự động kích hoạt pipeline kiểm duyệt và giải thích
-thuật ngữ văn hóa mạng \\
+thuật ngữ văn hóa mạng \\ \hline
 FR-08 & Chỉnh sửa bài đăng & Tác giả chỉnh sửa bài; hệ thống tự động
-kích hoạt lại pipeline kiểm duyệt và giải thích thuật ngữ văn hóa mạng \\
-FR-09 & Xóa bài đăng & Tác giả hoặc Admin xóa bài đăng \\
+kích hoạt lại pipeline kiểm duyệt và giải thích thuật ngữ văn hóa mạng \\ \hline
+FR-09 & Xóa bài đăng & Tác giả hoặc Admin xóa bài đăng \\ \hline
 FR-10 & Bình luận & Người dùng bình luận, trả lời bình luận (nested
-comment) \\
-FR-11 & Tương tác bài đăng & Like, share, save bài đăng \\
+comment) \\ \hline
+FR-11 & Tương tác bài đăng & Like, share, save bài đăng \\ \hline
 FR-12 & Báo cáo nội dung & Người dùng báo cáo bài đăng hoặc bình luận vi
-phạm để quản trị viên xem xét \\
+phạm để quản trị viên xem xét \\ \hline
 \end{longtable}
 }
 
@@ -805,38 +802,37 @@ Bảng 3.3: Nhóm Module AI Kiểm duyệt nội dung
 \addcontentsline{lot}{table}{\protect\numberline{3.3}Nhóm Module AI Kiểm duyệt nội dung}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-13 & Lọc rule-based (Tier 1) & Sau khi bài đăng hoặc bình luận được
 lưu, tác vụ kiểm duyệt nền áp dụng Regex, danh sách từ khóa và các tín
 hiệu spam. Nội dung vi phạm rõ ràng được chuyển sang trạng thái từ chối;
-trường hợp nghi vấn được phân tích tiếp ở Tier 2 \\
+trường hợp nghi vấn được phân tích tiếp ở Tier 2 \\ \hline
 FR-14 & Kiểm duyệt AI (Tier 2) & Gọi Gemini API để phân tích nội dung
 trong các trường hợp: nội dung bị báo cáo, có dấu hiệu vi phạm chưa chắc
 chắn, hoặc lấy mẫu ngẫu nhiên. API trả về toxic\_score,
-hate\_speech\_score, spam\_score \\
+hate\_speech\_score, spam\_score \\ \hline
 FR-15 & Phân loại kết quả kiểm duyệt & Dựa trên điểm số: score
 \textless{} 0.5 → Approved; 0.5 ≤ score \textless{} 0.8 → Human Review;
-score ≥ 0.8 → Auto Hide \\
+score ≥ 0.8 → Auto Hide \\ \hline
 FR-16 & Danh sách kiểm duyệt thủ công & Admin xem danh sách nội dung cần
 Human Review, hiển thị điểm số AI và thông tin liên quan để phê duyệt,
-ẩn hoặc từ chối nội dung \\
+ẩn hoặc từ chối nội dung \\ \hline
 FR-17 & Lưu dấu vết kiểm duyệt & Lưu trạng thái và các điểm toxic,
 hate-speech, spam trực tiếp trên bài đăng hoặc bình luận; các thao tác
-quản trị được ghi nhận thông qua cơ chế audit/log của hệ thống \\
+quản trị được ghi nhận thông qua cơ chế audit/log của hệ thống \\ \hline
 FR-18 & Xử lý báo cáo nội dung & Người dùng gửi báo cáo đối với bài đăng,
 bình luận hoặc tài khoản; quản trị viên xem xét và cập nhật kết quả xử
-lý \\
+lý \\ \hline
 FR-19 & Kiểm duyệt media ở mức MVP & Hình ảnh có thể được gửi tới dịch
 vụ phân tích đa phương thức. Đối với video, hệ thống hiện kiểm tra ảnh
-thu nhỏ nếu được cung cấp; chưa xử lý chuỗi frame và âm thanh video \\
+thu nhỏ nếu được cung cấp; chưa xử lý chuỗi frame và âm thanh video \\ \hline
 \end{longtable}
 }
 
@@ -847,40 +843,39 @@ Bảng 3.4: Nhóm Module AI Cá nhân hóa Feed
 \addcontentsline{lot}{table}{\protect\numberline{3.4}Nhóm Module AI Cá nhân hóa Feed}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-20 & Phân nhánh feed & Hệ thống chia feed thành hai nhánh: Friends
 Feed (following posts, sắp xếp mới nhất) và Explore Feed (candidate
-posts từ pool rộng hơn) \\
+posts từ pool rộng hơn) \\ \hline
 FR-21 & Lọc điều kiện hiển thị & Lọc bài đăng theo trạng thái hiển thị,
-danh sách chặn hai chiều, đã xem, và quyền xem bài (canViewPost) \\
+danh sách chặn hai chiều, đã xem, và quyền xem bài (canViewPost) \\ \hline
 FR-22 & Tính điểm ranking (Scoring Engine) & Tính điểm bài đăng dựa trên
 ba thành phần: Content Matching Score (độ phù hợp chủ đề, hashtag, tác
 giả với UserProfile), Popularity Score (lượt like, comment, share,
 save), Social Score (mức độ gần trong social graph). Áp dụng trọng số
-tĩnh (static weights) và cơ chế cold\_start/normal \\
+tĩnh (static weights) và cơ chế cold\_start/normal \\ \hline
 FR-23 & Khám phá nội dung (Exploration & Chủ động đưa một tỉ lệ bài đăng
 ngoài vùng sở thích (EXPLORATION\_RATE) vào feed để tránh filter
-bubble \\
+bubble \\ \hline
 FR-24 & Phân trang và enrich & Phân trang kết quả feed; enrich dữ liệu
-bài đăng với media, hashtag, mention, like/save count \\
+bài đăng với media, hashtag, mention, like/save count \\ \hline
 FR-25 & Ghi impression & Ghi lại mỗi lần bài đăng hiển thị với người
-dùng, bao gồm tab, source, position và score breakdown \\
+dùng, bao gồm tab, source, position và score breakdown \\ \hline
 FR-26 & Ghi nhận tương tác người dùng & Ghi nhận các hành vi view, like,
 comment, share, save, follow-from-post, hide, not-interested và see-more
-kèm nguồn tương tác, thời gian xem và độ sâu cuộn khi có \\
+kèm nguồn tương tác, thời gian xem và độ sâu cuộn khi có \\ \hline
 FR-27 & Cập nhật UserProfile & Dựa trên tương tác, cập nhật topicScores,
 authorScores, hashtagScores và interaction weight với cơ chế decay theo
-thời gian \\
+thời gian \\ \hline
 FR-28 & Feedback feed & Người dùng có thể phản hồi trực tiếp trên feed:
-hide, not\_interested, see\_more, report để điều chỉnh đề xuất \\
+hide, not\_interested, see\_more, report để điều chỉnh đề xuất \\ \hline
 \end{longtable}
 }
 
@@ -891,29 +886,28 @@ Bảng 3.5: Nhóm Module giải thích thuật ngữ và ngữ cảnh văn hóa 
 \addcontentsline{lot}{table}{\protect\numberline{3.5}Nhóm Module giải thích thuật ngữ và ngữ cảnh văn hóa mạng}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-29 & Phát hiện thuật ngữ văn hóa mạng & Khi bài đăng được gửi lên,
 rule-based engine quét nội dung để nhận diện slang, meme, internet
-culture reference \\
+culture reference \\ \hline
 FR-30 & Giải thích hàng loạt qua LLM & Gộp toàn bộ thuật ngữ phát hiện
 được vào một lần gọi Gemini API duy nhất, lấy giải thích gồm: nghĩa,
-nguồn gốc, tone cảm xúc, ghi chú ngữ cảnh \\
+nguồn gốc, tone cảm xúc, ghi chú ngữ cảnh \\ \hline
 FR-31 & Lưu kết quả vào bài đăng & Kết quả giải thích được lưu trực tiếp
 vào document bài đăng trong MongoDB, kèm vị trí ký tự (character offset)
-của từng thuật ngữ \\
+của từng thuật ngữ \\ \hline
 FR-32 & Hiển thị tooltip & Frontend làm nổi bật các thuật ngữ; người đọc
-nhấn vào để xem phần giải thích đã lưu mà không cần gọi lại Gemini API \\
+nhấn vào để xem phần giải thích đã lưu mà không cần gọi lại Gemini API \\ \hline
 FR-33 & Phân tích lại khi chỉnh sửa & Khi tác giả chỉnh sửa bài đăng, hệ
 thống gọi lại pipeline phát hiện và giải thích bất đồng bộ (async) để
-không chặn luồng lưu bài \\
+không chặn luồng lưu bài \\ \hline
 \end{longtable}
 }
 
@@ -924,19 +918,18 @@ Bảng 3.6: Nhóm Nhắn tin và Thông báo
 \addcontentsline{lot}{table}{\protect\numberline{3.6}Nhóm Nhắn tin và Thông báo}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1106}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3128}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Tên chức năng & Mô tả \\
+Mã & Tên chức năng & Mô tả \\ \hline
 FR-34 & Nhắn tin trực tiếp (DM) & Chat 1-1, 1-N theo thời gian thực qua
-WebSocket \\
+WebSocket \\ \hline
 FR-35 & Thông báo hệ thống & Push notification cho các sự kiện: like,
-comment, follow, tin nhắn \\
+comment, follow, tin nhắn \\ \hline
 \end{longtable}
 }
 
@@ -947,41 +940,40 @@ Bảng 3.7: Yêu cầu phi chức năng
 \addcontentsline{lot}{table}{\protect\numberline{3.7}Yêu cầu phi chức năng}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1296}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2571}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1296}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2571}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.5284}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Mã & Yêu cầu & Mô tả \\
+Mã & Yêu cầu & Mô tả \\ \hline
 NFR-01 & Hiệu năng & Mục tiêu đối với các API không phụ thuộc dịch vụ AI
 là thời gian phản hồi P95 không vượt quá 500 ms trong điều kiện tải thử
 nghiệm được xác định. Các tác vụ kiểm duyệt và giải thích thuật ngữ được
-khởi chạy bất đồng bộ sau khi nội dung được lưu \\
+khởi chạy bất đồng bộ sau khi nội dung được lưu \\ \hline
 NFR-02 & Khả năng mở rộng & Backend được tổ chức theo kiến trúc
 monolithic modular. Các module có trách nhiệm tách biệt ở mức mã nguồn,
 tạo điều kiện cho việc tách thành dịch vụ hoặc bổ sung hàng đợi tác vụ
-trong các giai đoạn phát triển tiếp theo \\
+trong các giai đoạn phát triển tiếp theo \\ \hline
 NFR-03 & Bảo mật & Mật khẩu hash bằng bcrypt. JWT access token thời hạn
 ngắn kết hợp refresh token. Toàn bộ giao tiếp qua HTTPS/TLS. Validate và
-sanitize dữ liệu đầu vào để phòng injection \\
+sanitize dữ liệu đầu vào để phòng injection \\ \hline
 NFR-04 & Độ sẵn sàng & Hệ thống đặt mục tiêu uptime 99,5\% trong môi
 trường triển khai. Khi Gemini API timeout, rate limit hoặc trả dữ liệu
 không hợp lệ, bài đăng vẫn được lưu và hệ thống sử dụng kết quả fallback
-thay vì trả lỗi cho thao tác đăng bài \\
+thay vì trả lỗi cho thao tác đăng bài \\ \hline
 NFR-05 & Khả năng bảo trì & Logic gọi Gemini và prompt được tập trung
 trong các service chuyên trách. Trạng thái cùng các điểm kiểm duyệt được
 lưu trên nội dung; thao tác quản trị được ghi nhận qua cơ chế audit/log
-để hỗ trợ truy vết \\
+để hỗ trợ truy vết \\ \hline
 NFR-06 & Tính riêng tư & Tuân thủ nguyên tắc tối thiểu hóa dữ liệu.
 UserProfile (topicScores, authorScores) chỉ dùng nội bộ cho ranking,
 không chia sẻ ra ngoài. Người dùng có quyền xóa tài khoản và toàn bộ dữ
-liệu liên quan \\
+liệu liên quan \\ \hline
 NFR-07 & Tính tương thích & Mobile app (React Native) hỗ trợ iOS và
 Android. Web Admin (Next.js) tương thích các trình duyệt hiện đại
-(Chrome, Firefox, Safari, Edge) \\
+(Chrome, Firefox, Safari, Edge) \\ \hline
 \end{longtable}
 }
 
@@ -995,42 +987,41 @@ Bảng 3.8: Yêu cầu chất lượng
 \addcontentsline{lot}{table}{\protect\numberline{3.8}Yêu cầu chất lượng}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1770}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3043}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4958}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1770}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3043}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4958}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Đặc tính chất lượng & Tiêu chí đo lường & Mục tiêu \\
+Đặc tính chất lượng & Tiêu chí đo lường & Mục tiêu \\ \hline
 Functional Suitability & Precision, Recall và F1-score của pipeline
 kiểm duyệt nội dung & Mục tiêu Precision ≥ 85\%, Recall ≥ 80\%; kết quả
-thực tế sẽ được xác định bằng tập dữ liệu gán nhãn \\
+thực tế sẽ được xác định bằng tập dữ liệu gán nhãn \\ \hline
 Functional Suitability & Tỉ lệ False Positive của tầng rule-based &
 Theo dõi và giảm số nội dung an toàn bị phân loại nhầm; giá trị mục tiêu
-được xác lập sau đợt đánh giá thực nghiệm đầu tiên \\
+được xác lập sau đợt đánh giá thực nghiệm đầu tiên \\ \hline
 Performance Efficiency & Thời gian phản hồi API không phụ thuộc dịch vụ
-AI & Mục tiêu P95 ≤ 500 ms trong kịch bản tải thử nghiệm được công bố \\
+AI & Mục tiêu P95 ≤ 500 ms trong kịch bản tải thử nghiệm được công bố \\ \hline
 Performance Efficiency & Thời gian tải feed, bao gồm scoring và enrich &
 Theo dõi P50, P95, P99, throughput và tỉ lệ lỗi ở các mức tải 10, 50 và
-100 người dùng ảo \\
+100 người dùng ảo \\ \hline
 Usability & Người dùng mới thực hiện được chức năng cơ bản như đăng bài
 và xem feed mà không cần hướng dẫn & Mục tiêu ít nhất 90\% người tham gia
-hoàn thành kịch bản trong đợt kiểm thử người dùng \\
+hoàn thành kịch bản trong đợt kiểm thử người dùng \\ \hline
 Reliability & Hệ thống vẫn lưu bài khi Gemini API lỗi hoặc phản hồi sai
 định dạng & 100\% ca kiểm thử fallback không làm thất bại thao tác tạo
-bài \\
+bài \\ \hline
 Reliability & Độ sẵn sàng của API trong môi trường triển khai & Mục tiêu
-uptime 99,5\%; kết quả được tính theo thời gian giám sát thực tế \\
+uptime 99,5\%; kết quả được tính theo thời gian giám sát thực tế \\ \hline
 Security & Kiểm tra các nhóm rủi ro phổ biến theo OWASP Top 10 & Không
-phát hiện lỗ hổng mức nghiêm trọng trong phạm vi kiểm thử cơ bản \\
+phát hiện lỗ hổng mức nghiêm trọng trong phạm vi kiểm thử cơ bản \\ \hline
 \end{longtable}
 }
 
-\section{Kiến trúc hệ thống}
+\section{Thiết kế hệ thống}
 
-\subsection{Kiến trúc tổng thể}
+\subsection{Kiến trúc hệ thống ứng dụng}
 
 Ở giai đoạn MVP, hệ thống được xây dựng theo mô hình \textbf{Monolithic
 Modular Architecture} --- toàn bộ backend nằm trong một project Node.js
@@ -1042,22 +1033,21 @@ tách trách nhiệm giữa controller, service và model cũng tạo điều ki
 thuận lợi hơn nếu cần tách một số module thành dịch vụ độc lập về sau.
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2789}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2891}}
-  >{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4091}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2789}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2891}}
+  |>{\centering\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4091}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Tiêu chí & Monolithic Modular & Microservices \\
+Tiêu chí & Monolithic Modular & Microservices \\ \hline
 Độ phức tạp triển khai & Thấp --- 1 process & Cao --- nhiều service, cần
-orchestration \\
-Chi phí vận hành & Thấp & Cao (container, service mesh) \\
+orchestration \\ \hline
+Chi phí vận hành & Thấp & Cao (container, service mesh) \\ \hline
 Độ trễ giao tiếp nội bộ & Không có (function call) & Có (HTTP/gRPC qua
-mạng) \\
-Khả năng scale từng module & Hạn chế & Linh hoạt \\
-Phù hợp giai đoạn MVP & Cao & Thấp \\
+mạng) \\ \hline
+Khả năng scale từng module & Hạn chế & Linh hoạt \\ \hline
+Phù hợp giai đoạn MVP & Cao & Thấp \\ \hline
 \end{longtable}
 }
 
@@ -1096,7 +1086,35 @@ hình ảnh, video.
 \caption*{\footnotesize Nguồn: Nhóm tác giả}
 \end{figure}
 
-\subsection{Module AI Content Moderation}
+\subsection{Mô tả các thành phần hệ thống}
+
+Bảng 3.9: Mô tả các thành phần chính của hệ thống
+\addcontentsline{lot}{table}{\protect\numberline{3.9}Mô tả các thành phần chính của hệ thống}
+
+{\def\LTcaptype{none}
+\begin{longtable}{
+  |>{\raggedright\arraybackslash}p{0.22\linewidth}
+  |>{\raggedright\arraybackslash}p{0.24\linewidth}
+  |>{\raggedright\arraybackslash}p{0.46\linewidth}|}
+\hline
+\textbf{Thành phần} & \textbf{Công nghệ / dịch vụ} & \textbf{Vai trò trong hệ thống} \\ \hline
+\endhead
+\hline
+\endlastfoot
+Ứng dụng di động & React Native & Cung cấp giao diện cho người dùng cuối, hỗ trợ đăng ký, đăng nhập, xem feed, đăng bài, nhắn tin, thông báo và quản lý hồ sơ. \\ \hline
+Trang quản trị & Next.js & Cung cấp giao diện cho quản trị viên để theo dõi dashboard, xử lý báo cáo, kiểm duyệt nội dung và quản lý từ điển slang. \\ \hline
+REST API backend & Node.js, Express.js, TypeScript & Xử lý nghiệp vụ cốt lõi của hệ thống, xác thực người dùng, điều phối dữ liệu mạng xã hội và tích hợp các dịch vụ AI, OTP, media. \\ \hline
+Tầng dữ liệu & MongoDB & Lưu trữ dữ liệu người dùng, bài viết, bình luận, quan hệ theo dõi, tin nhắn, báo cáo, hồ sơ hành vi và mã xác minh. \\ \hline
+Lưu trữ media & Cloudinary & Lưu trữ và phân phối ảnh, video, tệp đính kèm cho bài viết, hồ sơ người dùng và tin nhắn. \\ \hline
+Realtime & Socket.IO, Pusher & Phân phối tin nhắn, trạng thái trực tuyến và thông báo theo thời gian thực. \\ \hline
+Kiểm duyệt AI & Rule-based pipeline, Gemini API & Phân loại nội dung độc hại, spam, thù ghét; hỗ trợ gắn cờ hoặc ẩn nội dung vi phạm. \\ \hline
+Cá nhân hóa feed & Scoring service, user profile, interaction log & Xếp hạng feed Friends và Explore dựa trên chủ đề quan tâm, tín hiệu xã hội và mức độ phổ biến của bài viết. \\ \hline
+Giải thích văn hóa mạng & Slang dictionary, Gemini API & Phát hiện thuật ngữ văn hóa mạng, suy luận ngữ cảnh và trả về phần giải thích cho người đọc. \\ \hline
+Dịch vụ xác minh & SMTP, SMS OTP, Google OAuth & Gửi OTP, hỗ trợ khôi phục tài khoản và xác thực đăng nhập bằng Google. \\ \hline
+\end{longtable}
+}
+
+\subsubsection{Thành phần kiểm duyệt nội dung bằng AI}
 
 \textbf{Vấn đề và hướng tiếp cận}
 
@@ -1109,23 +1127,22 @@ hướng tiếp cận bằng kiến trúc \textbf{2-Tier Pipeline}, kết hợp
 rule-based filter và phân tích bằng mô hình ngôn ngữ.
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2505}}
-  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1965}}
-  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1812}}
-  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1568}}
-  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1568}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2505}}
+  |>{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1965}}
+  |>{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1812}}
+  |>{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1568}}
+  |>{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1568}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Phương án & Tốc độ & Chi phí & Khả năng phân tích ngữ cảnh & Phù hợp \\
+Phương án & Tốc độ & Chi phí & Khả năng phân tích ngữ cảnh & Phù hợp \\ \hline
 Thuần Rule-based & Nhanh & Không phát sinh chi phí API & Hạn chế &
-Không \\
+Không \\ \hline
 Thuần LLM API & Phụ thuộc dịch vụ ngoài & Phát sinh theo số lần gọi &
-Có & Không \\
+Có & Không \\ \hline
 2-Tier Hybrid & Có fast path & Giảm số lần gọi API & Kết hợp hai nguồn
-tín hiệu & Phù hợp \\
+tín hiệu & Phù hợp \\ \hline
 \end{longtable}
 }
 
@@ -1206,20 +1223,19 @@ nguyên là 0.4. Quyết định cuối cùng dựa trên maxScore = max(toxic,
 hateSpeech, spam) theo ngưỡng phân loại trong Bảng 3.3:
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1923}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2795}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1810}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3253}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1923}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2795}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1810}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3253}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-maxScore & Quyết định & Trạng thái & Hành động \\
-\textless{} 0.5 & Approved & APPROVED & Cho phép hiển thị \\
-0.5 -- \textless{} 0.8 & Human Review & FLAGGED & Đưa vào danh sách cần xem xét \\
+maxScore & Quyết định & Trạng thái & Hành động \\ \hline
+\textless{} 0.5 & Approved & APPROVED & Cho phép hiển thị \\ \hline
+0.5 -- \textless{} 0.8 & Human Review & FLAGGED & Đưa vào danh sách cần xem xét \\ \hline
 \textgreater{}= 0.8 & Auto Hide & REJECTED & Tự động ẩn, ghi
-hiddenReason \\
+hiddenReason \\ \hline
 \end{longtable}
 }
 
@@ -1245,7 +1261,7 @@ Hình 3.2 mô tả luồng xử lý đầy đủ của 2-Tier Moderation Pipelin
 \caption*{\footnotesize Nguồn: Nhóm tác giả}
 \end{figure}
 
-\subsection{Module Personalized Feed}
+\subsubsection{Thành phần cá nhân hóa feed}
 
 \textbf{Vấn đề và hướng tiếp cận}
 
@@ -1271,21 +1287,20 @@ Bảng 3.9: Trọng số Scoring Engine theo chế độ người dùng
 \addcontentsline{lot}{table}{\protect\numberline{3.9}Trọng số Scoring Engine theo chế độ người dùng}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1923}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2795}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1810}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3253}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1923}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2795}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1810}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3253}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
 Thành phần & Normal (\textgreater= 10 tương tác) & Cold Start
-(\textless{} 10 tương tác) & Lý do \\
-Content (\emph{w}₁) & 0.50 & 0.05 & Người dùng mới chưa có đủ profile \\
+(\textless{} 10 tương tác) & Lý do \\ \hline
+Content (\emph{w}₁) & 0.50 & 0.05 & Người dùng mới chưa có đủ profile \\ \hline
 Popularity (\emph{w}₂) & 0.20 & 0.7 & Nội dung phổ biến phù hợp khi
-thiếu dữ liệu \\
-Social (\emph{w}₃) & 0.30 & 0.25 & Ưu tiên người đang follow \\
+thiếu dữ liệu \\ \hline
+Social (\emph{w}₃) & 0.30 & 0.25 & Ưu tiên người đang follow \\ \hline
 \end{longtable}
 }
 
@@ -1339,26 +1354,25 @@ Bảng 3.10: Trọng số và hệ số tín hiệu theo loại tương tác
 \addcontentsline{lot}{table}{\protect\numberline{3.10}Trọng số và hệ số tín hiệu theo loại tương tác}
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2282}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2672}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1744}}
-  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3084}}@{}}
-\toprule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2282}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2672}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1744}}
+  |>{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3084}}|}
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Loại tương tác & Trọng số (weight) & Hệ số tín hiệu & Ý nghĩa \\
+Loại tương tác & Trọng số (weight) & Hệ số tín hiệu & Ý nghĩa \\ \hline
 follow\_\allowbreak from\_\allowbreak post & 6 & 1.2 & Tín hiệu mạnh nhất --- chủ động theo
-dõi \\
-share & 5 & 1.0 & Muốn lan truyền nội dung \\
-comment & 4 & 1.0 & Tương tác sâu \\
-save & 4 & 1.0 & Muốn xem lại \\
-like & 3 & 1.0 & Thích nội dung \\
-see\_more & 2 & 0.8 & Muốn xem thêm về chủ đề \\
-view & 1 & 0.6 & Tín hiệu yếu --- có thể vô tình \\
-not\_interested & -3 & 1.0 & Phản hồi tiêu cực nhẹ \\
-hide & -5 & 1.0 & Phản hồi tiêu cực mạnh \\
+dõi \\ \hline
+share & 5 & 1.0 & Muốn lan truyền nội dung \\ \hline
+comment & 4 & 1.0 & Tương tác sâu \\ \hline
+save & 4 & 1.0 & Muốn xem lại \\ \hline
+like & 3 & 1.0 & Thích nội dung \\ \hline
+see\_more & 2 & 0.8 & Muốn xem thêm về chủ đề \\ \hline
+view & 1 & 0.6 & Tín hiệu yếu --- có thể vô tình \\ \hline
+not\_interested & -3 & 1.0 & Phản hồi tiêu cực nhẹ \\ \hline
+hide & -5 & 1.0 & Phản hồi tiêu cực mạnh \\ \hline
 \end{longtable}
 }
 
@@ -1394,7 +1408,7 @@ Hình 3.3 mô tả pipeline đầy đủ của Personalized Feed:
 \caption*{\footnotesize Nguồn: Nhóm tác giả}
 \end{figure}
 
-\subsection{Module giải thích thuật ngữ và ngữ cảnh văn hóa mạng}
+\subsubsection{Thành phần giải thích thuật ngữ và ngữ cảnh văn hóa mạng}
 
 \textbf{Vấn đề và hướng tiếp cận}
 
@@ -1467,32 +1481,355 @@ Hình 3.4 mô tả luồng xử lý của Culture Translation Pipeline:
 \caption*{\footnotesize Nguồn: Nhóm tác giả}
 \end{figure}
 
-\section{Thiết kế Use Case}
+\section{Thiết kế Use-case}
 
-\subsection{Danh sách các Actor}
+\newcommand{\usecasespec}[8]{%
+\subsubsection{#1 -- #2}
+{\def\LTcaptype{none}
+\begin{longtable}{
+  |>{\raggedright\arraybackslash}p{0.18\linewidth}
+  |>{\raggedright\arraybackslash}p{0.76\linewidth}|}
+\hline
+\textbf{Thuộc tính} & \textbf{Mô tả} \\ \hline
+\endhead
+\hline
+\endlastfoot
+Mã use-case & #1 \\ \hline
+Tên use-case & #2 \\ \hline
+Actor chính & #3 \\ \hline
+Mục tiêu & #4 \\ \hline
+Tiền điều kiện & #5 \\ \hline
+Hậu điều kiện & #6 \\ \hline
+Luồng chính & #7 \\ \hline
+Luồng thay thế / ngoại lệ & #8 \\ \hline
+\end{longtable}
+}
+}
 
-\subsection{Danh sách các Use Case chính}
+\subsection{Sơ đồ Use-case}
 
-\subsection{Đặc tả chi tiết Use Case}
+Phần này mô tả các nhóm chức năng chính của hệ thống Mingo theo từng actor nghiệp vụ. Sơ đồ use-case được tách theo actor để thể hiện rõ phạm vi thao tác của Khách, Người dùng, Quản trị viên và dịch vụ Gemini API.
 
-\textit{Phần này sẽ được bổ sung các use case quan trọng sau khi hoàn
-thiện tài liệu phân tích.}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.56\textwidth,height=0.86\textheight,keepaspectratio]{images/erd/usecase-actors.png}
+\caption{Sơ đồ use-case theo actor của hệ thống}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+
+\subsection{Danh sách Actors}
+
+Bảng 3.9: Danh sách các actor của hệ thống
+\addcontentsline{lot}{table}{\protect\numberline{3.9}Danh sách các actor của hệ thống}
+
+{\def\LTcaptype{none}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.14\linewidth}
+  |>{\raggedright\arraybackslash}p{0.24\linewidth}
+  |>{\raggedright\arraybackslash}p{0.54\linewidth}|}
+\hline
+\textbf{Mã actor} & \textbf{Tên actor} & \textbf{Mô tả vai trò} \\ \hline
+\endhead
+\hline
+\endlastfoot
+ACT-01 & Khách & Người chưa đăng nhập, có thể đăng ký tài khoản, đăng nhập và khôi phục mật khẩu. \\ \hline
+ACT-02 & Người dùng & Người dùng đã xác thực, sử dụng các chức năng mạng xã hội như quản lý hồ sơ, bài viết, tương tác, xem feed, nhắn tin, nhận thông báo, gửi báo cáo và xem giải thích thuật ngữ văn hóa mạng. \\ \hline
+ACT-03 & Gemini API & Dịch vụ AI bên ngoài được hệ thống gọi để hỗ trợ giải thích thuật ngữ văn hóa mạng và kiểm duyệt nội dung bằng AI. \\ \hline
+ACT-04 & Quản trị viên & Người dùng có quyền quản trị, xử lý báo cáo, quản lý nội dung, quản lý từ điển slang và theo dõi thống kê hệ thống. \\ \hline
+\end{longtable}
+}
+
+\subsection{Danh sách các Use-case}
+
+Hệ thống được phân rã thành các nhóm use case lớn tương ứng với các mô-đun nghiệp vụ đã triển khai trong backend. Script PlantUML dùng để vẽ sơ đồ use case tổng thể được lưu tại tệp \texttt{report/usecase-system.puml}.
+
+Bảng 3.10: Danh sách các use case chính
+\addcontentsline{lot}{table}{\protect\numberline{3.10}Danh sách các use case chính}
+
+{\def\LTcaptype{none}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.12\linewidth}
+  |>{\raggedright\arraybackslash}p{0.28\linewidth}
+  |>{\raggedright\arraybackslash}p{0.20\linewidth}
+  |>{\raggedright\arraybackslash}p{0.32\linewidth}|}
+\hline
+\textbf{Mã use case} & \textbf{Tên use case} & \textbf{Actor chính} & \textbf{Mục tiêu nghiệp vụ} \\ \hline
+\endhead
+\hline
+\endlastfoot
+UC-01 & Đăng ký tài khoản & Khách & Tạo tài khoản mới bằng email hoặc số điện thoại sau khi hoàn tất bước xác thực OTP trước đăng ký. \\ \hline
+UC-02 & Đăng nhập và duy trì phiên & Khách, Người dùng & Cho phép người dùng đăng nhập, làm mới phiên, đăng xuất và tiếp tục đăng nhập với 2FA khi được bật. \\ \hline
+UC-03 & Quản lý xác thực đa yếu tố & Người dùng & Thiết lập, kích hoạt hoặc tắt xác thực hai yếu tố để tăng cường bảo mật tài khoản. \\ \hline
+UC-04 & Khôi phục mật khẩu & Khách & Yêu cầu đặt lại mật khẩu khi quên thông tin đăng nhập. \\ \hline
+UC-05 & Quản lý hồ sơ cá nhân & Người dùng & Xem và cập nhật hồ sơ, ảnh đại diện, ảnh nền và thông tin cá nhân. \\ \hline
+UC-06 & Tìm kiếm toàn cục & Người dùng & Tìm kiếm người dùng, bài viết và hashtag phục vụ khám phá nội dung. \\ \hline
+UC-07 & Quản lý quan hệ người dùng & Người dùng & Gửi yêu cầu theo dõi, chấp nhận hoặc từ chối yêu cầu, quản lý close friend, chặn và bỏ chặn. \\ \hline
+UC-08 & Quản lý bài viết & Người dùng & Tạo, xem, sửa, xóa và truy xuất bài viết theo người dùng hoặc theo ngữ cảnh hiển thị. \\ \hline
+UC-09 & Tương tác với nội dung & Người dùng & Thích, bỏ thích, lưu, bỏ lưu, bình luận, trả lời bình luận, chia sẻ, repost và báo cáo nội dung hoặc tài khoản. \\ \hline
+UC-10 & Xem feed cá nhân hóa & Người dùng & Nhận feed Friends hoặc Explore được xếp hạng dựa trên hồ sơ hành vi và phản hồi của người dùng. \\ \hline
+UC-11 & Giải thích thuật ngữ văn hóa mạng & Người dùng, Gemini API & Xem các thuật ngữ được phát hiện trong bài viết, nhận giải thích theo ngữ cảnh và báo lỗi thuật ngữ nếu cần. \\ \hline
+UC-12 & Nhận và quản lý thông báo & Người dùng & Đăng ký thiết bị, xem thông báo, đánh dấu đã đọc hoặc đã xem và xóa thông báo. \\ \hline
+UC-13 & Nhắn tin và gọi thoại & Người dùng & Trao đổi tin nhắn trực tiếp hoặc nhóm, quản lý nhóm chat, file đính kèm, trạng thái đọc và lịch sử cuộc gọi. \\ \hline
+UC-14 & Gửi báo cáo vi phạm & Người dùng & Gửi báo cáo đối với bài viết, bình luận, tài khoản hoặc thuật ngữ sai để hệ thống và quản trị viên xử lý. \\ \hline
+UC-15 & Kiểm duyệt nội dung bằng AI & Gemini API, Quản trị viên & Phân tích nội dung theo pipeline 2 tầng, tự động duyệt, gắn cờ hoặc ẩn nội dung vi phạm. \\ \hline
+UC-16 & Quản trị báo cáo và nội dung & Quản trị viên & Xem hàng đợi báo cáo, xử lý bài viết, bình luận, tài khoản bị báo cáo và ghi nhận kết quả xử lý. \\ \hline
+UC-17 & Quản lý từ điển slang & Quản trị viên & Thêm mới hoặc bật tắt các mục trong từ điển slang phục vụ phát hiện thuật ngữ văn hóa mạng. \\ \hline
+UC-18 & Theo dõi thống kê hệ thống & Quản trị viên & Xem dashboard, chỉ số AI, thống kê người dùng, audit log và dữ liệu vận hành. \\ \hline
+\end{longtable}
+}
+
+\subsubsection{Nhóm use-case của actor Khách}
+
+Actor Khách tương tác với nhóm chức năng liên quan đến gia nhập hệ thống và khôi phục quyền truy cập, bao gồm UC-01, UC-02 và UC-04.
+
+\subsubsection{Nhóm use-case của actor Người dùng}
+
+Actor Người dùng là trung tâm của hệ thống, tương tác với các nhóm chức năng hồ sơ, kết nối, nội dung, giao tiếp, thông báo và cá nhân hóa, bao gồm UC-03 đến UC-14.
+
+\subsubsection{Nhóm use-case của actor Quản trị viên}
+
+Actor Quản trị viên làm việc với các chức năng điều hành và kiểm soát rủi ro của nền tảng, bao gồm UC-15 đến UC-18.
+
+\input{usecase-specs.tex}
 
 \section{Sơ đồ Activity}
 
-\textit{Phần này sẽ được bổ sung các sơ đồ Activity của các chức năng
-chính.}
+Phần này mô tả luồng xử lý của các chức năng nghiệp vụ quan trọng nhất trong hệ thống. Các sơ đồ activity được chọn theo tiêu chí bao quát những luồng có nhiều nhánh quyết định, tương tác với dịch vụ ngoài và tác động trực tiếp đến trải nghiệm người dùng hoặc công việc quản trị.
 
-\section{Thiết kế dữ liệu}
+\textbf{Đăng ký tài khoản và xác thực OTP}
 
-\subsection{Sơ đồ lớp (Class Diagram)}
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 12mm]
+\node[terminator] (start) {Bắt đầu};
+\node[activity, below=of start] (input) {Khách nhập thông tin\\đăng ký};
+\node[activity, below=of input] (sendotp) {Hệ thống gửi yêu cầu\\phát hành OTP};
+\node[activity, below=of sendotp] (deliver) {Dịch vụ OTP/Email/SMS\\gửi mã xác thực};
+\node[activity, below=of deliver] (enterotp) {Khách nhập OTP\\và gửi xác nhận};
+\node[decision, below=of enterotp] (valid) {OTP hợp lệ?};
+\node[activity, below left=10mm and 18mm of valid] (fail) {Thông báo lỗi\\và yêu cầu gửi lại mã};
+\node[activity, below right=10mm and 18mm of valid] (create) {Tạo tài khoản mới\\trong hệ thống};
+\node[activity, below=of create] (success) {Trả kết quả đăng ký\\thành công};
+\node[terminator, below=of success] (end) {Kết thúc};
+\draw[flow] (start) -- (input);
+\draw[flow] (input) -- (sendotp);
+\draw[flow] (sendotp) -- (deliver);
+\draw[flow] (deliver) -- (enterotp);
+\draw[flow] (enterotp) -- (valid);
+\draw[flow] (valid) -- node[above left] {Không} (fail);
+\draw[flow] (valid) -- node[above right] {Có} (create);
+\draw[flow] (create) -- (success);
+\draw[flow] (success) -- (end);
+\draw[flow] (fail.west) -- ++(-1.0,0) |- (enterotp.west);
+\end{tikzpicture}
+}
+\caption{Sơ đồ activity đăng ký tài khoản và xác thực OTP}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
 
-\subsection{Sơ đồ ERD}
+\textbf{Đăng nhập và xác thực hai yếu tố}
 
-\subsection{Mô tả chi tiết các collection}
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 12mm]
+\node[terminator] (start) {Bắt đầu};
+\node[activity, below=of start] (login) {Người dùng nhập\\thông tin đăng nhập};
+\node[decision, below=of login] (authok) {Thông tin hợp lệ?};
+\node[activity, below left=10mm and 18mm of authok] (authfail) {Từ chối đăng nhập\\và báo lỗi};
+\node[decision, below right=10mm and 18mm of authok] (twofa) {Tài khoản bật 2FA?};
+\node[activity, below right=10mm and 18mm of twofa] (issue) {Phát hành access token\\và refresh token};
+\node[activity, below left=10mm and 18mm of twofa] (prompt2fa) {Yêu cầu người dùng\\nhập mã 2FA};
+\node[decision, below=of prompt2fa] (codeok) {Mã 2FA hợp lệ?};
+\node[activity, below left=10mm and 16mm of codeok] (codefail) {Thông báo mã sai\\hoặc hết hạn};
+\node[activity, below right=10mm and 16mm of codeok] (issue2) {Phát hành token\\sau xác minh 2FA};
+\node[terminator, below=22mm of issue] (end) {Kết thúc};
+\draw[flow] (start) -- (login);
+\draw[flow] (login) -- (authok);
+\draw[flow] (authok) -- node[above left] {Không} (authfail);
+\draw[flow] (authok) -- node[above right] {Có} (twofa);
+\draw[flow] (twofa) -- node[above right] {Không} (issue);
+\draw[flow] (twofa) -- node[above left] {Có} (prompt2fa);
+\draw[flow] (prompt2fa) -- (codeok);
+\draw[flow] (codeok) -- node[above left] {Không} (codefail);
+\draw[flow] (codeok) -- node[above right] {Có} (issue2);
+\draw[flow] (issue) -- (end);
+\draw[flow] (issue2.south) |- (end.east);
+\draw[flow] (codefail.west) -- ++(-1.0,0) |- (prompt2fa.west);
+\end{tikzpicture}
+}
+\caption{Sơ đồ activity đăng nhập và xác thực hai yếu tố}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
 
-\textit{Phần này sẽ được bổ sung sau khi hoàn thiện sơ đồ ERD và bảng mô
-tả dữ liệu.}
+\textbf{Tạo bài viết và xử lý hậu kỳ bằng AI}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 11mm]
+\node[terminator] (start) {Bắt đầu};
+\node[activity-wide, below=of start] (compose) {Người dùng nhập nội dung\\và đính kèm media nếu có};
+\node[decision, below=of compose] (media) {Có media?};
+\node[activity, below left=10mm and 18mm of media] (upload) {Tải media lên\\Cloudinary};
+\node[activity, below right=10mm and 18mm of media] (savepost) {Lưu bài viết\\vào MongoDB};
+\node[activity, below=18mm of upload] (savepost2) {Lưu bài viết\\vào MongoDB};
+\node[activity-wide, below=of savepost2] (moderate) {Khởi chạy pipeline kiểm duyệt\\rule-based và AI nếu cần};
+\node[activity-wide, below=of moderate] (culture) {Khởi chạy pipeline phát hiện\\và giải thích thuật ngữ};
+\node[decision, below=of culture] (visible) {Nội dung bị từ chối?};
+\node[activity, below left=10mm and 18mm of visible] (hide) {Đánh dấu REJECTED\\hoặc FLAGGED};
+\node[activity, below right=10mm and 18mm of visible] (show) {Cho phép hiển thị\\trên feed};
+\node[terminator, below=18mm of visible] (end) {Kết thúc};
+\draw[flow] (start) -- (compose);
+\draw[flow] (compose) -- (media);
+\draw[flow] (media) -- node[above left] {Có} (upload);
+\draw[flow] (media) -- node[above right] {Không} (savepost);
+\draw[flow] (upload) -- (savepost2);
+\draw[flow] (savepost) |- (savepost2.east);
+\draw[flow] (savepost2) -- (moderate);
+\draw[flow] (moderate) -- (culture);
+\draw[flow] (culture) -- (visible);
+\draw[flow] (visible) -- node[above left] {Có} (hide);
+\draw[flow] (visible) -- node[above right] {Không} (show);
+\draw[flow] (hide.south) |- (end.west);
+\draw[flow] (show.south) |- (end.east);
+\end{tikzpicture}
+}
+\caption{Sơ đồ activity tạo bài viết và xử lý hậu kỳ bằng AI}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+
+\textbf{Truy xuất feed cá nhân hóa}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 12mm]
+\node[terminator] (start) {Bắt đầu};
+\node[activity, below=of start] (openfeed) {Người dùng mở feed\\và chọn tab};
+\node[decision, below=of openfeed] (tab) {Friends hay Explore?};
+\node[activity, below left=10mm and 18mm of tab] (friends) {Lấy bài viết từ\\mạng lưới theo dõi};
+\node[activity, below right=10mm and 18mm of tab] (explore) {Lấy tập ứng viên\\cho feed khám phá};
+\node[activity, below=18mm of tab] (score) {Tính điểm theo hồ sơ hành vi,\\chủ đề, độ mới và độ phổ biến};
+\node[activity, below=of score] (paginate) {Sắp xếp, phân trang\\và enrich dữ liệu hiển thị};
+\node[activity, below=of paginate] (return) {Trả danh sách bài viết\\cho client};
+\node[decision, below=of return] (feedback) {Người dùng có gửi\\feedback?};
+\node[activity, below left=10mm and 18mm of feedback] (endnow) {Kết thúc phiên\\xem feed hiện tại};
+\node[activity, below right=10mm and 18mm of feedback] (update) {Ghi nhận hide,\\not interested, see more};
+\node[terminator, below=18mm of feedback] (end) {Kết thúc};
+\draw[flow] (start) -- (openfeed);
+\draw[flow] (openfeed) -- (tab);
+\draw[flow] (tab) -- node[above left] {Friends} (friends);
+\draw[flow] (tab) -- node[above right] {Explore} (explore);
+\draw[flow] (friends.south) |- (score.west);
+\draw[flow] (explore.south) |- (score.east);
+\draw[flow] (score) -- (paginate);
+\draw[flow] (paginate) -- (return);
+\draw[flow] (return) -- (feedback);
+\draw[flow] (feedback) -- node[above left] {Không} (endnow);
+\draw[flow] (feedback) -- node[above right] {Có} (update);
+\draw[flow] (endnow.south) |- (end.west);
+\draw[flow] (update.south) |- (end.east);
+\end{tikzpicture}
+}
+\caption{Sơ đồ activity truy xuất feed cá nhân hóa}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+
+\textbf{Báo cáo vi phạm và xử lý quản trị}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 12mm]
+\node[terminator] (start) {Bắt đầu};
+\node[activity-wide, below=of start] (report) {Người dùng chọn đối tượng\\và gửi báo cáo vi phạm};
+\node[activity, below=of report] (store) {Hệ thống lưu báo cáo\\và tăng chỉ số liên quan};
+\node[decision, below=of store] (priority) {Cần ưu tiên\\kiểm duyệt AI?};
+\node[activity, below left=10mm and 18mm of priority] (queue) {Đưa vào hàng đợi\\xử lý quản trị};
+\node[activity, below right=10mm and 18mm of priority] (recheck) {Kích hoạt kiểm duyệt lại\\hoặc tăng mức cảnh báo};
+\node[activity, below=18mm of priority] (review) {Quản trị viên xem báo cáo,\\nội dung và lịch sử hoạt động};
+\node[decision, below=of review] (action) {Chọn hành động xử lý};
+\node[activity, below left=10mm and 18mm of action] (resolve) {Đánh dấu báo cáo\\đã giải quyết};
+\node[activity, below=18mm of action] (moderate) {Ẩn, mở lại, xóa nội dung\\hoặc khóa người dùng};
+\node[activity, below right=10mm and 18mm of action] (log) {Ghi audit log\\và cập nhật thống kê};
+\node[terminator, below=18mm of moderate] (end) {Kết thúc};
+\draw[flow] (start) -- (report);
+\draw[flow] (report) -- (store);
+\draw[flow] (store) -- (priority);
+\draw[flow] (priority) -- node[above left] {Không} (queue);
+\draw[flow] (priority) -- node[above right] {Có} (recheck);
+\draw[flow] (queue.south) |- (review.west);
+\draw[flow] (recheck.south) |- (review.east);
+\draw[flow] (review) -- (action);
+\draw[flow] (action) -- node[above left] {Chỉ đóng} (resolve);
+\draw[flow] (action) -- node[right] {Can thiệp} (moderate);
+\draw[flow] (action) -- node[above right] {Hoàn tất} (log);
+\draw[flow] (resolve.south) |- (end.west);
+\draw[flow] (moderate) -- (end);
+\draw[flow] (log.south) |- (end.east);
+\end{tikzpicture}
+}
+\caption{Sơ đồ activity báo cáo vi phạm và xử lý quản trị}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+
+\section{Thiết kế cơ sở dữ liệu}
+
+\subsection{Mô hình dữ liệu khái niệm}
+
+Mô hình dữ liệu của hệ thống được tổ chức xoay quanh các thực thể nghiệp vụ cốt lõi gồm người dùng, hồ sơ hành vi, quan hệ theo dõi, bài viết, media, bình luận, thông báo, tin nhắn, báo cáo và mã xác minh. Các thực thể này được xây dựng theo định hướng document database trên MongoDB, trong đó một số dữ liệu cần truy xuất nhanh như \texttt{culturalTerms} được nhúng trực tiếp vào bài viết, còn các dữ liệu có vòng đời độc lập như \texttt{comments}, \texttt{reports}, \texttt{messages} được tách thành collection riêng.
+
+Để tránh lỗi chồng hình khi dàn trang bằng TikZ, sơ đồ dữ liệu được chuyển sang script DBML để nhóm có thể mở trên \texttt{dbdiagram.io}, tinh chỉnh bố cục và xuất ảnh chất lượng cao cho bản báo cáo hoàn thiện.
+
+\subsection{Sơ đồ ERD hệ thống}
+
+Sơ đồ ERD của hệ thống mô tả đầy đủ các collection chính, khóa chính, khóa tham chiếu và các quan hệ quan trọng giữa người dùng, bài viết, bình luận, báo cáo, nhắn tin, thông báo và module xác minh.
+
+\begin{figure}[H]
+\centering
+\includegraphics[angle=90,width=0.88\textheight,height=0.92\textwidth,keepaspectratio]{images/erd/erd.png}
+\caption{Sơ đồ ERD của hệ thống}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+
+Script DBML dùng để xuất sơ đồ được lưu tại tệp \texttt{report/mingo-erd.dbml}, giúp nhóm có thể tiếp tục tinh chỉnh bố cục trên \texttt{dbdiagram.io} khi cần.
+
+\subsection{Mô tả chi tiết bảng dữ liệu}
+
+Bảng 3.11: Mô tả chi tiết các collection chính
+\addcontentsline{lot}{table}{\protect\numberline{3.11}Mô tả chi tiết các collection chính}
+
+{\def\LTcaptype{none}
+\begin{longtable}{
+  |>{\raggedright\arraybackslash}p{0.16\linewidth}
+  |>{\raggedright\arraybackslash}p{0.26\linewidth}
+  |>{\raggedright\arraybackslash}p{0.25\linewidth}
+  |>{\raggedright\arraybackslash}p{0.25\linewidth}|}
+\hline
+\textbf{Collection} & \textbf{Mục đích} & \textbf{Thuộc tính chính} & \textbf{Liên kết và ghi chú} \\ \hline
+\endhead
+\hline
+\endlastfoot
+\texttt{users} & Lưu thông tin tài khoản và trạng thái hoạt động của người dùng. & \texttt{phoneNumber}, \texttt{email}, \texttt{passwordHash}, \texttt{name}, \texttt{avatar}, \texttt{role}, \texttt{twoFactorEnabled}, \texttt{verified}, \texttt{isBlocked}. & Là thực thể trung tâm; được tham chiếu bởi hầu hết collection khác như \texttt{posts}, \texttt{comments}, \texttt{reports}, \texttt{notifications}, \texttt{messageboxes}. \\ \hline
+\texttt{posts} & Lưu bài viết gốc do người dùng tạo cùng thông tin kiểm duyệt và chủ đề. & \texttt{userId}, \texttt{contentText}, \texttt{visibility}, \texttt{moderationStatus}, \texttt{aiToxicScore}, \texttt{topics}, \texttt{hotScore}, \texttt{culturalTerms}. & Tham chiếu \texttt{users}; là nút cha của \texttt{postmedia}, \texttt{comments}, \texttt{likes}, \texttt{reports}; nhúng trực tiếp danh sách \texttt{culturalTerms}. \\ \hline
+\texttt{postmedia} & Lưu media của bài viết như ảnh và video. & \texttt{postId}, \texttt{userId}, \texttt{mediaType}, \texttt{mediaUrl}, \texttt{thumbnailUrl}, \texttt{orderIndex}. & Tham chiếu \texttt{posts} và \texttt{users}; được dùng khi hiển thị bài viết đa phương tiện và khi bình luận trên media. \\ \hline
+\texttt{comments} & Lưu bình luận và reply theo cấu trúc cây. & \texttt{postId}, \texttt{mediaId}, \texttt{userId}, \texttt{parentCommentId}, \texttt{originalCommentId}, \texttt{contentText}, \texttt{moderationStatus}. & Tham chiếu \texttt{posts}, \texttt{postmedia}, \texttt{users} và tự tham chiếu để tạo thread reply. \\ \hline
+\texttt{follows} & Lưu quan hệ theo dõi và bạn thân giữa hai người dùng. & \texttt{followerId}, \texttt{followingId}, \texttt{followStatus}, \texttt{closeFriendStatus}, \texttt{closeFriendRequestedBy}. & Tạo quan hệ tự liên kết giữa hai bản ghi trong \texttt{users}; có unique index trên cặp follower-following. \\ \hline
+\texttt{userprofiles} & Lưu hồ sơ sở thích và điểm hành vi phục vụ feed cá nhân hóa. & \texttt{userId}, \texttt{topicScores}, \texttt{hashtagScores}, \texttt{authorScores}, \texttt{interactionCount}, \texttt{preferredContentType}. & Quan hệ một-một với \texttt{users}; dữ liệu dạng \texttt{Map} được dùng trong pipeline recommendation. \\ \hline
+\texttt{userinteractions} & Lưu nhật ký hành vi thô của người dùng trên feed và nội dung. & \texttt{userId}, \texttt{postId}, \texttt{interactionType}, \texttt{source}, \texttt{createdAt}. & Hỗ trợ cập nhật \texttt{userprofiles}; thường có TTL hoặc chiến lược làm sạch theo thời gian. \\ \hline
+\texttt{notifications} & Lưu thông báo hệ thống và thông báo phát sinh từ tương tác xã hội. & \texttt{userId}, \texttt{actorId}, \texttt{notificationType}, \texttt{entityType}, \texttt{entityId}, \texttt{isRead}, \texttt{isSeen}. & Tham chiếu \texttt{users} và có thể liên kết gián tiếp tới \texttt{posts}, \texttt{comments}, \texttt{postmedia} hoặc \texttt{messages}. \\ \hline
+\texttt{messageboxes} & Lưu metadata của hội thoại trực tiếp và nhóm chat. & \texttt{senderId}, \texttt{receiverIds}, \texttt{adminIds}, \texttt{messageIds}, \texttt{groupName}, \texttt{category}. & Liên kết nhiều người dùng với nhiều tin nhắn; đóng vai trò hộp chứa của \texttt{messages}. \\ \hline
+\texttt{messages} & Lưu từng tin nhắn trong hội thoại. & \texttt{boxId}, \texttt{createBy}, \texttt{text}, \texttt{contentId}, \texttt{readedId}, \texttt{visibility}. & Tham chiếu \texttt{messageboxes} và \texttt{users}; có thể liên kết thêm tới \texttt{messagefiles}. \\ \hline
+\texttt{reports} & Lưu báo cáo vi phạm và quyết định xử lý của quản trị viên. & \texttt{reporterId}, \texttt{targetType}, \texttt{targetId}, \texttt{reason}, \texttt{status}, \texttt{reviewedBy}, \texttt{actionTaken}. & Tham chiếu \texttt{users}; \texttt{targetId} có thể trỏ logic tới \texttt{posts}, \texttt{comments} hoặc \texttt{users} tùy \texttt{targetType}. \\ \hline
+\texttt{verificationtokens} & Lưu mã OTP hoặc token xác minh cho email, số điện thoại và đặt lại mật khẩu. & \texttt{userId}, \texttt{identifier}, \texttt{channel}, \texttt{purpose}, \texttt{tokenHash}, \texttt{expiresAt}, \texttt{usedAt}, \texttt{attempts}. & Có TTL index trên \texttt{expiresAt}; hỗ trợ cả luồng trước đăng ký lẫn sau đăng nhập. \\ \hline
+\texttt{slangentries} & Lưu từ điển slang phục vụ phát hiện thuật ngữ văn hóa mạng. & \texttt{term}, \texttt{aliases}, \texttt{regexPattern}, \texttt{category}, \texttt{isActive}, \texttt{reportCount}. & Được quản trị viên quản lý; dùng trong pipeline giải thích thuật ngữ trước khi gọi LLM. \\ \hline
+\texttt{devicetokens} & Lưu token thiết bị để gửi push notification. & \texttt{userId}, \texttt{token}, \texttt{platform}, \texttt{deviceName}, \texttt{lastUsedAt}. & Tham chiếu \texttt{users}; phục vụ module thông báo đa thiết bị. \\ \hline
+\end{longtable}
+}
+
+Nhìn tổng thể, mô hình dữ liệu ưu tiên ba nguyên tắc. Thứ nhất, các thực thể nghiệp vụ cốt lõi như người dùng, bài viết, bình luận và báo cáo được tách thành collection riêng để dễ mở rộng và phục vụ truy vấn quản trị. Thứ hai, dữ liệu có tính phụ thuộc chặt vào vòng đời bài viết như \texttt{culturalTerms} được nhúng trực tiếp vào \texttt{posts} nhằm giảm số lần join logic ở tầng ứng dụng khi render bài. Thứ ba, các mô-đun AI như recommendation, moderation và culture translation đều lưu lại kết quả trung gian ở mức document để giảm chi phí tính toán lặp lại trong các lần truy xuất sau.
 
 \chapter{XÂY DỰNG ỨNG DỤNG}
 
@@ -1504,40 +1841,68 @@ mỗi ảnh cần được chèn bằng chức năng \textbf{References → Inse
 
 \section{Giao diện ứng dụng di động}
 
-Các hình nên được chụp cùng một thiết bị hoặc khung giả lập, có kích
-thước thống nhất và che thông tin nhạy cảm. Danh sách hình đề xuất:
+Các hình bên dưới là những màn hình thực tế được sử dụng trong ứng dụng
+di động. Tên mỗi hình đều được chuẩn hóa theo mẫu ``Màn hình ...'' để
+thống nhất với phần mô tả giao diện trong chương.
 
 {\def\LTcaptype{none}
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{0.12\linewidth}
-  >{\raggedright\arraybackslash}p{0.32\linewidth}
-  >{\raggedright\arraybackslash}p{0.50\linewidth}@{}}
-\toprule\noalign{}
-\textbf{Số hình} & \textbf{Màn hình cần chụp} & \textbf{Chú thích đề xuất} \\
-\midrule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.12\linewidth}
+  |>{\raggedright\arraybackslash}p{0.32\linewidth}
+  |>{\raggedright\arraybackslash}p{0.50\linewidth}|}
+\hline
+\textbf{Số hình} & \textbf{Màn hình cần chụp} & \textbf{Chú thích đề xuất} \\ \hline
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Hình 4.1 & Đăng nhập & Giao diện đăng nhập bằng email hoặc số điện thoại \\
-Hình 4.2 & Đăng ký & Giao diện đăng ký tài khoản người dùng \\
-Hình 4.3 & Xác thực tài khoản & Giao diện xác thực email hoặc số điện thoại bằng mã OTP \\
-Hình 4.4 & Xác thực hai yếu tố & Giao diện thiết lập và xác nhận mã xác thực hai yếu tố \\
-Hình 4.5 & Feed Khám phá & Giao diện feed Khám phá với nội dung được xếp hạng cá nhân hóa \\
-Hình 4.6 & Feed Bạn bè & Giao diện feed hiển thị bài viết từ các tài khoản đang theo dõi \\
-Hình 4.7 & Tạo bài viết & Giao diện tạo bài viết gồm văn bản, hashtag, mention và quyền riêng tư \\
-Hình 4.8 & Chi tiết bài viết & Giao diện chi tiết bài viết và các thông tin tương tác \\
-Hình 4.9 & Bình luận & Giao diện danh sách bình luận và trả lời bình luận \\
-Hình 4.10 & Tìm kiếm & Giao diện tìm kiếm người dùng, bài viết và hashtag \\
-Hình 4.11 & Hồ sơ cá nhân & Giao diện hồ sơ cá nhân và danh sách bài viết của người dùng \\
-Hình 4.12 & Quan hệ người dùng & Giao diện danh sách người theo dõi, đang theo dõi và bạn thân \\
-Hình 4.13 & Bài viết đã lưu & Giao diện quản lý các bài viết người dùng đã lưu \\
-Hình 4.14 & Thông báo & Giao diện danh sách thông báo của người dùng \\
-Hình 4.15 & Danh sách trò chuyện & Giao diện danh sách cuộc trò chuyện gần đây \\
-Hình 4.16 & Chi tiết trò chuyện & Giao diện nhắn tin trực tiếp hoặc trò chuyện nhóm \\
-Hình 4.17 & Cuộc gọi & Giao diện cuộc gọi thời gian thực sử dụng WebRTC \\
-Hình 4.18 & Báo cáo nội dung & Giao diện gửi báo cáo đối với bài viết, bình luận hoặc tài khoản \\
+Hình 4.1 & Màn hình Đăng nhập & Giao diện đăng nhập bằng email hoặc số điện thoại \\ \hline
+Hình 4.2 & Màn hình Đăng ký & Giao diện đăng ký tài khoản người dùng \\ \hline
+Hình 4.3 & Màn hình Xác thực tài khoản & Giao diện xác thực email hoặc số điện thoại bằng mã OTP \\ \hline
+Hình 4.4 & Màn hình Xác thực hai yếu tố & Giao diện thiết lập và xác nhận mã xác thực hai yếu tố \\ \hline
+Hình 4.5 & Màn hình Feed Khám phá & Giao diện feed Khám phá với nội dung được xếp hạng cá nhân hóa \\ \hline
+Hình 4.6 & Màn hình Tạo bài viết & Giao diện tạo bài viết gồm văn bản, hashtag, mention và quyền riêng tư \\ \hline
+Hình 4.7 & Màn hình Chi tiết bài viết & Giao diện chi tiết bài viết và các thông tin tương tác \\ \hline
+Hình 4.8 & Màn hình Tìm kiếm & Giao diện tìm kiếm người dùng, bài viết và hashtag \\ \hline
+Hình 4.9 & Màn hình Hồ sơ cá nhân & Giao diện hồ sơ cá nhân và danh sách bài viết của người dùng \\ \hline
+Hình 4.10 & Màn hình Quan hệ người dùng & Giao diện danh sách người theo dõi, đang theo dõi và bạn thân \\ \hline
+Hình 4.11 & Màn hình Bài viết đã lưu & Giao diện quản lý các bài viết người dùng đã lưu \\ \hline
+Hình 4.12 & Màn hình Thông báo & Giao diện danh sách thông báo của người dùng \\ \hline
+Hình 4.13 & Màn hình Danh sách trò chuyện & Giao diện danh sách cuộc trò chuyện gần đây \\ \hline
+Hình 4.14 & Màn hình Chi tiết trò chuyện & Giao diện nhắn tin trực tiếp hoặc trò chuyện nhóm \\ \hline
+Hình 4.15 & Màn hình Báo cáo nội dung & Giao diện gửi báo cáo đối với bài viết, bình luận hoặc tài khoản \\ \hline
+Hình 4.16 & Màn hình Quên mật khẩu & Giao diện yêu cầu cấp lại quyền truy cập tài khoản \\ \hline
+Hình 4.17 & Màn hình Đổi mật khẩu & Giao diện nhập và xác nhận mật khẩu mới \\ \hline
+Hình 4.18 & Màn hình Giải thích thuật ngữ văn hóa mạng & Giao diện hiển thị giải thích theo ngữ cảnh cho các thuật ngữ văn hóa mạng \\ \hline
 \end{longtable}
 }
+
+\newcommand{\mobilescreen}[2]{%
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.42\textwidth,height=0.72\textheight,keepaspectratio]{images/screen/#1}
+\caption{#2}
+\caption*{\footnotesize Nguồn: Nhóm tác giả}
+\end{figure}
+}
+
+\mobilescreen{signin.PNG}{Màn hình Đăng nhập}
+\mobilescreen{signup.PNG}{Màn hình Đăng ký}
+\mobilescreen{verify_account.PNG}{Màn hình Xác thực tài khoản}
+\mobilescreen{man_hinh_bat_2fa.PNG}{Màn hình Xác thực hai yếu tố}
+\mobilescreen{feed_kham_pha.PNG}{Màn hình Feed Khám phá}
+\mobilescreen{man_hinh_tao_bai_viet.PNG}{Màn hình Tạo bài viết}
+\mobilescreen{man_hinh_chi_tiet_bai_viet.PNG}{Màn hình Chi tiết bài viết}
+\mobilescreen{tim_kiem.PNG}{Màn hình Tìm kiếm}
+\mobilescreen{ho_so_ca_nhan.PNG}{Màn hình Hồ sơ cá nhân}
+\mobilescreen{man_hinh_friend.PNG}{Màn hình Quan hệ người dùng}
+\mobilescreen{man_hinh_bai_viet_da_luu.PNG}{Màn hình Bài viết đã lưu}
+\mobilescreen{thong_bao.PNG}{Màn hình Thông báo}
+\mobilescreen{danh_sach_tro_chuyen.PNG}{Màn hình Danh sách trò chuyện}
+\mobilescreen{chi_tiet_nhan_tin.PNG}{Màn hình Chi tiết trò chuyện}
+\mobilescreen{bao_cao.PNG}{Màn hình Báo cáo nội dung}
+\mobilescreen{quen_mat_khau.PNG}{Màn hình Quên mật khẩu}
+\mobilescreen{man_hinh_doi_mat_khau.PNG}{Màn hình Đổi mật khẩu}
+\mobilescreen{dich_van_hoa_mang.PNG}{Màn hình Giải thích thuật ngữ văn hóa mạng}
 
 \section{Giao diện trang quản trị}
 
@@ -1545,28 +1910,27 @@ Các ảnh trang quản trị nên chụp trên cùng kích thước cửa sổ 
 ưu tiên hiển thị đầy đủ thanh điều hướng và vùng nội dung chính.
 
 {\def\LTcaptype{none}
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{0.12\linewidth}
-  >{\raggedright\arraybackslash}p{0.32\linewidth}
-  >{\raggedright\arraybackslash}p{0.50\linewidth}@{}}
-\toprule\noalign{}
-\textbf{Số hình} & \textbf{Màn hình cần chụp} & \textbf{Chú thích đề xuất} \\
-\midrule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.12\linewidth}
+  |>{\raggedright\arraybackslash}p{0.32\linewidth}
+  |>{\raggedright\arraybackslash}p{0.50\linewidth}|}
+\hline
+\textbf{Số hình} & \textbf{Màn hình cần chụp} & \textbf{Chú thích đề xuất} \\ \hline
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Hình 4.19 & Đăng nhập quản trị & Giao diện đăng nhập dành cho quản trị viên \\
-Hình 4.20 & Dashboard & Giao diện tổng quan số liệu người dùng, nội dung và báo cáo \\
-Hình 4.21 & Quản lý người dùng & Giao diện danh sách và tìm kiếm tài khoản người dùng \\
-Hình 4.22 & Chi tiết người dùng & Giao diện xem thông tin, thống kê và trạng thái tài khoản \\
-Hình 4.23 & Quản lý bài viết & Giao diện danh sách bài viết và trạng thái kiểm duyệt \\
-Hình 4.24 & Chi tiết bài viết & Giao diện xem nội dung, điểm kiểm duyệt và lịch sử xử lý bài viết \\
-Hình 4.25 & Quản lý bình luận & Giao diện danh sách và xử lý bình luận \\
-Hình 4.26 & Danh sách báo cáo & Giao diện tổng hợp các báo cáo đang chờ xử lý \\
-Hình 4.27 & Chi tiết báo cáo & Giao diện xem thông tin báo cáo và thực hiện hành động quản trị \\
-Hình 4.28 & Hiệu suất AI & Giao diện thống kê điểm và kết quả kiểm duyệt nội dung \\
-Hình 4.29 & Nhật ký hệ thống & Giao diện theo dõi audit log và hoạt động quản trị \\
-Hình 4.30 & Từ điển tiếng lóng & Giao diện quản lý từ điển thuật ngữ văn hóa mạng \\
+Hình 4.19 & Đăng nhập quản trị & Giao diện đăng nhập dành cho quản trị viên \\ \hline
+Hình 4.20 & Dashboard & Giao diện tổng quan số liệu người dùng, nội dung và báo cáo \\ \hline
+Hình 4.21 & Quản lý người dùng & Giao diện danh sách và tìm kiếm tài khoản người dùng \\ \hline
+Hình 4.22 & Chi tiết người dùng & Giao diện xem thông tin, thống kê và trạng thái tài khoản \\ \hline
+Hình 4.23 & Quản lý bài viết & Giao diện danh sách bài viết và trạng thái kiểm duyệt \\ \hline
+Hình 4.24 & Chi tiết bài viết & Giao diện xem nội dung, điểm kiểm duyệt và lịch sử xử lý bài viết \\ \hline
+Hình 4.25 & Quản lý bình luận & Giao diện danh sách và xử lý bình luận \\ \hline
+Hình 4.26 & Danh sách báo cáo & Giao diện tổng hợp các báo cáo đang chờ xử lý \\ \hline
+Hình 4.27 & Chi tiết báo cáo & Giao diện xem thông tin báo cáo và thực hiện hành động quản trị \\ \hline
+Hình 4.28 & Hiệu suất AI & Giao diện thống kê điểm và kết quả kiểm duyệt nội dung \\ \hline
+Hình 4.29 & Nhật ký hệ thống & Giao diện theo dõi audit log và hoạt động quản trị \\ \hline
+Hình 4.30 & Từ điển tiếng lóng & Giao diện quản lý từ điển thuật ngữ văn hóa mạng \\ \hline
 \end{longtable}
 }
 
@@ -1576,20 +1940,19 @@ Nhóm hình này nên sử dụng cùng một dữ liệu mẫu trước và sau
 rõ đầu vào, kết quả và giá trị của từng module.
 
 {\def\LTcaptype{none}
-\begin{longtable}[]{@{}
-  >{\centering\arraybackslash}p{0.12\linewidth}
-  >{\raggedright\arraybackslash}p{0.32\linewidth}
-  >{\raggedright\arraybackslash}p{0.50\linewidth}@{}}
-\toprule\noalign{}
-\textbf{Số hình} & \textbf{Nội dung cần chụp} & \textbf{Chú thích đề xuất} \\
-\midrule\noalign{}
+\begin{longtable}{
+  |>{\centering\arraybackslash}p{0.12\linewidth}
+  |>{\raggedright\arraybackslash}p{0.32\linewidth}
+  |>{\raggedright\arraybackslash}p{0.50\linewidth}|}
+\hline
+\textbf{Số hình} & \textbf{Nội dung cần chụp} & \textbf{Chú thích đề xuất} \\ \hline
 \endhead
-\bottomrule\noalign{}
+\hline
 \endlastfoot
-Hình 4.31 & Kiểm duyệt nội dung & Kết quả phân loại và các điểm toxic, hate-speech, spam của một bài viết mẫu \\
-Hình 4.32 & Nội dung bị gắn cờ hoặc ẩn & Trạng thái hiển thị của nội dung sau khi vượt ngưỡng kiểm duyệt \\
-Hình 4.33 & Cá nhân hóa feed & Kết quả xếp hạng feed kèm các thành phần content, popularity và social score \\
-Hình 4.34 & Giải thích thuật ngữ & Giao diện làm nổi bật thuật ngữ văn hóa mạng và hiển thị phần giải thích theo ngữ cảnh \\
+Hình 4.31 & Kiểm duyệt nội dung & Kết quả phân loại và các điểm toxic, hate-speech, spam của một bài viết mẫu \\ \hline
+Hình 4.32 & Nội dung bị gắn cờ hoặc ẩn & Trạng thái hiển thị của nội dung sau khi vượt ngưỡng kiểm duyệt \\ \hline
+Hình 4.33 & Cá nhân hóa feed & Kết quả xếp hạng feed kèm các thành phần content, popularity và social score \\ \hline
+Hình 4.34 & Giải thích thuật ngữ & Giao diện làm nổi bật thuật ngữ văn hóa mạng và hiển thị phần giải thích theo ngữ cảnh \\ \hline
 \end{longtable}
 }
 
@@ -1649,3 +2012,6 @@ Moderation Overhaul: Key Risk Considerations," 2025. {[}Online{]}.
 Available:
 \href{https://www.sustainalytics.com/esg-research/resource/investors-esg-blog/meta-s-content-moderation-overhaul}{sustainalytics.com -- Meta's Content Moderation Overhaul}
 \fussy
+
+
+

@@ -1,0 +1,35 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces TypeScript}}{7}{figure.caption.8}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces React Native}}{8}{figure.caption.9}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Next.js}}{9}{figure.caption.10}%
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Node.js}}{9}{figure.caption.11}%
+\contentsline {figure}{\numberline {2.5}{\ignorespaces MongoDB}}{10}{figure.caption.12}%
+\contentsline {figure}{\numberline {2.6}{\ignorespaces Pusher}}{11}{figure.caption.13}%
+\contentsline {figure}{\numberline {2.7}{\ignorespaces Cloudinary}}{12}{figure.caption.14}%
+\contentsline {figure}{\numberline {2.8}{\ignorespaces Socket.io}}{13}{figure.caption.15}%
+\contentsline {figure}{\numberline {2.9}{\ignorespaces Gemini}}{14}{figure.caption.16}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Kiến trúc tổng thể của hệ thống}}{30}{figure.caption.23}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Luồng xử lý của 2-Tier Moderation Pipeline}}{34}{figure.caption.24}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Luồng xử lý của Personalized Feed}}{38}{figure.caption.25}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Luồng giải thích thuật ngữ và ngữ cảnh văn hóa mạng}}{40}{figure.caption.26}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Màn hình Đăng nhập}}{44}{figure.caption.27}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Màn hình Đăng ký}}{45}{figure.caption.28}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Màn hình Xác thực tài khoản}}{46}{figure.caption.29}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Màn hình Xác thực hai yếu tố}}{47}{figure.caption.30}%
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Màn hình Feed Khám phá}}{48}{figure.caption.31}%
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Màn hình Tạo bài viết}}{49}{figure.caption.32}%
+\contentsline {figure}{\numberline {4.7}{\ignorespaces Màn hình Chi tiết bài viết}}{50}{figure.caption.33}%
+\contentsline {figure}{\numberline {4.8}{\ignorespaces Màn hình Tìm kiếm}}{51}{figure.caption.34}%
+\contentsline {figure}{\numberline {4.9}{\ignorespaces Màn hình Hồ sơ cá nhân}}{52}{figure.caption.35}%
+\contentsline {figure}{\numberline {4.10}{\ignorespaces Màn hình Quan hệ người dùng}}{53}{figure.caption.36}%
+\contentsline {figure}{\numberline {4.11}{\ignorespaces Màn hình Bài viết đã lưu}}{54}{figure.caption.37}%
+\contentsline {figure}{\numberline {4.12}{\ignorespaces Màn hình Thông báo}}{55}{figure.caption.38}%
+\contentsline {figure}{\numberline {4.13}{\ignorespaces Màn hình Danh sách trò chuyện}}{56}{figure.caption.39}%
+\contentsline {figure}{\numberline {4.14}{\ignorespaces Màn hình Chi tiết trò chuyện}}{57}{figure.caption.40}%
+\contentsline {figure}{\numberline {4.15}{\ignorespaces Màn hình Báo cáo nội dung}}{58}{figure.caption.41}%
+\contentsline {figure}{\numberline {4.16}{\ignorespaces Màn hình Quên mật khẩu}}{59}{figure.caption.42}%
+\contentsline {figure}{\numberline {4.17}{\ignorespaces Màn hình Đổi mật khẩu}}{60}{figure.caption.43}%
+\contentsline {figure}{\numberline {4.18}{\ignorespaces Màn hình Giải thích thuật ngữ văn hóa mạng}}{61}{figure.caption.44}%
