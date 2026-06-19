@@ -4,11 +4,17 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/async-handler";
 import { sendSuccess, sendCreated } from "../utils/response";
 import { ValidationError } from "../errors";
-import { MediaService } from "../services/media.service";
+import {
+  MediaService,
+  triggerMediaModeration,
+} from "../services/media.service";
 import { cloudinaryService } from "../services/cloudinary.service";
 import { MediaType } from "../models/post-media.model";
 
-// Helper to get userId from request
+// ────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────
+
 function getUserId(req: Request): string {
   const userId = (req as any).user?.userId;
   if (!userId) {
@@ -17,12 +23,10 @@ function getUserId(req: Request): string {
   return userId;
 }
 
-// Helper to get optional userId
 function getOptionalUserId(req: Request): string | undefined {
   return (req as any).user?.userId;
 }
 
-// Helper to get string param
 function getParam(param: string | string[] | undefined): string {
   if (Array.isArray(param)) return param[0];
   return param || "";
@@ -34,28 +38,68 @@ function getParam(param: string | string[] | undefined): string {
 
 /**
  * @route   POST /api/posts/:postId/media
- * @desc    Thêm media cho post
+ * @desc    Thêm 1 hoặc nhiều media cho post
  * @access  Private (owner only)
+ *
+ * Hỗ trợ 2 cách gọi:
+ *   1. JSON body { mediaUrl, mediaType, ... }  — backward-compatible
+ *   2. multipart/form-data với field "files"   — upload trực tiếp
+ *
+ * Moderation luôn được trigger SAU KHI toàn bộ batch insert xong,
+ * tránh race condition khi nhiều ảnh ghi đè nhau lên cùng 1 post.
  */
 export const createMedia = asyncHandler(async (req: Request, res: Response) => {
   const postId = getParam(req.params.postId);
   const userId = getUserId(req);
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
 
-  // Backward-compatible: vẫn cho phép FE gửi trực tiếp mediaUrl/mediaType như cũ.
+  // ── Nhánh 1: JSON body — hỗ trợ cả object đơn lẫn array ────────────────────
   if (files.length === 0) {
-    const result = await MediaService.createMedia(postId, userId, req.body);
-    sendCreated(res, result, "Thêm media thành công");
+    const dtoList = Array.isArray(req.body) ? req.body : [req.body];
+
+    if (!dtoList.length) {
+      throw new ValidationError("Không có media nào được gửi lên");
+    }
+
+    // Insert tất cả song song
+    const results = await Promise.all(
+      dtoList.map((dto, index) =>
+        MediaService.createMedia(postId, userId, {
+          ...dto,
+          orderIndex: dto.orderIndex ?? index,
+        })
+      )
+    );
+
+    // Trigger moderation 1 lần sau khi tất cả insert xong
+    void triggerMediaModeration(
+      postId,
+      userId,
+      dtoList.map((dto) => ({
+        mediaType: dto.mediaType,
+        mediaUrl: dto.mediaUrl,
+        thumbnailUrl: dto.thumbnailUrl,
+      }))
+    );
+
+    sendCreated(
+      res,
+      results.length === 1 ? results[0] : results,
+      "Thêm media thành công"
+    );
     return;
   }
 
+  // ── Nhánh 2: File upload → Cloudinary → insert DB ────────────────────────
   const baseOrderIndex = Number(req.body.orderIndex ?? 0) || 0;
   const caption =
     typeof req.body.caption === "string" ? req.body.caption : undefined;
 
+  // Upload tất cả files lên Cloudinary song song, sau đó insert DB
   const uploadedMedia = await Promise.all(
     files.map(async (file, index) => {
       const isVideo = file.mimetype.startsWith("video/");
+
       const uploadResult = isVideo
         ? await cloudinaryService.uploadVideo(
             file,
@@ -80,6 +124,19 @@ export const createMedia = asyncHandler(async (req: Request, res: Response) => {
         orderIndex: baseOrderIndex + index,
       });
     })
+  );
+
+  // Trigger moderation 1 lần duy nhất sau khi TẤT CẢ đã insert xong:
+  // - Nhiều ảnh → moderateImages() batch, 1 request Gemini, 1 lần write DB
+  // - Video     → moderateVideo() riêng từng cái
+  void triggerMediaModeration(
+    postId,
+    userId,
+    uploadedMedia.map((m) => ({
+      mediaType: m.mediaType,
+      mediaUrl: m.mediaUrl,
+      thumbnailUrl: m.thumbnailUrl,
+    }))
   );
 
   sendCreated(

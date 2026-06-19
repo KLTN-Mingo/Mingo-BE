@@ -1,7 +1,7 @@
 // src/services/media.service.ts
 
 import { Types } from "mongoose";
-import { PostMediaModel } from "../models/post-media.model";
+import { PostMediaModel, MediaType } from "../models/post-media.model";
 import { PostModel } from "../models/post.model";
 import { CommentModel } from "../models/comment.model";
 import { LikeModel } from "../models/like.model";
@@ -14,25 +14,103 @@ import {
   UpdateMediaDto,
   MediaResponseDto,
   MediaDetailDto,
-  PaginatedMediaDto,
   toMediaResponse,
   toMediaDetail,
 } from "../dtos/media.dto";
 import { ModerationService } from "./moderation/moderation.service";
 
-// Helper: validate ObjectId
+// ────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────
+
 function assertObjectId(id: string, label: string) {
   if (!Types.ObjectId.isValid(id)) {
     throw new ValidationError(`${label} không hợp lệ`);
   }
 }
 
+// ────────────────────────────────────────────────────────────
+// Moderation trigger — dùng bởi controller sau khi insert xong
+// ────────────────────────────────────────────────────────────
+
+/**
+ * Trigger moderation cho toàn bộ media của 1 batch sau khi đã insert DB xong.
+ * Gọi từ controller, KHÔNG await (fire-and-forget).
+ *
+ * - Nhiều ảnh → 1 request Gemini duy nhất (batch), không race condition
+ * - 1 ảnh    → analyzeImage (xử lý animated GIF đúng cách)
+ * - Video    → analyzeVideo riêng từng cái (Gemini File API không batch được)
+ */
+export async function triggerMediaModeration(
+  postId: string,
+  userId: string,
+  mediaList: { mediaType: string; mediaUrl: string; thumbnailUrl?: string }[]
+): Promise<void> {
+  try {
+    if (!mediaList.length) return;
+
+    const user = await UserModel.findById(userId).select("createdAt").lean();
+    const accountAgeDays = user
+      ? (Date.now() - new Date((user as any).createdAt).getTime()) / 86400000
+      : 999;
+
+    const moderationContext = {
+      isNewAccount: accountAgeDays < 7,
+      reportCount: 0,
+    };
+
+    // ── Ảnh ──────────────────────────────────────────────────
+    const imageUrls = mediaList
+      .filter((m) => m.mediaType === MediaType.IMAGE && m.mediaUrl)
+      .map((m) => m.mediaUrl);
+
+    if (imageUrls.length === 1) {
+      void ModerationService.moderateImage(
+        imageUrls[0],
+        postId,
+        moderationContext
+      ).catch((err) => console.error("[Media Moderation] image error:", err));
+    } else if (imageUrls.length > 1) {
+      void ModerationService.moderateImages(
+        imageUrls,
+        postId,
+        moderationContext
+      ).catch((err) =>
+        console.error("[Media Moderation] images batch error:", err)
+      );
+    }
+
+    // ── Video ─────────────────────────────────────────────────
+    const videos = mediaList.filter(
+      (m) => m.mediaType === MediaType.VIDEO && m.mediaUrl
+    );
+
+    for (const video of videos) {
+      void ModerationService.moderateVideo(
+        video.mediaUrl,
+        postId,
+        moderationContext
+      ).catch((err) => console.error("[Media Moderation] video error:", err));
+    }
+  } catch (err) {
+    console.error("[triggerMediaModeration] Unexpected error:", err);
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Service
+// ────────────────────────────────────────────────────────────
+
 export const MediaService = {
   // ══════════════════════════════════════════════════════════════════════════════
   // CRUD OPERATIONS
   // ══════════════════════════════════════════════════════════════════════════════
 
-  // Tạo media cho post
+  /**
+   * Tạo 1 media record và insert vào DB.
+   * KHÔNG trigger moderation — việc đó do controller đảm nhiệm
+   * sau khi toàn bộ batch insert xong, tránh race condition.
+   */
   async createMedia(
     postId: string,
     userId: string,
@@ -45,7 +123,6 @@ export const MediaService = {
       throw new NotFoundError(`Không tìm thấy bài viết với ID: ${postId}`);
     }
 
-    // Chỉ chủ post mới được thêm media
     if (post.userId.toString() !== userId) {
       throw new ForbiddenError(
         "Bạn không có quyền thêm media cho bài viết này"
@@ -65,32 +142,6 @@ export const MediaService = {
       fileSize: dto.fileSize,
       orderIndex: dto.orderIndex || 0,
     });
-
-    // Chỉ scan ảnh và video, bỏ qua raw/other
-    if (dto.mediaType === "image" || dto.mediaType === "video") {
-      // Lấy URL để scan:
-      // - Ảnh: dùng trực tiếp mediaUrl
-      // - Video: dùng thumbnailUrl nếu có, nếu không thì skip
-      const scanUrl =
-        dto.mediaType === "image" ? dto.mediaUrl : (dto.thumbnailUrl ?? null);
-
-      if (scanUrl) {
-        // Lấy thông tin user để check tài khoản mới
-        const user = await UserModel.findById(userId)
-          .select("createdAt")
-          .lean();
-        const accountAgeDays = user
-          ? (Date.now() - new Date((user as any).createdAt).getTime()) /
-            86400000
-          : 999;
-
-        // Fire-and-forget — KHÔNG await, KHÔNG block response
-        void ModerationService.moderateImage(scanUrl, postId, {
-          isNewAccount: accountAgeDays < 7,
-          reportCount: 0,
-        }).catch((err) => console.error("[Media Moderation]", err));
-      }
-    }
 
     return toMediaResponse(media);
   },
@@ -135,7 +186,6 @@ export const MediaService = {
 
     if (mediaList.length === 0) return [];
 
-    // Get like status for all media
     const mediaIds = mediaList.map((m) => m._id);
     const userLikes = currentUserId
       ? await LikeModel.find({
@@ -146,7 +196,6 @@ export const MediaService = {
 
     const likedSet = new Set(userLikes.map((l) => l.mediaId?.toString()));
 
-    // Get user info
     const userIds = [...new Set(mediaList.map((m) => m.userId.toString()))];
     const users = await UserModel.find({ _id: { $in: userIds } }).lean();
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
@@ -196,7 +245,6 @@ export const MediaService = {
       throw new ForbiddenError("Bạn không có quyền xóa media này");
     }
 
-    // Xóa tất cả likes, comments, shares của media
     await Promise.all([
       LikeModel.deleteMany({ mediaId: media._id }),
       CommentModel.deleteMany({ mediaId: media._id }),
@@ -222,7 +270,7 @@ export const MediaService = {
       userId: new Types.ObjectId(userId),
     });
 
-    if (existing) return; // Idempotent
+    if (existing) return;
 
     await LikeModel.create({
       mediaId: new Types.ObjectId(mediaId),
@@ -258,7 +306,6 @@ export const MediaService = {
   // COMMENTS
   // ══════════════════════════════════════════════════════════════════════════════
 
-  // Lấy comments của media
   async getMediaComments(
     mediaId: string,
     page: number = 1,
@@ -274,7 +321,7 @@ export const MediaService = {
 
     const query = {
       mediaId: new Types.ObjectId(mediaId),
-      parentCommentId: null, // Only top-level comments
+      parentCommentId: null,
     };
 
     const [comments, total] = await Promise.all([
@@ -286,7 +333,6 @@ export const MediaService = {
       CommentModel.countDocuments(query),
     ]);
 
-    // Get user info and like status
     const userIds = [...new Set(comments.map((c) => c.userId.toString()))];
     const users = await UserModel.find({ _id: { $in: userIds } }).lean();
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
@@ -328,7 +374,6 @@ export const MediaService = {
     };
   },
 
-  // Tạo comment cho media
   async createMediaComment(
     mediaId: string,
     userId: string,
@@ -368,7 +413,6 @@ export const MediaService = {
     };
   },
 
-  // Tạo reply cho comment trên media
   async createMediaCommentReply(
     mediaId: string,
     userId: string,
@@ -404,7 +448,6 @@ export const MediaService = {
       contentText,
     });
 
-    // Tăng repliesCount của originalComment và commentsCount của media
     await Promise.all([
       CommentModel.findByIdAndUpdate(originalCommentId, {
         $inc: { repliesCount: 1 },
@@ -433,7 +476,6 @@ export const MediaService = {
     };
   },
 
-  // Lấy replies của comment trên media
   async getMediaCommentReplies(
     commentId: string,
     page: number = 1,
@@ -460,7 +502,6 @@ export const MediaService = {
       CommentModel.countDocuments(query),
     ]);
 
-    // Get user info and like status
     const userIds = [...new Set(replies.map((r) => r.userId.toString()))];
     const users = await UserModel.find({ _id: { $in: userIds } }).lean();
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
@@ -531,7 +572,6 @@ export const MediaService = {
     });
   },
 
-  // Lấy danh sách người đã share media
   async getMediaShares(mediaId: string, page: number = 1, limit: number = 20) {
     assertObjectId(mediaId, "ID media");
 
@@ -566,7 +606,6 @@ export const MediaService = {
     };
   },
 
-  // Lấy danh sách người đã like media
   async getMediaLikes(mediaId: string, page: number = 1, limit: number = 20) {
     assertObjectId(mediaId, "ID media");
 

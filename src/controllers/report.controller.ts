@@ -432,12 +432,10 @@ export const createReport = asyncHandler(
                 console.error("[Image Moderation] Report-trigger error:", err)
               );
             } else if (media.mediaType === "video") {
-              const scanUrl = media.thumbnailUrl;
-              if (!scanUrl) continue;
+              if (!media.mediaUrl) continue;
 
-              // FIX: truyền reportIdStr để moderateVideo cập nhật đúng report
-              void ModerationService.moderateImage(
-                scanUrl,
+              void ModerationService.moderateVideo(
+                media.mediaUrl, // dùng video gốc, không phải thumbnail
                 oid.toString(),
                 { reportCount: 1 },
                 reportIdStr

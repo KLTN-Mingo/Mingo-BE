@@ -453,6 +453,8 @@ export const PostService = {
   //   return this.getPostById(postId, userId);
   // },
 
+  // Phần createPost trong post.service.ts — chỉ đoạn gọi moderation thay đổi
+
   async createPost(userId: string, dto: CreatePostDto): Promise<PostDetailDto> {
     const user = await UserModel.findById(userId).select("createdAt").lean();
     if (!user) {
@@ -551,35 +553,58 @@ export const PostService = {
     }
 
     const postId = post!._id.toString();
+    const moderationContext = { isNewAccount, reportCount: 0 };
 
     // ── Kiểm duyệt text ──────────────────────────────────────────────────────
     if (dto.contentText?.trim()) {
-      ModerationService.moderateAndUpdate("post", postId, dto.contentText, {
-        isNewAccount,
-        reportCount: 0,
-      }).catch((err) => console.error("[Moderation] text error:", err));
+      ModerationService.moderateAndUpdate(
+        "post",
+        postId,
+        dto.contentText,
+        moderationContext
+      ).catch((err) => console.error("[Moderation] text error:", err));
 
       CultureTranslationService.analyzePost(postId).catch((err) =>
         console.error("[CultureTranslation] background error:", err)
       );
     }
 
-    // ── Kiểm duyệt ảnh / video ───────────────────────────────────────────────
+    // ── Kiểm duyệt media ─────────────────────────────────────────────────────
     if (dto.mediaFiles?.length) {
-      for (const media of dto.mediaFiles) {
-        if (!media.mediaUrl) continue;
+      // Gom tất cả ảnh → 1 request Gemini duy nhất (tránh race condition)
+      const imageUrls = dto.mediaFiles
+        .filter((m) => m.mediaType === "image" && m.mediaUrl)
+        .map((m) => m.mediaUrl!);
 
-        if (media.mediaType === "video") {
-          ModerationService.moderateVideo(media.mediaUrl, postId, {
-            isNewAccount,
-            reportCount: 0,
-          }).catch((err) => console.error("[Moderation] video error:", err));
-        } else if (media.mediaType === "image") {
-          ModerationService.moderateImage(media.mediaUrl, postId, {
-            isNewAccount,
-            reportCount: 0,
-          }).catch((err) => console.error("[Moderation] image error:", err));
-        }
+      if (imageUrls.length === 1) {
+        // Chỉ 1 ảnh: dùng analyzeImage để xử lý animated GIF đúng cách
+        ModerationService.moderateImage(
+          imageUrls[0],
+          postId,
+          moderationContext
+        ).catch((err) => console.error("[Moderation] image error:", err));
+      } else if (imageUrls.length > 1) {
+        // Nhiều ảnh: batch 1 request
+        ModerationService.moderateImages(
+          imageUrls,
+          postId,
+          moderationContext
+        ).catch((err) =>
+          console.error("[Moderation] images batch error:", err)
+        );
+      }
+
+      // Video vẫn xử lý riêng từng cái (Gemini File API không batch được video)
+      const videoUrls = dto.mediaFiles
+        .filter((m) => m.mediaType === "video" && m.mediaUrl)
+        .map((m) => m.mediaUrl!);
+
+      for (const videoUrl of videoUrls) {
+        ModerationService.moderateVideo(
+          videoUrl,
+          postId,
+          moderationContext
+        ).catch((err) => console.error("[Moderation] video error:", err));
       }
     }
 
