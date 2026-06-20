@@ -1,7 +1,8 @@
 // src/middleware/auth-middleware.ts
 import { Request, Response, NextFunction } from "express";
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { verifyAccessToken } from "../lib/auth/jwt";
-import { UnauthorizedError } from "../errors";
+import { TokenError, UnauthorizedError } from "../errors";
 import { UserModel, checkAndUnbanUser } from "../models/user.model";
 
 export async function authMiddleware(
@@ -38,6 +39,16 @@ export async function authMiddleware(
 
     next();
   } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      next(new TokenError("Access token đã hết hạn"));
+      return;
+    }
+
+    if (error instanceof JsonWebTokenError) {
+      next(new TokenError("Access token không hợp lệ"));
+      return;
+    }
+
     next(error);
   }
 }

@@ -5,6 +5,7 @@ export interface ExplorationCandidate {
   };
 }
 
+/** Tạo random xác định để tái lập thứ tự exploration trong demo và test. */
 function shuffle<T>(items: T[], random: () => number): T[] {
   const result = [...items];
   for (let index = result.length - 1; index > 0; index--) {
