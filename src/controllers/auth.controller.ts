@@ -35,6 +35,15 @@ function randomEmailOnlyPhone(): string {
   return `e_${crypto.randomBytes(12).toString("hex")}`;
 }
 
+function verifyLoginTwoFactorCode(code: string, secret: string): boolean {
+  const loginAuthenticator = authenticator.create({
+    ...authenticator.allOptions(),
+    window: 1,
+  });
+
+  return loginAuthenticator.check(code, secret);
+}
+
 /**
  * @route   POST /api/auth/register
  */
@@ -397,7 +406,7 @@ export const completeTwoFactorLogin = asyncHandler(
       throw new UnauthorizedError("2FA không áp dụng cho tài khoản này");
     }
 
-    const ok = authenticator.check(code, user.twoFactorSecret);
+    const ok = verifyLoginTwoFactorCode(code, user.twoFactorSecret);
     if (!ok) {
       throw new UnauthorizedError("Mã 2FA không đúng");
     }
