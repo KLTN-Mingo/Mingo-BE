@@ -21,7 +21,11 @@ function shouldSkipAudit(req: Request): boolean {
   return skipPrefixes.some((prefix) => req.originalUrl.startsWith(prefix));
 }
 
-export function auditMiddleware(req: Request, res: Response, next: NextFunction): void {
+export function auditMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   if (shouldSkipAudit(req)) {
     next();
     return;
@@ -46,20 +50,22 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
     const durationMs = Date.now() - start;
     const responseText = truncateLogValue(responseBody);
 
-    console.log(
-      `[API] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)`
-    );
+    // console.log(
+    //   `[API] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)`
+    // );
 
-    if (responseText) {
-      console.log(`[API] response: ${responseText}`);
-    }
+    // if (responseText) {
+    //   console.log(`[API] response: ${responseText}`);
+    // }
 
-    void auditLogService.logRequest(req, {
-      statusCode: res.statusCode,
-      durationMs,
-    }).catch((error) => {
-      console.error("[AuditMiddleware] failed to persist audit log:", error);
-    });
+    void auditLogService
+      .logRequest(req, {
+        statusCode: res.statusCode,
+        durationMs,
+      })
+      .catch((error) => {
+        console.error("[AuditMiddleware] failed to persist audit log:", error);
+      });
   });
 
   next();
