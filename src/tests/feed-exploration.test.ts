@@ -1,8 +1,14 @@
 import { applyOutsideInterestExploration } from "../utils/feed-exploration.util";
+import { TOP_INTEREST_TOPIC_COUNT } from "../constants/feed.constants";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+assert(
+  TOP_INTEREST_TOPIC_COUNT === 10,
+  "Exploration phải dùng top 10 chủ đề có điểm cao nhất"
+);
 
 const ranked = Array.from({ length: 20 }, (_, index) => ({
   post: {

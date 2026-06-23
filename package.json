@@ -8,7 +8,11 @@
     "build": "tsc && node copy-data.js",
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
-    "migrate:messagebox": "ts-node src/scripts/migrate-messagebox-fields.ts"
+    "eval:moderation:v1": "ts-node docs/datasets/evaluate-moderation-v1.ts",
+    "eval:culture:v1": "ts-node docs/datasets/evaluate-culture-v1.ts",
+    "eval:recommendation:v2": "node docs/datasets/evaluate-recommendation-v2.cjs",
+    "migrate:messagebox": "ts-node src/scripts/migrate-messagebox-fields.ts",
+    "migrate:user-profile-scores": "ts-node src/scripts/migrate-user-profile-score-entries.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -33,7 +37,8 @@
     "redis": "^5.12.1",
     "sharp": "^0.35.1",
     "socket.io": "^4.8.3",
-    "streamifier": "^0.1.1"
+    "streamifier": "^0.1.1",
+    "twilio": "^6.0.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
