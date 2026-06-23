@@ -1,0 +1,1184 @@
+[
+  {
+    "id": "clean-001",
+    "text": "Hôm nay trời đẹp quá, mọi người đi chơi đâu chưa?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-002",
+    "text": "Cảm ơn bạn đã chia sẻ bài viết rất hữu ích này.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-003",
+    "text": "Mình vừa đi ăn phở ở quán gần nhà, ngon lắm các bạn ạ.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-004",
+    "text": "Chúc mừng sinh nhật bạn nhé, chúc bạn luôn vui vẻ và hạnh phúc.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-005",
+    "text": "Các bạn ơi cho mình hỏi quán cà phê nào view đẹp ở quận 1 không?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-006",
+    "text": "Cuối tuần này mình định đi leo núi, có ai đi cùng không?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-007",
+    "text": "Bộ phim này hay thật sự, diễn viên đóng rất tự nhiên.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-008",
+    "text": "Mình mới mua con mèo này, dễ thương quá trời.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-009",
+    "text": "Recipe nấu bún chả hôm nay mình thử thành công rồi!",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-010",
+    "text": "Cảm thấy hơi mệt sau ngày làm việc dài, nhưng ổn rồi.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-011",
+    "text": "Sách này viết về lịch sử Việt Nam khá chi tiết và dễ hiểu.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-012",
+    "text": "Hi everyone, just sharing my weekend trip photos, hope you like them!",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-013",
+    "text": "Thanks for the feedback, I really appreciate your honest opinion.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-014",
+    "text": "Em bé nhà mình hôm nay biết đi rồi, vui quá!",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-015",
+    "text": "Group mình lập ra để chia sẻ kinh nghiệm học tiếng Anh nhé.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-016",
+    "text": "Nay đi học về muộn, đường tắc kinh khủng luôn.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-017",
+    "text": "Bạn nào biết chỗ sửa xe máy uy tín gần Cầu Giấy không ạ?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-018",
+    "text": "Mình đang tập gym được 3 tháng rồi, cảm thấy khỏe hơn nhiều.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-019",
+    "text": "Cảnh hoàng hôn ở Đà Lạt đẹp không thể tả được.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-020",
+    "text": "Mọi người cho mình xin ý kiến về laptop nào học lập trình tốt nhé.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "profanity-001",
+    "text": "Mày là thằng ngu, đồ vô học.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-002",
+    "text": "Con đĩ kia, ăn nói cho cẩn thận.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-003",
+    "text": "Địt con mẹ mày, nói nhiều thế.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-004",
+    "text": "Đồ súc vật, làm ăn kiểu gì vậy.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-005",
+    "text": "Thằng chó này láo thật.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-006",
+    "text": "Đéo má, sao mày ngu vậy.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-007",
+    "text": "Con lồn, biến đi cho khuất mắt.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-008",
+    "text": "Vãi lồn, ngu vậy cũng nói được.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-009",
+    "text": "Loại mất dạy, nói chuyện vô lễ.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-010",
+    "text": "You're such an asshole, get out.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-011",
+    "text": "What a bitch, can't believe she did that.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-012",
+    "text": "Shut up you motherfucker, nobody asked.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-evasion-001",
+    "text": "d1t con me may di",
+    "label": "toxic",
+    "category": "profanity_evasion_leet"
+  },
+  {
+    "id": "profanity-evasion-002",
+    "text": "may la thang ng4 vai lon",
+    "label": "toxic",
+    "category": "profanity_evasion_leet"
+  },
+  {
+    "id": "profanity-evasion-003",
+    "text": "con c4c kia im di",
+    "label": "toxic",
+    "category": "profanity_evasion_leet"
+  },
+  {
+    "id": "profanity-evasion-004",
+    "text": "deo me may noi nhieu the",
+    "label": "toxic",
+    "category": "profanity_evasion_nodiacritic"
+  },
+  {
+    "id": "profanity-evasion-005",
+    "text": "thang ngu vai lon ban oi",
+    "label": "toxic",
+    "category": "profanity_evasion_nodiacritic"
+  },
+  {
+    "id": "profanity-evasion-006",
+    "text": "lồnnnnn thiệt tình",
+    "label": "toxic",
+    "category": "profanity_evasion_repeat_char"
+  },
+  {
+    "id": "profanity-evasion-007",
+    "text": "c.ặ.c gì vậy trời",
+    "label": "toxic",
+    "category": "profanity_evasion_punctuation"
+  },
+  {
+    "id": "profanity-evasion-008",
+    "text": "b1tch please stop talking",
+    "label": "toxic",
+    "category": "profanity_evasion_leet_en"
+  },
+  {
+    "id": "false-positive-001",
+    "text": "Các bạn ơi cho mình hỏi cách học tiếng Anh hiệu quả.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-002",
+    "text": "Cặc bò là món ăn đặc sản ở một số vùng quê.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-003",
+    "text": "Đồ ngủ mới mua mặc rất thoải mái.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-004",
+    "text": "Con cá lóc nướng trui ăn với bánh tráng ngon lắm.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-005",
+    "text": "Anh Nam là một người chăm chỉ và rất tốt bụng.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "hate-001",
+    "text": "Mày chết đi cho rồi, đồ con hoang.",
+    "label": "hate_speech",
+    "category": "hate_threat"
+  },
+  {
+    "id": "hate-002",
+    "text": "Tao giết mày bây giờ, đừng có thách thức tao.",
+    "label": "hate_speech",
+    "category": "hate_threat"
+  },
+  {
+    "id": "hate-003",
+    "text": "Đồ chó, đồ lợn, không xứng đáng làm người.",
+    "label": "hate_speech",
+    "category": "hate_animal_insult"
+  },
+  {
+    "id": "hate-004",
+    "text": "Con súc vật này không có não, đồ phế vật.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing"
+  },
+  {
+    "id": "hate-005",
+    "text": "Lũ phản động này phải bị tiêu diệt hết.",
+    "label": "hate_speech",
+    "category": "hate_group_incitement"
+  },
+  {
+    "id": "hate-006",
+    "text": "Kill yourself, nobody wants you here.",
+    "label": "hate_speech",
+    "category": "hate_threat_en"
+  },
+  {
+    "id": "hate-007",
+    "text": "You're a worthless piece of shit, just go die.",
+    "label": "hate_speech",
+    "category": "hate_threat_en"
+  },
+  {
+    "id": "hate-008",
+    "text": "Đồ không cha không mẹ, mồ côi não thì đừng nói nhiều.",
+    "label": "hate_speech",
+    "category": "hate_family_insult"
+  },
+  {
+    "id": "hate-009",
+    "text": "Đập chết nó đi, đồ rác rưởi không đáng sống.",
+    "label": "hate_speech",
+    "category": "hate_threat"
+  },
+  {
+    "id": "hate-010",
+    "text": "KYS, không ai cần mày ở đây cả.",
+    "label": "hate_speech",
+    "category": "hate_threat_abbrev"
+  },
+  {
+    "id": "spam-001",
+    "text": "MUA NGAY MUA NGAY MUA NGAY giảm giá 90% chỉ hôm nay thôi!!!",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "spam-002",
+    "text": "Link đăng ký: http://spam1.com http://spam2.com http://spam3.com nhanh tay kẻo lỡ",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-003",
+    "text": "Kiếm tiền online dễ dàng, chỉ cần click vào đây http://abc.xyz http://def.xyz",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-004",
+    "text": "Giảmmmmmmm giá sốc, mua liềnnnnnn kẻo hếtttttt hàng!!!",
+    "label": "spam",
+    "category": "spam_repeat_char"
+  },
+  {
+    "id": "spam-005",
+    "text": "VAY TIỀN NHANH LÃI SUẤT THẤP LIÊN HỆ NGAY HÔM NAY ĐỂ NHẬN ƯU ĐÃI",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "spam-006",
+    "text": "Đầu tư forex lãi 300% mỗi tháng, link đây http://fx1.com http://fx2.com đăng ký ngay",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-007",
+    "text": "CLICK NGAYYYYYY để nhận quà miễn phí, số lượng có hạnnnnn",
+    "label": "spam",
+    "category": "spam_mixed"
+  },
+  {
+    "id": "spam-008",
+    "text": "Mở bán căn hộ cao cấp, chiết khấu khủng, xem ngay tại http://land1.com http://land2.com http://land3.com",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-soft-001",
+    "text": "Sản phẩm này khá tốt, mình dùng được 2 tuần rồi.",
+    "label": "clean",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "spam-soft-002",
+    "text": "Mình có bán vài món đồ cũ, ai cần inbox nhé, đây là link http://shop.example.com",
+    "label": "spam_soft",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "spam-soft-003",
+    "text": "AAAAAA vui quá trời vui luôn á mọi người ơi!!!",
+    "label": "clean",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "spam-soft-004",
+    "text": "THẬT KHÔNG THỂ TIN ĐƯỢC LUÔN MỌI NGƯỜI ƠI HÔM NAY MÌNH ĐÃ THẤY MỘT CHUYỆN RẤT THÚ VỊ TRÊN ĐƯỜNG ĐI LÀM VỀ",
+    "label": "spam_soft",
+    "category": "spam_soft_allcaps_borderline"
+  },
+  {
+    "id": "toxic-implicit-001",
+    "text": "Loại người như mày thì sống làm gì cho phí cơm.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-002",
+    "text": "Đúng là não phẳng, nói chuyện chả hiểu gì cả.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-003",
+    "text": "What a pathetic excuse for a human being, disgusting.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword_en"
+  },
+  {
+    "id": "toxic-implicit-004",
+    "text": "Nhìn cái mặt là biết loại không ra gì rồi.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-005",
+    "text": "Người gì mà ở bẩn vậy, kinh tởm hết sức.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "ambiguous-001",
+    "text": "Sao mày làm cái trò gì vậy, chán thật sự.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-002",
+    "text": "Thời tiết hôm nay chán vãi, mưa suốt cả ngày.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-003",
+    "text": "Đội bóng đá dở quá, thua hoài thôi.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-004",
+    "text": "Bực mình ghê, sếp giao việc dí deadline liên tục.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-005",
+    "text": "Phim này dở tệ, không đáng xem chút nào.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-006",
+    "text": "Ghét cái kiểu làm việc chậm chạp như vậy lắm.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "context-sarcasm-001",
+    "text": "Giỏi quá nhỉ, làm gì cũng hỏng được, đúng là tài năng.",
+    "label": "clean",
+    "category": "sarcasm_no_explicit_insult"
+  },
+  {
+    "id": "context-sarcasm-002",
+    "text": "Ừ thì cứ tiếp tục đi, xem được tới đâu.",
+    "label": "clean",
+    "category": "sarcasm_no_explicit_insult"
+  },
+  {
+    "id": "mixed-violation-001",
+    "text": "Mày là đồ ngu, mua hàng giảm giá 90% tại http://scam.com http://scam2.com ngay đi đồ rác rưởi",
+    "label": "toxic",
+    "category": "mixed_profanity_and_spam"
+  },
+  {
+    "id": "mixed-violation-002",
+    "text": "ĐỒ CHÓ NGU, CLICK NGAYYYYY để nhận tiền http://x.com http://y.com",
+    "label": "toxic",
+    "category": "mixed_profanity_and_spam"
+  },
+  {
+    "id": "empty-001",
+    "text": "",
+    "label": "clean",
+    "category": "edge_case_empty"
+  },
+  {
+    "id": "whitespace-001",
+    "text": "   ",
+    "label": "clean",
+    "category": "edge_case_whitespace_only"
+  },
+  {
+    "id": "short-001",
+    "text": "ok",
+    "label": "clean",
+    "category": "edge_case_too_short"
+  },
+  {
+    "id": "short-002",
+    "text": "ngu",
+    "label": "toxic",
+    "category": "edge_case_too_short_but_toxic"
+  },
+  {
+    "id": "emoji-001",
+    "text": "😀😀😀 vui quá trời luôn á mọi người ơi 🎉🎉🎉",
+    "label": "clean",
+    "category": "edge_case_emoji_heavy"
+  },
+  {
+    "id": "number-001",
+    "text": "123456789 000000 999999999",
+    "label": "clean",
+    "category": "edge_case_numbers_only"
+  },
+  {
+    "id": "mixed-lang-001",
+    "text": "OMG con này so cute quá đi, love it luôn á.",
+    "label": "clean",
+    "category": "edge_case_mixed_language"
+  },
+  {
+    "id": "long-clean-001",
+    "text": "Hôm nay mình muốn chia sẻ một chút về hành trình học lập trình của bản thân trong suốt hai năm qua, từ những ngày đầu bỡ ngỡ với cú pháp cơ bản cho đến khi có thể tự xây dựng một ứng dụng hoàn chỉnh, quá trình này thực sự đòi hỏi rất nhiều kiên nhẫn và sự cố gắng không ngừng nghỉ.",
+    "label": "clean",
+    "category": "edge_case_long_clean_text"
+  },
+  {
+    "id": "clean-021",
+    "text": "Mình thấy series phim tài liệu này rất bổ ích về thiên nhiên hoang dã.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-022",
+    "text": "Cuối tuần mình hay nấu ăn cho gia đình, vừa tiết kiệm vừa vui.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-023",
+    "text": "Bạn có thể recommend vài cuốn sách self-help hay không?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-024",
+    "text": "Mình đang học vẽ digital art, hy vọng sớm có sản phẩm khoe mọi người.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-025",
+    "text": "Cà phê sáng nay pha hơi đậm nhưng vẫn ngon.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-026",
+    "text": "Dạo này mình tập thói quen đọc sách trước khi ngủ, thấy khá hiệu quả.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-027",
+    "text": "Nhóm mình vừa hoàn thành dự án tình nguyện ở vùng cao, rất ý nghĩa.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-028",
+    "text": "Bài hát này giai điệu nhẹ nhàng, nghe thư giãn lắm.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-029",
+    "text": "Mình mới chuyển nhà, đang dọn dẹp sắp xếp đồ đạc cả tuần nay.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-030",
+    "text": "Thử công thức bánh flan mới, kết quả ngon hơn mong đợi.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "profanity-013",
+    "text": "Thằng đĩ này nói chuyện vô duyên thật.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-014",
+    "text": "Đồ vô học, ăn nói linh tinh.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-015",
+    "text": "Cái lồn má mày, đừng có giỡn mặt.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-016",
+    "text": "Đầu buồi suy nghĩ kiểu gì vậy trời.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-017",
+    "text": "What a slut, can't believe the things she says.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-018",
+    "text": "Stop being such a retard about this.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-019",
+    "text": "đjt con mE may haha",
+    "label": "toxic",
+    "category": "profanity_evasion_mixed"
+  },
+  {
+    "id": "profanity-020",
+    "text": "ngu vcllll thiệt tình",
+    "label": "toxic",
+    "category": "profanity_evasion_repeat_char"
+  },
+  {
+    "id": "hate-011",
+    "text": "Cho mày chết luôn đi, sống làm gì cho chật đất.",
+    "label": "hate_speech",
+    "category": "hate_threat"
+  },
+  {
+    "id": "hate-012",
+    "text": "Bọn phản động này cần phải dẹp sạch.",
+    "label": "hate_speech",
+    "category": "hate_group_incitement"
+  },
+  {
+    "id": "hate-013",
+    "text": "Subhuman trash, you don't deserve to exist.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing_en"
+  },
+  {
+    "id": "hate-014",
+    "text": "You should die, nobody would miss you.",
+    "label": "hate_speech",
+    "category": "hate_threat_en"
+  },
+  {
+    "id": "hate-015",
+    "text": "Đồ cặn bã của xã hội, không đáng được tôn trọng.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing"
+  },
+  {
+    "id": "spam-009",
+    "text": "FREESHIP FREESHIP FREESHIP đơn hôm nay, đặt ngay kẻo hết ưu đãi!!!",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "spam-010",
+    "text": "Tải app nhận ngay 500k: http://app1.link http://app2.link",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-011",
+    "text": "Nạp rúttttttt nhanhhhhh trong 5 phútttttt, uy tínnnnn 10 nămmmmm",
+    "label": "spam",
+    "category": "spam_repeat_char"
+  },
+  {
+    "id": "spam-012",
+    "text": "CASINO ONLINE UY TÍN SỐ 1 VIỆT NAM, THAM GIA NGAY HÔM NAY",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "false-positive-006",
+    "text": "Bánh cu đơ là đặc sản nổi tiếng của Hà Tĩnh.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-007",
+    "text": "Đồ ăn nhà mình nấu hôm nay hơi nhạt một chút.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-008",
+    "text": "Cô ấy là một người chu đáo và tốt bụng với mọi người.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "clean-031",
+    "text": "Mình mới hoàn thành khóa học online về thiết kế đồ họa, khá hài lòng.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-032",
+    "text": "Trời mưa to quá, mọi người nhớ mang theo áo mưa khi ra ngoài nhé.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-033",
+    "text": "Buổi hòa nhạc tối qua thực sự rất tuyệt vời, âm thanh sống động lắm.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-034",
+    "text": "Mình đang phân vân giữa việc học thêm bằng thạc sĩ hay đi làm luôn.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-035",
+    "text": "Cảm ơn đội ngũ hỗ trợ đã giải quyết vấn đề rất nhanh chóng.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-036",
+    "text": "Cuối cùng cũng sửa xong con xe đạp, giờ có thể đi làm bằng xe đạp rồi.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-037",
+    "text": "Recommend mình vài podcast hay về kinh doanh khởi nghiệp với.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-038",
+    "text": "Năm nay mình đặt mục tiêu đọc 24 cuốn sách, hiện đã được 10 cuốn.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-039",
+    "text": "Chuyến du lịch Phú Quốc vừa rồi thực sự đáng nhớ, biển đẹp lắm.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-040",
+    "text": "Just finished my first marathon today, feeling so accomplished!",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-041",
+    "text": "Does anyone have recommendations for a good budgeting app?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-042",
+    "text": "My cat knocked over my coffee again this morning, classic.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-043",
+    "text": "Mình vừa nhận được offer công việc mới, hồi hộp quá mọi người ơi.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-044",
+    "text": "Công thức làm sữa chua tại nhà này dễ làm mà thành phẩm rất ngon.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-045",
+    "text": "Dạo này thời tiết thất thường, mọi người chú ý giữ sức khỏe nhé.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-046",
+    "text": "Mình đang tìm hiểu về đầu tư chứng khoán cho người mới bắt đầu.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-047",
+    "text": "Workshop nhiếp ảnh cuối tuần này có ai tham gia cùng mình không?",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-048",
+    "text": "Bài tập về nhà hôm nay hơi nhiều nhưng cũng không đến mức quá khó.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-049",
+    "text": "Tiệm bánh mới mở gần nhà mình có món croissant ăn khá ổn.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "clean-050",
+    "text": "Cuối năm rồi, ai cũng đang tất bật chuẩn bị cho Tết.",
+    "label": "clean",
+    "category": "clean_text"
+  },
+  {
+    "id": "false-positive-009",
+    "text": "Đồ chơi trẻ em ở cửa hàng này khá đa dạng và chất lượng tốt.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-010",
+    "text": "Con chó nhà mình rất ngoan, không bao giờ sủa bậy.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-011",
+    "text": "Thằng bé hàng xóm nhà mình học giỏi lắm, mới đạt giải nhất toán.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-012",
+    "text": "Đập đá granite làm bàn bếp khá tốn kém nhưng bền lâu dài.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "false-positive-013",
+    "text": "Giết thời gian bằng cách đọc sách cũng là một cách hay.",
+    "label": "clean",
+    "category": "false_positive_check"
+  },
+  {
+    "id": "toxic-implicit-006",
+    "text": "Có loại người sống cả đời mà chẳng đóng góp được gì cho ai cả.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-007",
+    "text": "Nhìn cách cư xử là biết được dạy dỗ kiểu gì rồi.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-008",
+    "text": "Some people really shouldn't be allowed to talk in public.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword_en"
+  },
+  {
+    "id": "toxic-implicit-009",
+    "text": "Đúng kiểu người không biết xấu hổ là gì luôn á.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "toxic-implicit-010",
+    "text": "Cái dạng người này thì sống ở đâu cũng làm phiền người khác thôi.",
+    "label": "toxic",
+    "category": "toxic_implicit_no_keyword"
+  },
+  {
+    "id": "profanity-021",
+    "text": "Đồ con hoang, biến khỏi nhà tao ngay.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-022",
+    "text": "Mặt mày trông như thằng vô học vậy.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-023",
+    "text": "Câm cái mồm con đĩ kia lại.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-024",
+    "text": "Bố mày là đồ chó, nói chuyện vô lễ với người lớn.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-025",
+    "text": "Fuck off, nobody wants you here asshole.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-026",
+    "text": "She's a complete cunt for doing that to her own family.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-027",
+    "text": "What a dumb prick, can't even read instructions.",
+    "label": "toxic",
+    "category": "profanity_direct_en"
+  },
+  {
+    "id": "profanity-028",
+    "text": "ngu vl, đồ ngu thật sự không thể tin nổi.",
+    "label": "toxic",
+    "category": "profanity_direct"
+  },
+  {
+    "id": "profanity-evasion-009",
+    "text": "th4ng ch0 lao nhao len",
+    "label": "toxic",
+    "category": "profanity_evasion_leet"
+  },
+  {
+    "id": "profanity-evasion-010",
+    "text": "vcllllll thiet tinh ngu vai",
+    "label": "toxic",
+    "category": "profanity_evasion_repeat_char"
+  },
+  {
+    "id": "profanity-evasion-011",
+    "text": "đ.ị.t m.ẹ m.à.y nói nhiều",
+    "label": "toxic",
+    "category": "profanity_evasion_punctuation"
+  },
+  {
+    "id": "profanity-evasion-012",
+    "text": "th4ng dj hoc ngu nhu bo",
+    "label": "toxic",
+    "category": "profanity_evasion_leet"
+  },
+  {
+    "id": "profanity-evasion-013",
+    "text": "biiiiiitch please stop",
+    "label": "toxic",
+    "category": "profanity_evasion_repeat_char_en"
+  },
+  {
+    "id": "profanity-evasion-014",
+    "text": "do ngu vailllllll that su",
+    "label": "toxic",
+    "category": "profanity_evasion_nodiacritic"
+  },
+  {
+    "id": "hate-016",
+    "text": "ĐỒ CHÓ NGU, mày không xứng làm người đâu.",
+    "label": "hate_speech",
+    "category": "hate_animal_insult_allcaps"
+  },
+  {
+    "id": "hate-017",
+    "text": "Tao sẽ đập chết mày nếu còn dám léng phéng nữa.",
+    "label": "hate_speech",
+    "category": "hate_threat"
+  },
+  {
+    "id": "hate-018",
+    "text": "Lũ này là rác rưởi của xã hội, cần phải loại bỏ.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing"
+  },
+  {
+    "id": "hate-019",
+    "text": "Go die already, the world doesn't need you.",
+    "label": "hate_speech",
+    "category": "hate_threat_en"
+  },
+  {
+    "id": "hate-020",
+    "text": "Đồ phế vật, sống chỉ tổ tốn cơm của xã hội.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing"
+  },
+  {
+    "id": "hate-021",
+    "text": "Bọn phản động này phải bị xử lý nghiêm khắc, không khoan nhượng.",
+    "label": "hate_speech",
+    "category": "hate_group_incitement"
+  },
+  {
+    "id": "hate-022",
+    "text": "Waste of space, honestly nobody would even notice if you left.",
+    "label": "hate_speech",
+    "category": "hate_dehumanizing_en"
+  },
+  {
+    "id": "spam-013",
+    "text": "GIẢM SỐC GIẢM SỐC GIẢM SỐC chỉ còn hôm nay thôi mọi người ơi!!!",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "spam-014",
+    "text": "Liên hệ ngay số 0901xxxxxx để nhận ưu đãi đặc biệt hôm nay.",
+    "label": "spam",
+    "category": "spam_phone_number"
+  },
+  {
+    "id": "spam-015",
+    "text": "💰💰💰 Kiếm tiền tại nhà dễ dàng 💰💰💰 link: http://abc.com http://def.com",
+    "label": "spam",
+    "category": "spam_emoji_link"
+  },
+  {
+    "id": "spam-016",
+    "text": "Mã giảm giá: SALE50 SALE50 SALE50 áp dụng ngay tại http://shop1.vn http://shop2.vn",
+    "label": "spam",
+    "category": "spam_code_multilink"
+  },
+  {
+    "id": "spam-017",
+    "text": "ĐĂNG KÝ NGAY HÔM NAY ĐỂ NHẬN QUÀ TẶNG GIÁ TRỊ LÊN ĐẾN 1 TRIỆU ĐỒNG",
+    "label": "spam",
+    "category": "spam_allcaps"
+  },
+  {
+    "id": "spam-018",
+    "text": "Cho vay nhanh không thế chấp, lãi suất 0%, liên hệ http://loan1.com http://loan2.com http://loan3.com",
+    "label": "spam",
+    "category": "spam_multilink"
+  },
+  {
+    "id": "spam-019",
+    "text": "Nhận làm CTV bán hàng online, thu nhập khủnggggggg mỗi tháng",
+    "label": "spam",
+    "category": "spam_repeat_char"
+  },
+  {
+    "id": "spam-020",
+    "text": "GET RICH QUICK click here now http://x1.link http://x2.link limited time only",
+    "label": "spam",
+    "category": "spam_multilink_en"
+  },
+  {
+    "id": "spam-021",
+    "text": "Mua 1 tặng 1, mua 1 tặng 1, mua 1 tặng 1 chỉ trong hôm nay",
+    "label": "spam",
+    "category": "spam_repeat_phrase"
+  },
+  {
+    "id": "spam-022",
+    "text": "XEM NGAYYYY video kiếm tiền triệu mỗi ngày tại đâyyyyy http://vid1.com",
+    "label": "spam",
+    "category": "spam_mixed"
+  },
+  {
+    "id": "spam-soft-005",
+    "text": "Mình thấy review sản phẩm này khá tốt, link tham khảo http://review.example.com",
+    "label": "spam_soft",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "spam-soft-006",
+    "text": "WOWWWW không thể tin nổi luôn, mọi người phải xem cái này",
+    "label": "spam_soft",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "spam-soft-007",
+    "text": "Cần tuyển gấp nhân viên, lương thưởng hấp dẫn, liên hệ qua inbox nhé.",
+    "label": "spam_soft",
+    "category": "spam_soft_borderline"
+  },
+  {
+    "id": "mixed-violation-003",
+    "text": "ĐỒ NGU NGU NGU, sản phẩm lừa đảo đừng mua kẻo bị lừa http://scam1.com http://scam2.com",
+    "label": "toxic",
+    "category": "mixed_profanity_and_spam"
+  },
+  {
+    "id": "mixed-violation-004",
+    "text": "Bọn lừa đảo đáng chết, đừng tin chúng nó, xem chi tiết tại http://warn1.com http://warn2.com",
+    "label": "hate_speech",
+    "category": "mixed_hate_and_spam"
+  },
+  {
+    "id": "ambiguous-007",
+    "text": "Trận đấu hôm nay đội nhà chơi quá tệ, thất vọng tràn trề.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-008",
+    "text": "Dịch vụ khách hàng ở đây thật sự rất kém, đợi cả tiếng không ai trả lời.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "ambiguous-009",
+    "text": "Quán này giá hơi chát so với chất lượng đồ ăn.",
+    "label": "clean",
+    "category": "ambiguous_mild_negative"
+  },
+  {
+    "id": "context-sarcasm-003",
+    "text": "Wow, đúng là một quyết định sáng suốt ghê, kết quả thấy rõ rồi đó.",
+    "label": "clean",
+    "category": "sarcasm_no_explicit_insult"
+  },
+  {
+    "id": "long-toxic-001",
+    "text": "Tao nói thật với mày, cái thằng như mày sống trên đời này chỉ toàn gây phiền phức cho người khác, từ chuyện nhỏ đến chuyện lớn, lúc nào cũng làm hỏng việc rồi đổ lỗi cho người khác, đúng là loại không có liêm sỉ, không biết xấu hổ là gì cả.",
+    "label": "toxic",
+    "category": "long_toxic_text"
+  },
+  {
+    "id": "long-spam-001",
+    "text": "CHƯƠNG TRÌNH KHUYẾN MÃI ĐẶC BIỆT DUY NHẤT HÔM NAY, GIẢM GIÁ SỐC LÊN ĐẾN 80% CHO TẤT CẢ SẢN PHẨM, SỐ LƯỢNG CÓ HẠN, NHANH TAY ĐẶT HÀNG NGAY KẺO LỠ CƠ HỘI NHẬN ƯU ĐÃI HẤP DẪN NÀY",
+    "label": "spam",
+    "category": "long_spam_allcaps"
+  },
+  {
+    "id": "edge-mention-001",
+    "text": "@username bạn nghĩ sao về vấn đề này?",
+    "label": "clean",
+    "category": "edge_case_mention"
+  },
+  {
+    "id": "edge-hashtag-001",
+    "text": "Một ngày tuyệt vời #vietnam #travel #happy",
+    "label": "clean",
+    "category": "edge_case_hashtag"
+  },
+  {
+    "id": "edge-single-link-001",
+    "text": "Mọi người xem bài viết này nhé http://blog.example.com/article",
+    "label": "clean",
+    "category": "edge_case_single_link"
+  },
+  {
+    "id": "edge-question-001",
+    "text": "Có ai biết deadline nộp hồ sơ là ngày nào không ạ?",
+    "label": "clean",
+    "category": "edge_case_question"
+  },
+  {
+    "id": "edge-number-name-001",
+    "text": "Nguyễn Văn A sinh năm 1995 tại Hà Nội.",
+    "label": "clean",
+    "category": "edge_case_name_with_numbers"
+  }
+]

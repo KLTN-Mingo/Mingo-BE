@@ -2781,9 +2781,39 @@ export const getAdminPosts = asyncHandler(
       PostModel.countDocuments(filter),
     ]);
 
+    // ── Lấy media đầu tiên (orderIndex thấp nhất) của mỗi post ─────────
+    const postIds = posts.map((p) => p._id);
+    const mediaDocs = await PostMediaModel.find({ postId: { $in: postIds } })
+      .sort({ orderIndex: 1 })
+      .select("postId mediaUrl mediaType orderIndex")
+      .lean();
+
+    const firstMediaByPostId = new Map<
+      string,
+      { mediaUrl: string; mediaType: string }
+    >();
+    for (const m of mediaDocs) {
+      const key = m.postId.toString();
+      if (!firstMediaByPostId.has(key)) {
+        firstMediaByPostId.set(key, {
+          mediaUrl: m.mediaUrl,
+          mediaType: m.mediaType,
+        });
+      }
+    }
+
+    const postsWithMedia = posts.map((p) => {
+      const media = firstMediaByPostId.get(p._id.toString());
+      return {
+        ...p,
+        mediaUrl: media?.mediaUrl ?? null,
+        type: media ? media.mediaType : "text",
+      };
+    });
+
     const totalPages = Math.ceil(total / limit) || 1;
 
-    sendSuccess(res, { posts, total, page, totalPages });
+    sendSuccess(res, { posts: postsWithMedia, total, page, totalPages });
   }
 );
 

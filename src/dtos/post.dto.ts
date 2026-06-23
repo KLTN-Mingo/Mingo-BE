@@ -47,6 +47,8 @@ export class GetPostsQueryDto {
 
 /** Tab trang chủ: friends = bài bạn bè/bạn thân, explore = khám phá đề xuất cá nhân hóa */
 export type FeedTab = "friends" | "explore";
+export type PostStatus = "published" | "hidden" | "reported";
+export type PostType = "image" | "video" | "text";
 
 export class GetFeedDto {
   page?: number;
@@ -283,4 +285,19 @@ export function toPostDetail(
     hiddenReason: post.hiddenReason,
     topComments: options.topComments ?? [],
   };
+}
+
+export interface AdminPost {
+  _id: string;
+  content: string;
+  status: PostStatus;
+  type: PostType;
+  authorName: string;
+  authorAvatar: string;
+  authorId: string;
+  createdAt: string;
+  likes: number;
+  comments: number;
+  reports: number;
+  mediaUrl?: string;
 }

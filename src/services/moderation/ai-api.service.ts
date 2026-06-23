@@ -149,6 +149,81 @@ function levelToScore(level: unknown): number {
   return 0;
 }
 
+// Một số từ khóa mà nếu xuất hiện trong "reason" của model, bất kể model tự
+// gắn level gì, ta vẫn ép cứng về "severe" — để không phụ thuộc hoàn toàn
+// vào việc model tự tuân thủ rule "reason phải khớp level" trong prompt.
+const SEVERE_REASON_KEYWORDS = [
+  "gore",
+  "blood",
+  "dismember",
+  "dead body",
+  "corpse",
+  "internal exposure",
+  "organ expos",
+  "mutilat",
+  "open wound",
+  "severe injury",
+  "ledge",
+  "jump from",
+  "jumping from",
+  "suicide",
+  "self-harm",
+  "self harm",
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "falling from a building",
+  "self-harm",
+  "self harm",
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "falling from a building",
+  "self-harm",
+  "self harm",
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "falling from a building",
+  "self-harm",
+  "self harm",
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "falling from a building",
+  ,
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "falling from a building",
+  "self-harm",
+  "self harm",
+  "gunshot",
+  "stab wound",
+  "nudity",
+  "sexual content",
+  "extreme physical trauma",
+];
+
+function enforceSeverityFloor(level: string, reason: string): string {
+  const lowerReason = reason.toLowerCase();
+  const hitsSevereKeyword = SEVERE_REASON_KEYWORDS.some((kw) =>
+    lowerReason.includes(kw ?? "")
+  );
+  if (hitsSevereKeyword && level !== "severe") {
+    console.warn(
+      `⚠️ [AI] Overriding toxic_level "${level}" -> "severe" due to reason keyword match: "${reason}"`
+    );
+    return "severe";
+  }
+  return level;
+}
+
 /**
  * Chờ Gemini File API xử lý xong video (state: ACTIVE)
  * Timeout sau 3 phút
@@ -399,6 +474,7 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "image_fetch_error",
+          needsManualReview: true,
         };
       }
 
@@ -409,6 +485,7 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "image_fetch_error",
+          needsManualReview: true,
         };
       }
 
@@ -422,6 +499,7 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "image_fetch_error",
+          needsManualReview: true,
         };
       }
 
@@ -486,6 +564,10 @@ ${safe}
       
       - hate_speech_level "high": hate symbols, racist/extremist imagery
       - spam_level "high": advertisements, QR codes, watermarked promotional content
+
+      IMPORTANT CALIBRATION:
+      - Your "reason" text and your "toxic_level" MUST match in severity. If your reason mentions "gore", "blood", "open wound", "dismemberment", or "dead body", toxic_level MUST be "severe", not "high".
+      - Do not soften the level because the disturbing element is small/partial in the frame — presence matters more than size.
       ${isAnimatedGif ? "\nIMPORTANT: Classify based on the WORST frame found across ALL frames." : ""}`;
 
       const res = await fetchImpl(`${API_URL}?key=${apiKey}`, {
@@ -506,9 +588,9 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "fallback_http_error",
+          needsManualReview: true,
         };
       }
-
       const output = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       const parsed = parseAiSeverityJson(output);
 
@@ -523,8 +605,13 @@ ${safe}
         };
       }
 
+      const toxicLevel = enforceSeverityFloor(
+        parsed.toxic_level ?? "none",
+        parsed.reason ?? ""
+      );
+
       const result: AIScoreResult = {
-        toxic: levelToScore(parsed.toxic_level),
+        toxic: levelToScore(toxicLevel),
         hateSpeech: levelToScore(parsed.hate_speech_level),
         spam: levelToScore(parsed.spam_level),
         reason: parsed.reason || "ok",
@@ -609,6 +696,7 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "all_images_failed",
+          needsManualReview: true,
         };
       }
 
@@ -623,9 +711,9 @@ ${safe}
         inlineData: p.inlineData,
       }));
 
-      const prompt = `You are a video content safety classifier for a Vietnamese social network.
+      const prompt = `You are a strict content safety classifier for a Vietnamese social network.
 
-      Analyze this video and return ONLY valid JSON (no markdown, no explanation):
+      Analyze these images and return ONLY valid JSON (no markdown, no explanation):
       {
         "toxic_level": "none" | "low" | "medium" | "high" | "severe",
         "hate_speech_level": "none" | "low" | "medium" | "high",
@@ -642,9 +730,11 @@ ${safe}
       
       - hate_speech_level "high": hate symbols, racist/extremist content
       - spam_level "high": advertisements, QR codes, scam patterns
-      
-      Check the FULL video from start to end, not just the first few seconds — violations may appear midway or near the end.
-      Classify based on the WORST moment found anywhere in the video.`;
+
+      IMPORTANT CALIBRATION:
+      - Your "reason" text and your "toxic_level" MUST match in severity. If your reason mentions "gore", "blood", "open wound", "dismemberment", or "dead body", toxic_level MUST be "severe", not "high".
+
+      Check ALL images provided — classify based on the WORST image found among them.`;
 
       const fetchImplForGemini = getFetch();
       const res = await fetchImplForGemini(`${API_URL}?key=${apiKey}`, {
@@ -669,11 +759,12 @@ ${safe}
           hateSpeech: 0,
           spam: 0,
           reason: "fallback_http_error",
+          needsManualReview: true,
         };
       }
 
       const output = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      console.log("📥 [AI] Video analysis output:", output);
+      console.log("📥 [AI] Image batch output:", output);
 
       const parsed = parseAiSeverityJson(output);
 
@@ -688,14 +779,19 @@ ${safe}
         };
       }
 
+      const toxicLevel = enforceSeverityFloor(
+        parsed.toxic_level ?? "none",
+        parsed.reason ?? ""
+      );
+
       const result: AIScoreResult = {
-        toxic: levelToScore(parsed.toxic_level),
+        toxic: levelToScore(toxicLevel),
         hateSpeech: levelToScore(parsed.hate_speech_level),
         spam: levelToScore(parsed.spam_level),
         reason: parsed.reason || "ok",
       };
 
-      console.log("✅ [AI VIDEO RESULT]:", result);
+      console.log("✅ [AI IMAGE BATCH RESULT]:", result);
       return result;
     } catch (error) {
       console.error("💥 [AI BATCH ERROR]:", error);
@@ -814,26 +910,35 @@ ${safe}
 
       console.log("📤 [AI] Sending video analysis request...");
 
-      const prompt = `You are a STRICT video content safety classifier for a Vietnamese social network. Be conservative and err toward HIGHER scores when in doubt.
+      const prompt = `You are a strict content safety classifier for a Vietnamese social network.
 
-Return ONLY valid JSON (no markdown, no explanation):
-{"toxic": number 0-1, "hate_speech": number 0-1, "spam": number 0-1, "reason": string}
+Analyze this video and return ONLY valid JSON (no markdown, no explanation):
+{
+  "toxic_level": "none" | "low" | "medium" | "high" | "severe",
+  "hate_speech_level": "none" | "low" | "medium" | "high",
+  "spam_level": "none" | "low" | "medium" | "high",
+  "reason": string
+}
 
-SCORING RULES — be strict, do not soften scores for "context" or "it's brief":
-- toxic >= 0.9: clear visible blood, open wounds, gore, severe injury, dead bodies, dismemberment, graphic violence, weapons actively harming someone, nudity/sexual content
-- toxic >= 0.7: fighting with visible impact, mild blood, disturbing/shocking imagery, simulated harm that looks real, drug use
-- toxic >= 0.4: aggressive behavior, verbal violence, intense conflict without visible injury
-- hate_speech >= 0.8: hate symbols, racist/discriminatory content, extremist messaging
-- spam >= 0.8: ads, QR codes, promotional watermarks, scam patterns
+CLASSIFICATION GUIDE:
+- toxic_level "severe": visible blood, open wounds, gore, severe injury, dead bodies, dismemberment, graphic violence, weapons actively harming someone, nudity/sexual content, self-harm or suicide depiction (e.g. jumping from height with intent to harm)
+- toxic_level "high": fighting with visible impact, mild blood, disturbing/shocking imagery, simulated harm that looks real, drug use
+- toxic_level "medium": aggressive behavior, verbal violence, intense conflict without visible injury
+- toxic_level "low": mild tension, no real harm shown
+- toxic_level "none": completely safe content
+
+- hate_speech_level "high": hate symbols, racist/discriminatory content, extremist messaging
+- spam_level "high": ads, QR codes, promotional watermarks, scam patterns
 
 IMPORTANT CALIBRATION:
-- If you can SEE blood, wounds, or injury on a person/animal at ANY point in the video — even briefly, even partially obscured — toxic MUST be >= 0.8, not 0.7.
-- Do not round down because the disturbing content is short or only in part of the video. The presence of the content matters more than its duration.
-- Your "reason" text and your numeric score MUST match in severity. If your reason mentions "gore", "blood", or "physical trauma", toxic must be >= 0.85. Do not write a severe reason with a moderate score.
+- If you can SEE blood, wounds, injury, or a person engaging in life-threatening action (e.g. jumping from a building) at ANY point in the video — even briefly, even partially obscured — toxic_level MUST be "severe", not "high".
+- Do not soften the level because the disturbing content is short or only in part of the video. The presence of the content matters more than its duration.
+- Your "reason" text and your "toxic_level" MUST match in severity. If your reason mentions "gore", "blood", "physical trauma", or "jumping/suicide", toxic_level MUST be "severe".
 
 Check the FULL video from start to end, not just the first few seconds — violations may appear midway or near the end.
+Classify based on the WORST moment found anywhere in the video.
 
-If the video is completely safe, return ALL scores <= 0.05 and reason="clean".`;
+If the video is completely safe, return toxic_level="none", hate_speech_level="none", spam_level="none", and reason="clean".`;
 
       const res = await fetchImpl(`${API_URL}?key=${apiKey}`, {
         method: "POST",
@@ -866,7 +971,7 @@ If the video is completely safe, return ALL scores <= 0.05 and reason="clean".`;
       const output = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       console.log("📥 [AI] Video analysis output:", output);
 
-      const parsed = parseAiJson(output);
+      const parsed = parseAiSeverityJson(output);
 
       if (!parsed) {
         console.warn("⚠️ [AI] Parse failed");
@@ -879,10 +984,15 @@ If the video is completely safe, return ALL scores <= 0.05 and reason="clean".`;
         };
       }
 
+      const toxicLevel = enforceSeverityFloor(
+        parsed.toxic_level ?? "none",
+        parsed.reason ?? ""
+      );
+
       const result: AIScoreResult = {
-        toxic: clamp01(parsed.toxic ?? 0),
-        hateSpeech: clamp01(parsed.hate_speech ?? 0),
-        spam: clamp01(parsed.spam ?? 0),
+        toxic: levelToScore(toxicLevel),
+        hateSpeech: levelToScore(parsed.hate_speech_level),
+        spam: levelToScore(parsed.spam_level),
         reason: parsed.reason || "ok",
       };
 

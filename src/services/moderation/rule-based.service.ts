@@ -1,4 +1,3 @@
-// src/services/moderation/rule-based.service.ts
 import {
   TOXIC_BLOCKLIST_DIACRITIC,
   TOXIC_BLOCKLIST_NORMALIZED,
@@ -47,30 +46,22 @@ function normalizeLeet(text: string): string {
 // Normalization
 // ---------------------------------------------------------------------------
 
-/**
- * Lần 1: Giữ dấu tiếng Việt — dùng cho TOXIC_BLOCKLIST_DIACRITIC
- * Mục đích: tránh false positive "các bạn" → "cac ban" khớp "cặc"
- */
 function normalizeKeepDiacritic(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, " ") // bỏ ký tự đặc biệt, giữ chữ có dấu
-    .replace(/(.)\1{2,}/gu, "$1") // collapse ký tự lặp
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/(.)\1{2,}/gu, "$1")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/**
- * Lần 2: Bỏ dấu hoàn toàn + leet — dùng cho TOXIC_BLOCKLIST_NORMALIZED
- * Mục đích: bắt người cố tình né filter bằng cách viết không dấu / leet
- */
 function normalizeStripped(text: string): string {
   return normalizeLeet(text)
     .toLowerCase()
     .normalize("NFD")
-    .replace(/\p{M}/gu, "") // bỏ dấu tiếng Việt
-    .replace(/[^\p{L}\p{N}\s]/gu, "") // bỏ ký tự đặc biệt, emoji
-    .replace(/(.)\1{2,}/gu, "$1") // collapse ký tự lặp
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/(.)\1{2,}/gu, "$1")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -100,13 +91,11 @@ function buildEntries(
   });
 }
 
-/** Check có dấu — tránh false positive với từ thông thường */
 const ENTRIES_DIACRITIC = buildEntries(
   TOXIC_BLOCKLIST_DIACRITIC,
   normalizeKeepDiacritic
 );
 
-/** Check bỏ dấu — bắt người né filter */
 const ENTRIES_NORMALIZED = buildEntries(
   TOXIC_BLOCKLIST_NORMALIZED,
   normalizeStripped
@@ -168,21 +157,9 @@ export const RuleBasedService = {
         return emptyOk();
       }
 
-      // if (raw.length < 2) {
-      //   return {
-      //     isClearViolation: true,
-      //     violationType: "too_short",
-      //     score: 1,
-      //     needsAICheck: false,
-      //     reason: "Nội dung quá ngắn (< 2 ký tự)",
-      //   };
-      // }
-
       const slice = raw.length > MAX_LEN ? raw.slice(0, MAX_LEN) : raw;
 
       // ── 1a. Profanity — check có dấu (DIACRITIC) ────────────────────────
-      // Ưu tiên check trước để tránh false positive
-      // VD: "các bạn" không bị nhầm thành "cặc"
       const norm1 = normalizeKeepDiacritic(slice);
       const match1 = findMatch(norm1, ENTRIES_DIACRITIC);
       if (match1) {
@@ -196,7 +173,6 @@ export const RuleBasedService = {
       }
 
       // ── 1b. Profanity — check bỏ dấu (NORMALIZED) ───────────────────────
-      // Bắt các trường hợp né filter: "c4c", "đ1t", "c.ặ.c", "lồnnnn"
       const norm2 = normalizeStripped(slice);
       const match2 = findMatch(norm2, ENTRIES_NORMALIZED);
       if (match2) {
@@ -227,30 +203,31 @@ export const RuleBasedService = {
       let spamScore = 0;
       const spamReasons: string[] = [];
 
-      // 3a. Ký tự lặp 6+ lần liên tiếp
       if (REPEAT_CHAR_RE.test(slice)) {
         spamScore = Math.max(spamScore, 0.55);
         spamReasons.push("ky_tu_lap_6+");
       }
 
-      // 3b. Nhiều link trong cùng một bài
       const links = matchLinks(slice);
       if (links && links.length >= 2) {
         spamScore = Math.max(spamScore, 0.5);
         spamReasons.push("nhieu_link");
       }
 
-      // 3c. Toàn chữ hoa (ALLCAPS) trên đoạn văn dài
-      const lettersOnly = slice.replace(/[^a-zA-Z]/g, "");
-      if (lettersOnly.length > 40) {
-        const upperCount = lettersOnly.replace(/[^A-Z]/g, "").length;
-        if (upperCount / lettersOnly.length > 0.85) {
+      // Đếm chữ cái theo Unicode (\p{L}) để không làm mất/méo chữ Việt có dấu
+      // (bản cũ dùng slice.replace(/[^a-zA-Z]/g,"") làm mất hẳn các ký tự có dấu,
+      // khiến length và tỷ lệ uppercase bị tính sai trên văn bản tiếng Việt viết hoa)
+      const letterChars = slice.match(/\p{L}/gu) ?? [];
+      if (letterChars.length > 40) {
+        const upperCount = letterChars.filter(
+          (ch) => ch === ch.toUpperCase() && ch !== ch.toLowerCase()
+        ).length;
+        if (upperCount / letterChars.length > 0.85) {
           spamScore = Math.max(spamScore, 0.45);
           spamReasons.push("allcaps_dai");
         }
       }
 
-      // 3d. Kết hợp nhiều signal → score cộng dồn (có giới hạn)
       const signalCount = spamReasons.length;
       if (signalCount >= 2) {
         spamScore = Math.min(spamScore + 0.2 * (signalCount - 1), 0.9);
