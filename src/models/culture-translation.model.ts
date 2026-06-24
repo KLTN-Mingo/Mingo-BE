@@ -54,6 +54,4 @@ const SlangEntrySchema = new Schema<ISlangEntry>(
   { timestamps: true }
 );
 
-SlangEntrySchema.index({ term: 1 });
-
 export const SlangEntryModel = model<ISlangEntry>("SlangEntry", SlangEntrySchema);
