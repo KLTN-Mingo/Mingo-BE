@@ -78,6 +78,23 @@ function parseAiJson(text: string): Partial<{
   }
 }
 
+function parseReasonJson(text: string): { reason: string } | null {
+  try {
+    const cleaned = stripCodeFences(text);
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const payload = jsonMatch ? jsonMatch[0] : cleaned;
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return {
+      reason:
+        typeof parsed.reason === "string"
+          ? parsed.reason
+          : String(parsed.reason ?? ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function parseAiSeverityJson(text: string): Partial<{
   toxic_level: string;
   hate_speech_level: string;
@@ -119,6 +136,7 @@ function getApiKey(): string | undefined {
   const API_KEYS = [
     process.env.GEMINI_API_KEY_1,
     process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
   ].filter(Boolean) as string[];
   if (!API_KEYS.length) return undefined;
   return API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
@@ -365,30 +383,37 @@ async function fetchImageInline(
 // ────────────────────────────────────────────────────────────
 
 export const AIApiService = {
+  /**
+   * Chỉ sinh reason giải thích — KHÔNG chấm điểm toxic/hate_speech/spam.
+   *
+   * Điểm số được lấy từ:
+   *  - specialized-model.service.ts → toxic, hateSpeech (PhoBERT fine-tuned)
+   *  - rule-based.service.ts       → spam
+   *
+   * Gemini ở đây chỉ đóng vai trò generative: đọc nội dung đã bị flag
+   * và sinh 1 câu giải thích bằng tiếng Việt để admin tham khảo khi duyệt thủ công.
+   */
   async analyzeContent(text: string): Promise<AIScoreResult> {
     try {
-      console.log("🤖 [AI] analyzeContent called");
-      console.log("📄 Content:", text);
+      console.log("🤖 [AI] analyzeContent called (reason-only mode)");
 
       const apiKey = getApiKey();
       if (!apiKey) {
-        return { toxic: 0.1, hateSpeech: 0, spam: 0.1, reason: "no_api_key" };
+        return { toxic: 0, hateSpeech: 0, spam: 0, reason: "no_api_key" };
       }
 
       const safe = String(text).slice(0, 5000).replace(/```/g, "`\u200b``");
 
       const prompt = `
-You are a content safety classifier for a social network.
+Bạn là AI hỗ trợ kiểm duyệt nội dung cho mạng xã hội Việt Nam.
+Một hệ thống khác đã xác định nội dung sau có khả năng vi phạm (toxic, hate speech, hoặc spam).
+Hãy đọc nội dung và giải thích NGẮN GỌN (1 câu, tiếng Việt) lý do có thể vi phạm, để admin
+tham khảo khi duyệt thủ công. Nếu nội dung thực ra trông sạch/bình thường, ghi reason="clean".
 
-Return ONLY valid JSON with NO explanation, NO markdown:
-{"toxic": number 0-1, "hate_speech": number 0-1, "spam": number 0-1, "reason": string}
+Trả về CHỈ JSON, không markdown, không giải thích thêm:
+{"reason": string}
 
-IMPORTANT:
-- If content is completely safe (greetings, normal conversation, clean topics): return ALL scores <= 0.05 and reason="clean"
-- Do NOT return 0.3 for safe content
-- Only raise scores when there is clear evidence of violation
-
-Content:
+Nội dung:
 ${safe}
 `;
 
@@ -409,41 +434,41 @@ ${safe}
       if (!res.ok) {
         console.warn("⚠️ [AI] HTTP error:", res.status);
         return {
-          toxic: 0.2,
+          toxic: 0,
           hateSpeech: 0,
-          spam: 0.2,
+          spam: 0,
           reason: "fallback_http_error",
         };
       }
 
       const output = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      const parsed = parseAiJson(output);
+      const parsed = parseReasonJson(output);
 
       if (!parsed) {
         console.warn("⚠️ [AI] Parse failed");
         return {
-          toxic: 0.15,
+          toxic: 0,
           hateSpeech: 0,
-          spam: 0.1,
+          spam: 0,
           reason: "fallback_parse_error",
         };
       }
 
       const result: AIScoreResult = {
-        toxic: clamp01(parsed.toxic ?? 0),
-        hateSpeech: clamp01(parsed.hate_speech ?? 0),
-        spam: clamp01(parsed.spam ?? 0),
+        toxic: 0,
+        hateSpeech: 0,
+        spam: 0,
         reason: parsed.reason || "ok",
       };
 
-      console.log("✅ [AI RESULT]:", result);
+      console.log("✅ [AI RESULT]:", result.reason);
       return result;
     } catch (error) {
       console.error("💥 [AI ERROR]:", error);
       return {
-        toxic: 0.2,
+        toxic: 0,
         hateSpeech: 0,
-        spam: 0.2,
+        spam: 0,
         reason: "fallback_exception",
       };
     }

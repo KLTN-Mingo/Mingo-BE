@@ -1,7 +1,7 @@
 {
-  "mode": "rule",
+  "mode": "pipeline",
   "totalSamples": 197,
-  "totalDurationMs": 26,
+  "totalDurationMs": 1550,
   "results": [
     {
       "id": "clean-001",
@@ -9,9 +9,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 11
+      "durationMs": 1
     },
     {
       "id": "clean-002",
@@ -19,9 +25,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 4
+      "durationMs": 0
     },
     {
       "id": "clean-003",
@@ -29,7 +41,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -39,9 +57,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "id": "clean-005",
@@ -49,7 +73,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -59,7 +89,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -69,7 +105,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -79,7 +121,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -89,7 +137,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -99,7 +153,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -109,7 +169,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -119,9 +185,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 4
+      "durationMs": 0
     },
     {
       "id": "clean-013",
@@ -129,9 +201,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 40
     },
     {
       "id": "clean-014",
@@ -139,9 +217,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.007331073749810457,
+        "hateSpeech": 0.007331073749810457,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 109
     },
     {
       "id": "clean-015",
@@ -149,9 +233,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 6
     },
     {
       "id": "clean-016",
@@ -159,9 +249,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 2
     },
     {
       "id": "clean-017",
@@ -169,9 +265,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.03300121799111366,
+        "hateSpeech": 0.03300121799111366,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 140
     },
     {
       "id": "clean-018",
@@ -179,7 +281,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -189,7 +297,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -199,9 +313,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.007011661306023598,
+        "hateSpeech": 0.007011661306023598,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 101
     },
     {
       "id": "profanity-001",
@@ -210,7 +330,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -221,7 +346,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -232,7 +362,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -243,7 +378,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -254,7 +394,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -265,7 +410,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -276,7 +426,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -287,7 +442,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -298,7 +458,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -309,7 +474,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -320,9 +490,14 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "id": "profanity-012",
@@ -331,7 +506,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -342,7 +522,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -353,7 +538,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -364,7 +554,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -375,7 +570,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -386,7 +586,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -396,7 +601,13 @@
       "category": "profanity_evasion_repeat_char",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -406,7 +617,13 @@
       "category": "profanity_evasion_punctuation",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -417,7 +634,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -427,7 +649,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -437,7 +665,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -447,7 +681,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -457,7 +697,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -467,7 +713,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -478,7 +730,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -489,7 +746,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -500,9 +762,14 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "hate-004",
@@ -511,7 +778,12 @@
       "groundTruth": "hate_speech",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -522,7 +794,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -533,7 +810,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -544,7 +826,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -555,7 +842,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -566,7 +858,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -577,7 +874,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -587,86 +889,127 @@
       "category": "spam_allcaps",
       "groundTruth": "spam",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.009909462183713913,
+        "hateSpeech": 0.009909462183713913,
+        "spam": 0.1
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 211
     },
     {
       "id": "spam-002",
       "text": "Link đăng ký: http://spam1.com http://spam2.com http://spam3.com nhanh tay kẻo lỡ",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 81
     },
     {
       "id": "spam-003",
       "text": "Kiếm tiền online dễ dàng, chỉ cần click vào đây http://abc.xyz http://def.xyz",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 90
     },
     {
       "id": "spam-004",
       "text": "Giảmmmmmmm giá sốc, mua liềnnnnnn kẻo hếtttttt hàng!!!",
       "category": "spam_repeat_char",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": true,
+      "durationMs": 135
     },
     {
       "id": "spam-005",
       "text": "VAY TIỀN NHANH LÃI SUẤT THẤP LIÊN HỆ NGAY HÔM NAY ĐỂ NHẬN ƯU ĐÃI",
       "category": "spam_allcaps",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.8887495994567871,
+        "hateSpeech": 0.8887495994567871,
+        "spam": 0.45
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 138
     },
     {
       "id": "spam-006",
       "text": "Đầu tư forex lãi 300% mỗi tháng, link đây http://fx1.com http://fx2.com đăng ký ngay",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 135
     },
     {
       "id": "spam-007",
       "text": "CLICK NGAYYYYYY để nhận quà miễn phí, số lượng có hạnnnnn",
       "category": "spam_mixed",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": true,
+      "durationMs": 134
     },
     {
       "id": "spam-008",
       "text": "Mở bán căn hộ cao cấp, chiết khấu khủng, xem ngay tại http://land1.com http://land2.com http://land3.com",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 130
     },
     {
       "id": "spam-soft-001",
@@ -674,7 +1017,13 @@
       "category": "spam_soft_borderline",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -684,31 +1033,47 @@
       "category": "spam_soft_borderline",
       "groundTruth": "spam_soft",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.00866320263594389,
+        "hateSpeech": 0.00866320263594389,
+        "spam": 0.1
+      },
       "correct": false,
-      "durationMs": 1
+      "durationMs": 128
     },
     {
       "id": "spam-soft-003",
       "text": "AAAAAA vui quá trời vui luôn á mọi người ơi!!!",
       "category": "spam_soft_borderline",
       "groundTruth": "clean",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": true,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": false,
+      "durationMs": 124
     },
     {
       "id": "spam-soft-004",
       "text": "THẬT KHÔNG THỂ TIN ĐƯỢC LUÔN MỌI NGƯỜI ƠI HÔM NAY MÌNH ĐÃ THẤY MỘT CHUYỆN RẤT THÚ VỊ TRÊN ĐƯỜNG ĐI LÀM VỀ",
       "category": "spam_soft_allcaps_borderline",
       "groundTruth": "spam_soft",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.9377030730247498,
+        "hateSpeech": 0.9377030730247498,
+        "spam": 0.45
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 136
     },
     {
       "id": "toxic-implicit-001",
@@ -716,7 +1081,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -726,7 +1097,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -736,7 +1113,13 @@
       "category": "toxic_implicit_no_keyword_en",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -746,7 +1129,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -756,7 +1145,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -766,7 +1161,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -776,7 +1177,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -786,7 +1193,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -796,7 +1209,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -806,7 +1225,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -816,7 +1241,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -826,7 +1257,13 @@
       "category": "sarcasm_no_explicit_insult",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -836,7 +1273,13 @@
       "category": "sarcasm_no_explicit_insult",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -847,7 +1290,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -858,7 +1306,12 @@
       "groundTruth": "toxic",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -868,7 +1321,13 @@
       "category": "edge_case_empty",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -878,7 +1337,13 @@
       "category": "edge_case_whitespace_only",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -888,7 +1353,13 @@
       "category": "edge_case_too_short",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -898,7 +1369,13 @@
       "category": "edge_case_too_short_but_toxic",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -908,7 +1385,13 @@
       "category": "edge_case_emoji_heavy",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -917,11 +1400,16 @@
       "text": "123456789 000000 999999999",
       "category": "edge_case_numbers_only",
       "groundTruth": "clean",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": true,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": false,
+      "durationMs": 132
     },
     {
       "id": "mixed-lang-001",
@@ -929,7 +1417,13 @@
       "category": "edge_case_mixed_language",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -939,7 +1433,13 @@
       "category": "edge_case_long_clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -949,7 +1449,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -959,7 +1465,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -969,7 +1481,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -979,7 +1497,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -989,7 +1513,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -999,9 +1529,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "id": "clean-027",
@@ -1009,9 +1545,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.014608561992645264,
+        "hateSpeech": 0.014608561992645264,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 135
     },
     {
       "id": "clean-028",
@@ -1019,7 +1561,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1029,7 +1577,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1039,7 +1593,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1050,7 +1610,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1061,9 +1626,14 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "profanity-015",
@@ -1072,7 +1642,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1083,7 +1658,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1094,7 +1674,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1105,7 +1690,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1115,7 +1705,13 @@
       "category": "profanity_evasion_mixed",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1125,7 +1721,13 @@
       "category": "profanity_evasion_repeat_char",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1136,7 +1738,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1147,7 +1754,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1158,7 +1770,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1169,7 +1786,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1180,7 +1802,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1190,7 +1817,13 @@
       "category": "spam_allcaps",
       "groundTruth": "spam",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1199,33 +1832,48 @@
       "text": "Tải app nhận ngay 500k: http://app1.link http://app2.link",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 114
     },
     {
       "id": "spam-011",
       "text": "Nạp rúttttttt nhanhhhhh trong 5 phútttttt, uy tínnnnn 10 nămmmmm",
       "category": "spam_repeat_char",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": true,
+      "durationMs": 193
     },
     {
       "id": "spam-012",
       "text": "CASINO ONLINE UY TÍN SỐ 1 VIỆT NAM, THAM GIA NGAY HÔM NAY",
       "category": "spam_allcaps",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.8457766175270081,
+        "hateSpeech": 0.8457766175270081,
+        "spam": 0.45
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 203
     },
     {
       "id": "false-positive-006",
@@ -1233,7 +1881,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1243,7 +1897,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1253,7 +1913,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1263,7 +1929,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1273,7 +1945,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1283,9 +1961,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "clean-034",
@@ -1293,7 +1977,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1303,7 +1993,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1313,7 +2009,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1323,7 +2025,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1333,7 +2041,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1343,7 +2057,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1353,7 +2073,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1363,7 +2089,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1373,7 +2105,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1383,9 +2121,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "id": "clean-044",
@@ -1393,7 +2137,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1403,7 +2153,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1413,7 +2169,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1423,7 +2185,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1433,7 +2201,13 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1443,9 +2217,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.008994502015411854,
+        "hateSpeech": 0.008994502015411854,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 202
     },
     {
       "id": "clean-050",
@@ -1453,9 +2233,15 @@
       "category": "clean_text",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (ai)",
+      "scores": {
+        "toxic": 0.008740243501961231,
+        "hateSpeech": 0.008740243501961231,
+        "spam": 0.1
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 127
     },
     {
       "id": "false-positive-009",
@@ -1463,9 +2249,15 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "false-positive-010",
@@ -1473,7 +2265,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1483,7 +2281,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1493,7 +2297,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1503,7 +2313,13 @@
       "category": "false_positive_check",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1513,7 +2329,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1523,7 +2345,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1533,7 +2361,13 @@
       "category": "toxic_implicit_no_keyword_en",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1543,7 +2377,13 @@
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1552,10 +2392,16 @@
       "text": "Cái dạng người này thì sống ở đâu cũng làm phiền người khác thôi.",
       "category": "toxic_implicit_no_keyword",
       "groundTruth": "toxic",
-      "predicted": "clean",
-      "rawAction": "pass",
+      "predicted": "hate_speech",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.6333369016647339,
+        "hateSpeech": 0.6333369016647339,
+        "spam": 0.1
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 111
     },
     {
       "id": "profanity-021",
@@ -1564,7 +2410,12 @@
       "groundTruth": "toxic",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1575,7 +2426,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1586,7 +2442,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1597,7 +2458,12 @@
       "groundTruth": "toxic",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1608,7 +2474,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1619,7 +2490,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1630,7 +2506,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1641,7 +2522,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1651,7 +2537,13 @@
       "category": "profanity_evasion_leet",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1660,11 +2552,16 @@
       "text": "vcllllll thiet tinh ngu vai",
       "category": "profanity_evasion_repeat_char",
       "groundTruth": "toxic",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.6180195212364197,
+        "hateSpeech": 0.6180195212364197,
+        "spam": 0.55
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 106
     },
     {
       "id": "profanity-evasion-011",
@@ -1672,7 +2569,13 @@
       "category": "profanity_evasion_punctuation",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1682,7 +2585,13 @@
       "category": "profanity_evasion_leet",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1693,7 +2602,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1702,11 +2616,16 @@
       "text": "do ngu vailllllll that su",
       "category": "profanity_evasion_nodiacritic",
       "groundTruth": "toxic",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.5641471743583679,
+        "hateSpeech": 0.5641471743583679,
+        "spam": 0.55
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 105
     },
     {
       "id": "hate-016",
@@ -1715,7 +2634,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1726,7 +2650,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1736,7 +2665,13 @@
       "category": "hate_dehumanizing",
       "groundTruth": "hate_speech",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1747,7 +2682,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1758,7 +2698,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1769,7 +2714,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1780,7 +2730,12 @@
       "groundTruth": "hate_speech",
       "predicted": "hate_speech",
       "rawAction": "block_rule",
-      "rawStatus": "hate_speech",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.8280000000000001,
+        "hateSpeech": 0.92,
+        "spam": 0.276
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1790,7 +2745,13 @@
       "category": "spam_allcaps",
       "groundTruth": "spam",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1799,77 +2760,112 @@
       "text": "Liên hệ ngay số 0901xxxxxx để nhận ưu đãi đặc biệt hôm nay.",
       "category": "spam_phone_number",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 1
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": true,
+      "durationMs": 108
     },
     {
       "id": "spam-015",
       "text": "💰💰💰 Kiếm tiền tại nhà dễ dàng 💰💰💰 link: http://abc.com http://def.com",
       "category": "spam_emoji_link",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 118
     },
     {
       "id": "spam-016",
       "text": "Mã giảm giá: SALE50 SALE50 SALE50 áp dụng ngay tại http://shop1.vn http://shop2.vn",
       "category": "spam_code_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 123
     },
     {
       "id": "spam-017",
       "text": "ĐĂNG KÝ NGAY HÔM NAY ĐỂ NHẬN QUÀ TẶNG GIÁ TRỊ LÊN ĐẾN 1 TRIỆU ĐỒNG",
       "category": "spam_allcaps",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.9381767511367798,
+        "hateSpeech": 0.9381767511367798,
+        "spam": 0.45
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 129
     },
     {
       "id": "spam-018",
       "text": "Cho vay nhanh không thế chấp, lãi suất 0%, liên hệ http://loan1.com http://loan2.com http://loan3.com",
       "category": "spam_multilink",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.42378464341163635,
+        "hateSpeech": 0.42378464341163635,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 130
     },
     {
       "id": "spam-019",
       "text": "Nhận làm CTV bán hàng online, thu nhập khủnggggggg mỗi tháng",
       "category": "spam_repeat_char",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.1925,
+        "hateSpeech": 0.165,
+        "spam": 0.55
+      },
+      "correct": true,
+      "durationMs": 127
     },
     {
       "id": "spam-020",
       "text": "GET RICH QUICK click here now http://x1.link http://x2.link limited time only",
       "category": "spam_multilink_en",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "spam",
+      "rawAction": "review",
+      "rawStatus": "flagged (ai)",
+      "scores": {
+        "toxic": 0.175,
+        "hateSpeech": 0.15,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 123
     },
     {
       "id": "spam-021",
@@ -1877,7 +2873,13 @@
       "category": "spam_repeat_phrase",
       "groundTruth": "spam",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1887,7 +2889,13 @@
       "category": "spam_mixed",
       "groundTruth": "spam",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1897,7 +2905,13 @@
       "category": "spam_soft_borderline",
       "groundTruth": "spam_soft",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1907,9 +2921,15 @@
       "category": "spam_soft_borderline",
       "groundTruth": "spam_soft",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "spam-soft-007",
@@ -1917,7 +2937,13 @@
       "category": "spam_soft_borderline",
       "groundTruth": "spam_soft",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1928,7 +2954,12 @@
       "groundTruth": "toxic",
       "predicted": "toxic",
       "rawAction": "block_rule",
-      "rawStatus": "profanity",
+      "rawStatus": "rejected (rule)",
+      "scores": {
+        "toxic": 0.95,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1937,11 +2968,16 @@
       "text": "Bọn lừa đảo đáng chết, đừng tin chúng nó, xem chi tiết tại http://warn1.com http://warn2.com",
       "category": "mixed_hate_and_spam",
       "groundTruth": "hate_speech",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
-      "correct": false,
-      "durationMs": 0
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.9327877759933472,
+        "hateSpeech": 0.9327877759933472,
+        "spam": 0.5
+      },
+      "correct": true,
+      "durationMs": 118
     },
     {
       "id": "ambiguous-007",
@@ -1949,7 +2985,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1959,7 +3001,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1969,7 +3017,13 @@
       "category": "ambiguous_mild_negative",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1979,7 +3033,13 @@
       "category": "sarcasm_no_explicit_insult",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -1989,7 +3049,13 @@
       "category": "long_toxic_text",
       "groundTruth": "toxic",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": false,
       "durationMs": 0
     },
@@ -1998,11 +3064,16 @@
       "text": "CHƯƠNG TRÌNH KHUYẾN MÃI ĐẶC BIỆT DUY NHẤT HÔM NAY, GIẢM GIÁ SỐC LÊN ĐẾN 80% CHO TẤT CẢ SẢN PHẨM, SỐ LƯỢNG CÓ HẠN, NHANH TAY ĐẶT HÀNG NGAY KẺO LỠ CƠ HỘI NHẬN ƯU ĐÃI HẤP DẪN NÀY",
       "category": "long_spam_allcaps",
       "groundTruth": "spam",
-      "predicted": "clean",
-      "rawAction": "pass",
-      "rawStatus": "spam_soft",
+      "predicted": "hate_speech",
+      "rawAction": "auto_hide",
+      "rawStatus": "rejected (ai)",
+      "scores": {
+        "toxic": 0.9267038106918335,
+        "hateSpeech": 0.9267038106918335,
+        "spam": 0.45
+      },
       "correct": false,
-      "durationMs": 0
+      "durationMs": 158
     },
     {
       "id": "edge-mention-001",
@@ -2010,7 +3081,13 @@
       "category": "edge_case_mention",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -2020,7 +3097,13 @@
       "category": "edge_case_hashtag",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -2030,7 +3113,13 @@
       "category": "edge_case_single_link",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -2040,7 +3129,13 @@
       "category": "edge_case_question",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
       "durationMs": 0
     },
@@ -2050,24 +3145,30 @@
       "category": "edge_case_name_with_numbers",
       "groundTruth": "clean",
       "predicted": "clean",
-      "rawAction": "pass",
+      "rawAction": "approve",
+      "rawStatus": "approved (rule)",
+      "scores": {
+        "toxic": 0,
+        "hateSpeech": 0,
+        "spam": 0
+      },
       "correct": true,
-      "durationMs": 1
+      "durationMs": 0
     }
   ],
-  "accuracy": 0.7208121827411168,
-  "macroPrecision": 0.6189669345999269,
-  "macroRecall": 0.6121281464530892,
-  "macroF1": 0.5930331297713108,
+  "accuracy": 0.7868020304568528,
+  "macroPrecision": 0.814589993606138,
+  "macroRecall": 0.7423797341423907,
+  "macroF1": 0.7445539754363283,
   "perClass": [
     {
       "label": "clean",
-      "tp": 89,
-      "fp": 51,
-      "fn": 0,
-      "precision": 0.6357142857142857,
-      "recall": 1,
-      "f1": 0.7772925764192139,
+      "tp": 87,
+      "fp": 28,
+      "fn": 2,
+      "precision": 0.7565217391304347,
+      "recall": 0.9775280898876404,
+      "f1": 0.8529411764705881,
       "support": 89
     },
     {
@@ -2082,49 +3183,49 @@
     },
     {
       "label": "hate_speech",
-      "tp": 20,
-      "fp": 3,
-      "fn": 3,
-      "precision": 0.8695652173913043,
-      "recall": 0.8695652173913043,
-      "f1": 0.8695652173913043,
+      "tp": 21,
+      "fp": 11,
+      "fn": 2,
+      "precision": 0.65625,
+      "recall": 0.9130434782608695,
+      "f1": 0.7636363636363634,
       "support": 23
     },
     {
       "label": "spam",
-      "tp": 0,
-      "fp": 0,
-      "fn": 28,
-      "precision": 0,
-      "recall": 0,
-      "f1": 0,
+      "tp": 14,
+      "fp": 2,
+      "fn": 14,
+      "precision": 0.875,
+      "recall": 0.5,
+      "f1": 0.6363636363636364,
       "support": 28
     }
   ],
   "confusionMatrix": {
     "clean": {
-      "clean": 89,
+      "clean": 87,
       "toxic": 0,
       "hate_speech": 0,
-      "spam": 0
+      "spam": 2
     },
     "toxic": {
-      "clean": 21,
+      "clean": 18,
       "toxic": 33,
-      "hate_speech": 3,
+      "hate_speech": 6,
       "spam": 0
     },
     "hate_speech": {
-      "clean": 2,
+      "clean": 1,
       "toxic": 1,
-      "hate_speech": 20,
+      "hate_speech": 21,
       "spam": 0
     },
     "spam": {
-      "clean": 28,
+      "clean": 9,
       "toxic": 0,
-      "hate_speech": 0,
-      "spam": 0
+      "hate_speech": 5,
+      "spam": 14
     }
   }
 }

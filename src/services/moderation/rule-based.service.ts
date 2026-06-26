@@ -18,7 +18,13 @@ export interface RuleCheckResult {
 // ---------------------------------------------------------------------------
 
 const MAX_LEN = 12_000;
-const SPAM_CLEAR_THRESHOLD = 0.7;
+// Hạ từ 0.7 -> 0.55: cho phép 1 signal spam đủ mạnh tự quyết luôn, không
+// buộc phải có 2 signal cộng dồn mới chặn được. Lý do: spam là pattern máy
+// móc (lặp ký tự/cụm từ, nhiều link, allcaps), rule-based nên tự tin quyết
+// định phần lớn trường hợp, hạn chế việc phải đẩy qua AI mới chặn được spam
+// rõ ràng (qua thực nghiệm trên test set, threshold 0.7 khiến nhiều mẫu spam
+// rõ ràng chỉ có 1 signal bị rơi vào vùng "ambiguous" thay vì bị chặn ngay).
+const SPAM_CLEAR_THRESHOLD = 0.55;
 const SPAM_AMBIGUOUS_LOW = 0.25;
 
 // ---------------------------------------------------------------------------
@@ -127,6 +133,23 @@ function matchLinks(text: string): RegExpMatchArray | null {
   return text.match(/https?:\/\/[^\s]+/gi);
 }
 
+/**
+ * Phát hiện lặp CỤM TỪ liên tiếp (vd: "MUA NGAY MUA NGAY MUA NGAY").
+ * Khác với REPEAT_CHAR_RE (chỉ bắt lặp 1 ký tự), hàm này bắt cụm 2 từ
+ * xuất hiện lại ngay sau đó — pattern rất phổ biến trong spam quảng cáo
+ * tiếng Việt mà REPEAT_CHAR_RE không bắt được.
+ */
+function hasRepeatedPhrase(text: string): boolean {
+  const words = text.trim().split(/\s+/);
+  if (words.length < 4) return false;
+  for (let i = 0; i + 3 < words.length; i++) {
+    const phrase = `${words[i]} ${words[i + 1]}`.toLowerCase();
+    const nextPhrase = `${words[i + 2]} ${words[i + 3]}`.toLowerCase();
+    if (phrase === nextPhrase) return true;
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -206,6 +229,11 @@ export const RuleBasedService = {
       if (REPEAT_CHAR_RE.test(slice)) {
         spamScore = Math.max(spamScore, 0.55);
         spamReasons.push("ky_tu_lap_6+");
+      }
+
+      if (hasRepeatedPhrase(slice)) {
+        spamScore = Math.max(spamScore, 0.5);
+        spamReasons.push("lap_cum_tu");
       }
 
       const links = matchLinks(slice);

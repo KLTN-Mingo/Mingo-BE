@@ -1,0 +1,426 @@
+{
+  "false_negatives_sample": [
+    {
+      "text": "Haizz. Nthe này thì dân khổ quá",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "coin card :3",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Thay Ngu",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Đề nghị 17, 22,23,32 đến phà vài hơi vào mẹt tk này để nó đi cách ly thế giới hẳn đi.",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Trần Linh dell hiểu kiểu gì :))",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Một  phút  bóc  đồng  bằng  cả  đời  bóc  cức  😂",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Éo thích thì biến đi thọc con mắt chóng cái tai lên xem làm ghì",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Like 10 năm chất Liek bằng đầu bùi",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Không có csgt nào tốt cả .",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Lũlên mạng lừa đão",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Đậu rồi má hay đậu má rồi các bạn nhỏ ??? :)))",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "K có nghìn nào giúp dân thì nín đi!",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Ko xin nó thì đái ra mà hết hạn hán nhé",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Nguc em hoi nho",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Cay vl nhỉ kk",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Du ma tu thg cho giu xe den thg suc vat chuyen hanh ly",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Bao giờ chết",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Thật ra là quên kéo khóa quần ngoài lộ quần trong nên để lộ hẳn thành phong cách mới cho nó đỡ quê",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "90tr dân Việt Nam đang vả nhung nè",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Lí do lí trấu, chắc tin😏:)))",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Vailon :))",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Thối CC chỉ không ngửi đuợc thôi",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Chat la kiep truoc bi cam, 🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏toi ngiep cho mu nay qua ko biet kiep sao thanh loai gi nua 🙏🙏🙏🙏",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Cái đờ cờ mờ nhà a",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "cái miệng rộng qua đẻ con ra còn lọt",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "cô Ba có râu ha ha",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Thêm cái gì mà thêm. T đếch thèm qt đến vì chưa có thông báo nghĩ học 🙈",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Đạt Phạm dcu m đùa dai như tk bố m thế",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "Không giống ai",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    },
+    {
+      "text": "T đang nhìn clgv 🙂",
+      "true_label": 1,
+      "pred_flagged": 0,
+      "action": "approve",
+      "method": "ai"
+    }
+  ],
+  "false_positives_sample": [
+    {
+      "text": "Đừng cố biện minh =)))) choi lon",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "the nay ma chi phat gay roi trat tu cong cong thoi a dung la dan minh",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Lý khùng thì có,kk",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Sét đánh chết tao đi",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Hoàng Yến fan cứng độ mixi thì đi ăn lẩu phan thôi =))))))))))))",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "block_rule",
+      "method": "rule"
+    },
+    {
+      "text": "Nguyễn Thị Thủy chó con chứ dúi đâu ra",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Co ba oi co giau lam vay co giup nhung nguoi kho giong nku tui con di co",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Chi bà nhiều tiền thì đi làm từ thiện,còn ơ đó nói tục tiểu, giơ bẩn. Làm nhục người vn trên thế giới. Làm bai hoại nền văn hóa vn. Xin yêu các cấp có thẩm quyền vào cuộc sử lý.",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Bà này nói đúng mà     bà đó  đi làm o sin gửi tiền đô về Việt Nam hưởng chứ tiền Việt Nam lam gì có giá trị  tuy bà nói chuyện thô lỗ tí nhưng mà bà nói đúng mà...",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Duy Linh mình ra sân bay đi mà gặp 10 thằng tây thì chỉ 2 người tây chiệu đeo khẩu trang thôi 😂",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Mấy ông sống nhanh thế =)))",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Mặt chị nhìn sợ hơn mặt ông kia á 😞",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Công an mà muốn xử lý thì 2 ông luật sư này sẽ biến mất ngay lập tức. Chứ chả phải bị đánh giữa đường rồi chụp ảnh máu me post lên mạng rầm rầm đâu",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "cái gì cho nó thật tại sao mình là đàn ông biến thành đan bà",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Đạt Royal Bác thật có con mắt tinh đời",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "@Thanh Điệp Phan có lý, làm gì có ai vừa chống CS mà vừa chửi ông trump",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Nhìn mặt bà này ...",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Nghĩ mà chán :))",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "hóng bro tét đít thằng tùng",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Lờ ô lờ ôn lờ ôn lôn huyền CHIM:))",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Con bóng??",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Co thi noi k co thi thoi ba noi oi",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Lại thêm một con khoác lác",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Chắc mọi người viết Nhật thua trong thế chiến 2, ngàu xưa ta vẫn gọi là Nhật lùn theo đúng nghĩa đen. Nói hơi thô thiển thì đúng gọi là họ lấy giống tây để giúp nguồn gen dân họ tốt hơn, nên chắc chắc ko chỉ là vì chất lượng cuộc sống cao mà còn phải do chất lượng gen nữa mới đẩy tầm vóc lên dc",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "khi bạn muốn tích đức cho đời nhưng nghiệp quá nặng tại chúng rủa quá nên nghiệp:v",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Nhức óc thật",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "Trả lại cho căn nhà, thái độ khác hẳn..........!!!!",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "block_rule",
+      "method": "rule"
+    },
+    {
+      "text": "Chuoi  boi  làm  gì  chi  mang  toi  khau  nghiep  chư  có  iit  loi  gì",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "review",
+      "method": "ai"
+    },
+    {
+      "text": "Các bạn phản đối cái giè. Viện phí tăng gấp 3 ngân sách bội thu. Làm tốt thế mà còn kêu.",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    },
+    {
+      "text": "trung quốc sản sinh ra 1 thế hệ bác sỹ thật sự có tâm đức, dù truyền thông phương tây có bôi nhọ tnao thì cũng k thể phủ nhận",
+      "true_label": 0,
+      "pred_flagged": 1,
+      "action": "auto_hide",
+      "method": "ai"
+    }
+  ]
+}

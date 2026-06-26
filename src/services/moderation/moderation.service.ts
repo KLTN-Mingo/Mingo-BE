@@ -11,6 +11,7 @@ import { NotFoundError } from "../../errors";
 import { RuleBasedService } from "./rule-based.service";
 import type { RuleCheckResult } from "./rule-based.service";
 import { AIApiService, type AIScoreResult } from "./ai-api.service";
+import { SpecializedModelService } from "./specialized-model.service";
 
 export type { AIScoreResult } from "./ai-api.service";
 
@@ -160,6 +161,8 @@ export const ModerationService = {
   ): Promise<ModerationResult> {
     const ctx: ModerationContext = context ?? {};
     const rule = RuleBasedService.checkContent(text);
+    console.log("[Moderation] rule:", rule);
+    console.log("[Moderation] shouldCallAI:", shouldCallAI(rule, ctx));
 
     // TẦNG 1: Rule-based bắt vi phạm rõ ràng → chặn ngay
     if (rule.isClearViolation) {
@@ -172,17 +175,29 @@ export const ModerationService = {
       };
     }
 
-    // TẦNG 2: Vùng nghi vấn hoặc acc mới → gọi AI
+    // TẦNG 2: Vùng nghi vấn hoặc acc mới → gọi AI + specialized model song song
     if (shouldCallAI(rule, ctx)) {
-      const aiScores = await AIApiService.analyzeContent(text);
+      const [aiScores, specializedScore] = await Promise.all([
+        AIApiService.analyzeContent(text),
+        SpecializedModelService.getSpecializedScore(text),
+      ]);
 
+      // toxic / hateSpeech: lấy từ specialized model (chuyên dụng, không LLM general)
+      // spam: vẫn dùng Gemini vì specialized model không chấm spam
+      // reason: vẫn lấy từ Gemini
+      // toxic giờ là cờ true/false từ model chuyên biệt (ViHateT5-HSD), không còn
+      // là điểm xác suất liên tục. Nếu model báo toxic=true, ép thẳng giá trị 1
+      // (luôn vượt AUTO_HIDE=0.8 → ẩn ngay), không cộng dồn/blend với rule.score
+      // nữa để giữ đúng tinh thần "toxic là ẩn luôn", không quy điểm mờ.
+      // Nếu model báo false, vẫn fallback về rule.score*0.35 như cũ để rule-based
+      // tầng 1 (chửi thề nhẹ chưa đủ rõ) còn có đường review/flag.
       const combinedScores: AIScoreResult = {
-        toxic: Math.max(aiScores.toxic, rule.score * 0.35),
+        toxic: specializedScore.isToxic ? 1 : rule.score * 0.35,
         hateSpeech: Math.max(
-          aiScores.hateSpeech,
+          specializedScore.hateSpeech,
           rule.score > 0 ? rule.score * 0.3 : 0
         ),
-        spam: Math.max(aiScores.spam, rule.score),
+        spam: rule.score,
         reason: aiScores.reason || rule.reason || "combined",
       };
 
