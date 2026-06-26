@@ -5,7 +5,7 @@
  * Giữ dấu để tránh false positive: "các bạn" ≠ "cặc"
  */
 export const TOXIC_BLOCKLIST_DIACRITIC: readonly string[] = [
-  // ── Tục tĩu ───────────────────────────────────────────────────────────────
+  // ── Tục tĩu — cụm từ ─────────────────────────────────────────────────────
   "địt con mẹ mày",
   "đụ đĩ mẹ mày",
   "cái lồn má mày",
@@ -16,6 +16,14 @@ export const TOXIC_BLOCKLIST_DIACRITIC: readonly string[] = [
   "đéo má",
   "vãi lồn",
 
+  // ── Tục tĩu — từ đơn (thiếu trong bản cũ) ────────────────────────────────
+  "cặc",
+  "buồi",
+  "lồn",
+  "địt",
+  "đụ",
+  "đéo",
+
   // ── Xúc phạm cá nhân ──────────────────────────────────────────────────────
   "đồ ngu",
   "con ngu",
@@ -25,14 +33,26 @@ export const TOXIC_BLOCKLIST_DIACRITIC: readonly string[] = [
   "thằng đĩ",
   "con mẹ mày",
   "thằng chó",
+  "đồ chó", // ← thêm
+  "đồ khỉ", // ← thêm
+  "thằng khốn", // ← thêm
+  "con khốn", // ← thêm
+  "đồ khốn", // ← thêm
   "chết tiệt",
   "đồ súc vật",
   "con súc vật",
+  "đồ cặn bã", // ← thêm
+  "đồ rác rưởi", // ← thêm
   "đồ vô học",
   "thằng vô học",
   "loại mất dạy",
   "con mất dạy",
   "thằng mất dạy",
+
+  // ── Đe dọa ────────────────────────────────────────────────────────────────
+  "mày chết", // ← thêm
+  "tao giết", // ← thêm
+  "cho mày chết", // ← thêm
 ];
 
 /**
@@ -56,7 +76,7 @@ export const TOXIC_BLOCKLIST_NORMALIZED: readonly string[] = [
   "prick",
   "wanker",
 
-  // ── Từ Việt thường bị viết không dấu để né filter ─────────────────────────
+  // ── Từ Việt không dấu để né filter ───────────────────────────────────────
   "dit con me may",
   "du di me may",
   "con lon",
@@ -66,4 +86,12 @@ export const TOXIC_BLOCKLIST_NORMALIZED: readonly string[] = [
   "deo me",
   "deo ma",
   "vai lon",
+
+  // ── Viết tắt tục tĩu phổ biến (← thêm) ──────────────────────────────────
+  "dm", // địt mẹ
+  "dmm", // địt mẹ mày
+  "vcl", // vãi cả lồn
+  "clm", // cái lồn mẹ
+  "đm", // giữ cả bản có dấu
+  "vkl", // variant vcl
 ];
