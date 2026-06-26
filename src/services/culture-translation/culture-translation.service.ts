@@ -1,20 +1,45 @@
 // src/services/culture-translation/culture-translation.service.ts
 import { PostModel } from "../../models/post.model";
 import { SlangEntryModel } from "../../models/culture-translation.model";
+import { CultureTermMeaningCacheModel } from "../../models/culture-term-meaning-cache.model";
 import { SlangDetectorService } from "./slang-detector.service";
 import { CultureLLMService } from "./culture-llm.service";
 import type { ICultureTerm } from "../../models/culture-translation.model";
 import { buildVietnameseRegex, validateRegex } from "../../utils/regex-builder";
 
+type TermExplanation = Pick<
+  ICultureTerm,
+  "term" | "meaning" | "origin" | "tone" | "contextNote"
+>;
+
+const DEFAULT_TONE: ICultureTerm["tone"] = "trung tính";
+
+function normalizeTerm(term: string): string {
+  return term.trim().toLowerCase();
+}
+
+function hasMeaning(explanation: Pick<ICultureTerm, "meaning">): boolean {
+  return explanation.meaning.trim() !== "";
+}
+
+function toTermExplanation(entry: Partial<TermExplanation>): TermExplanation {
+  return {
+    term: normalizeTerm(entry.term ?? ""),
+    meaning: entry.meaning ?? "",
+    origin: entry.origin ?? "",
+    tone: (entry.tone as ICultureTerm["tone"]) ?? DEFAULT_TONE,
+    contextNote: entry.contextNote ?? "",
+  };
+}
+
 export const CultureTranslationService = {
-  /** Main pipeline — fire-and-forget after post creation */
+  /** Main pipeline - fire-and-forget after post creation */
   async analyzePost(postId: string): Promise<void> {
     try {
       const post = await PostModel.findById(postId)
         .select("contentText cultureAnalyzed moderationStatus isHidden")
         .lean();
 
-      // FIX: Skip nếu đã analyzed, không tồn tại, hoặc bài đã bị ẩn/reject
       if (!post) return;
       if ((post as any).cultureAnalyzed) return;
       if ((post as any).isHidden) return;
@@ -25,7 +50,6 @@ export const CultureTranslationService = {
         return;
       }
 
-      // STEP 1: Rule-based detect (fast, 0 API cost)
       const detectedTerms = await SlangDetectorService.detectTerms(content);
       console.log(
         `[CultureTranslation] ${detectedTerms.length} terms in post ${postId}`
@@ -36,62 +60,112 @@ export const CultureTranslationService = {
         return;
       }
 
-      // STEP 2: Single LLM call
-      const uniqueTerms = [
-        ...new Set(detectedTerms.map((t) => t.term.toLowerCase())),
-      ];
-      const explanations = await CultureLLMService.explainTerms(
-        uniqueTerms,
-        content
-      );
+      const uniqueTerms = [...new Set(detectedTerms.map((t) => normalizeTerm(t.term)))];
+      const cachedExplanations = (await CultureTermMeaningCacheModel.find({
+        term: { $in: uniqueTerms },
+      }).lean()) as unknown as TermExplanation[];
 
-      // FIX: Kiểm tra LLM có trả về data thật không
-      // Nếu tất cả meaning đều rỗng → LLM fail/fallback → không save, cho phép retry
-      const hasRealExplanations = explanations.some(
-        (e) => e.meaning && e.meaning.trim() !== ""
+      const cachedExplainMap = new Map(
+        cachedExplanations.map((entry) => [normalizeTerm(entry.term), entry])
       );
+      const missingTerms = uniqueTerms.filter((term) => !cachedExplainMap.has(term));
+
+      let freshExplanations: TermExplanation[] = [];
+      if (missingTerms.length > 0) {
+        const llmExplanations = await CultureLLMService.explainTerms(
+          missingTerms,
+          content
+        );
+        freshExplanations = llmExplanations
+          .map((entry) => toTermExplanation(entry))
+          .filter((entry) => hasMeaning(entry));
+      }
+
+      const hasRealExplanations =
+        cachedExplanations.some((entry) => hasMeaning(entry)) ||
+        freshExplanations.some((entry) => hasMeaning(entry));
 
       if (!hasRealExplanations) {
         console.warn(
-          `⚠️ [CultureTranslation] LLM trả về rỗng (fallback) — bỏ qua, sẽ retry sau cho post ${postId}`
+          `[CultureTranslation] No real explanations available - retry later for post ${postId}`
         );
-        // KHÔNG set cultureAnalyzed: true → giữ nguyên false → cho phép retry
         return;
       }
 
-      // STEP 3: Merge positions + explanations
+      if (freshExplanations.length > 0) {
+        try {
+          await (CultureTermMeaningCacheModel as any).bulkWrite(
+            freshExplanations.map((entry) => ({
+              updateOne: {
+                filter: { term: normalizeTerm(entry.term) },
+                update: {
+                  $set: {
+                    meaning: entry.meaning,
+                    origin: entry.origin,
+                    tone: entry.tone,
+                    contextNote: entry.contextNote,
+                    source: "gemini",
+                    lastUsedAt: new Date(),
+                  },
+                  $inc: { hitCount: 1 },
+                },
+                upsert: true,
+              },
+            }))
+          );
+        } catch (cacheErr) {
+          console.error("[CultureTranslation] cache upsert error:", cacheErr);
+        }
+      }
+
+      if (cachedExplanations.length > 0) {
+        void (CultureTermMeaningCacheModel as any)
+          .updateMany(
+            {
+              term: {
+                $in: cachedExplanations.map((entry) => normalizeTerm(entry.term)),
+              },
+            },
+            {
+              $inc: { hitCount: 1 },
+              $set: { lastUsedAt: new Date() },
+            }
+          )
+          .catch((cacheErr: unknown) => {
+            console.error("[CultureTranslation] cache hit update error:", cacheErr);
+          });
+      }
+
       const explainMap = new Map(
-        explanations.map((e) => [e.term.toLowerCase(), e])
+        [...cachedExplanations, ...freshExplanations].map((entry) => [
+          normalizeTerm(entry.term),
+          entry,
+        ])
       );
 
       const culturalTerms: ICultureTerm[] = detectedTerms.map((dt) => {
-        const exp = explainMap.get(dt.term.toLowerCase());
+        const exp = explainMap.get(normalizeTerm(dt.term));
         return {
           term: dt.term,
           startIndex: dt.startIndex,
           endIndex: dt.endIndex,
           meaning: exp?.meaning ?? "",
           origin: exp?.origin ?? "",
-          tone: (exp?.tone as ICultureTerm["tone"]) ?? "trung tính",
+          tone: exp?.tone ?? DEFAULT_TONE,
           contextNote: exp?.contextNote ?? "",
         };
       });
 
-      // STEP 4: Save to MongoDB — chỉ lock khi LLM thành công
       await PostModel.findByIdAndUpdate(postId, {
         culturalTerms,
         cultureAnalyzed: true,
       });
 
       console.log(
-        `✅ [CultureTranslation] Saved ${culturalTerms.length} terms for ${postId}`
+        `[CultureTranslation] Saved ${culturalTerms.length} terms for ${postId}`
       );
     } catch (err) {
-      // DO NOT throw — background error must not crash request
-      console.error(
-        `💥 [CultureTranslation] analyzePost error ${postId}:`,
-        err
-      );
+      console.error(`[CultureTranslation] analyzePost error ${postId}:`, err);
     }
   },
 
@@ -104,8 +178,6 @@ export const CultureTranslationService = {
     await CultureTranslationService.analyzePost(postId);
   },
 
-  // ── Admin: dictionary management ──────────────────────────────
-
   async getDictionary() {
     return SlangEntryModel.find().sort({ createdAt: -1 }).lean();
   },
@@ -113,24 +185,19 @@ export const CultureTranslationService = {
   async addSlangEntry(data: {
     term: string;
     aliases?: string[];
-    regexPattern?: string; // optional — tự build nếu không truyền
+    regexPattern?: string;
     category?: string;
   }) {
-    // Tự build regex nếu không truyền vào
     const regexPattern = data.regexPattern || buildVietnameseRegex(data.term);
 
-    // Validate trước khi lưu
     const { valid, error } = validateRegex(regexPattern);
     if (!valid) {
-      throw new Error(`regexPattern không hợp lệ: ${error}`);
+      throw new Error(`regexPattern khong hop le: ${error}`);
     }
 
-    // Test thử có match được term không
     const testMatch = new RegExp(regexPattern, "gi").test(data.term);
     if (!testMatch) {
-      console.warn(
-        `⚠️ Regex không match chính term "${data.term}" — kiểm tra lại`
-      );
+      console.warn(`Regex khong match chinh term "${data.term}" - kiem tra lai`);
     }
 
     const entry = new SlangEntryModel({ ...data, regexPattern });
